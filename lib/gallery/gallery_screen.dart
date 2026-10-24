@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../design/design.dart';
+import 'preview/checkin_preview_screen.dart';
+import 'preview/gate_preview_screen.dart';
+import 'preview/home_preview_screen.dart';
+import 'preview/onboarding_preview_screen.dart';
+import 'preview/phone_frame.dart';
+import 'preview/plan_sample.dart';
+import 'preview/reveal_preview_screen.dart';
+import 'preview/streak_moment.dart';
 
-/// A debug-only gallery of every design-foundation token and widget, shown
-/// in light and dark side by side regardless of the device's own theme
-/// setting. This is a temporary home for the widgets while Home, check-in
-/// and the gate are built — not a real screen.
+/// A debug-only gallery of the design foundation, shown in light and dark
+/// side by side whatever the device's own theme is. A temporary home for
+/// the widgets while Home, check-in and the gate are built, not a real
+/// screen.
+///
+/// It leads with real composed screens (the check-in modelled on the Mombo
+/// reference first), then a detail pass at 360 dp with a long plan, then
+/// the token and widget catalogue as an appendix.
 class DesignGalleryScreen extends StatelessWidget {
   const DesignGalleryScreen({super.key});
 
@@ -15,51 +27,118 @@ class DesignGalleryScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Curre design gallery')),
       body: ListView(
         padding: const EdgeInsets.all(CurreSpace.gutter),
-        children: const [
-          _SectionHeading('Colour'),
-          _ColorTokens(),
-          _SectionGap(),
-          _SectionHeading('Skies'),
-          _Skies(),
-          _SectionGap(),
-          _SectionHeading('Outcome tints'),
-          _OutcomeTints(),
-          _SectionGap(),
-          _SectionHeading('Type voices'),
-          _TypeVoices(),
-          _SectionGap(),
-          _SectionHeading('Spacing'),
-          _Spacing(),
-          _SectionGap(),
-          _SectionHeading('Radius'),
-          _Shapes(),
-          _SectionGap(),
-          _SectionHeading('Motion durations'),
-          _Motion(),
-          _SectionGap(),
-          _SectionHeading('CurreGlyph'),
-          _Glyphs(),
-          _SectionGap(),
-          _SectionHeading('SpanText (rune-safe highlights)'),
-          _SpanTextDemo(),
-          _SectionGap(),
-          _SectionHeading('DoorRow'),
-          _DoorRows(),
-          _SectionGap(),
-          _SectionHeading('HorizonLine'),
-          _HorizonLines(),
-          _SectionGap(),
-          _SectionHeading('OutcomeCard'),
-          _OutcomeCards(),
-          _SectionGap(),
-          _SectionHeading('KindChip'),
-          _KindChips(),
-          _SectionGap(),
-          _SectionHeading('RisingDisc'),
-          _RisingDiscDemo(),
-          _SectionGap(),
+        children: [
+          const _SectionHeading('Screens'),
+          const _Note(
+            'Real Flutter screens built from the tokens and widgets in the appendix, for review. '
+            'Not the production Home, check-in, gate or onboarding: those are a separate task.',
+          ),
+          const _SectionHeading('Check-in, at the start of a morning'),
+          PhoneFramePair(builder: (context) => const CheckinPreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Check-in, what Curre read'),
+          PhoneFramePair(builder: (context) => const RevealPreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Home, with a plan'),
+          PhoneFramePair(builder: (context) => const HomePreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Unlock gate, opens for a person'),
+          PhoneFramePair(builder: (context) => const GatePreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Unlock gate, the 60-second wait'),
+          PhoneFramePair(builder: (context) => const WaitPreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Onboarding, step 1 of 6'),
+          PhoneFramePair(builder: (context) => const OnboardingPreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Streak moment, a morning kept'),
+          const _Note('Plays, holds, rests and replays. Duolingo’s rhythm, Curre’s own sun.'),
+          PhoneFramePair(builder: (context) => const StreakMomentScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Detail pass: 360 dp, a long plan'),
+          const _Note('Four doors, long app names and long search words on a narrow phone.'),
+          PhoneFramePair(
+            size: PhoneFrame.narrowSize,
+            builder: (context) => const HomePreviewScreen(plan: longPlan),
+          ),
+          const SizedBox(height: CurreSpace.s4),
+          PhoneFramePair(
+            size: PhoneFrame.narrowSize,
+            builder: (context) => const RevealPreviewScreen(plan: longPlan),
+          ),
+          const SizedBox(height: CurreSpace.s4),
+          PhoneFramePair(size: PhoneFrame.narrowSize, builder: (context) => const CheckinPreviewScreen()),
+          const _SectionGap(),
+          const Divider(),
+          const _SectionGap(),
+          const _SectionHeading('Appendix: tokens'),
+          const _SectionHeading('Colour'),
+          const _ColorTokens(),
+          const _SectionGap(),
+          const _SectionHeading('Session skies and grounds'),
+          const _Skies(),
+          const _SectionGap(),
+          const _SectionHeading('Outcome tints'),
+          const _OutcomeTints(),
+          const _SectionGap(),
+          const _SectionHeading('Link tints'),
+          const _LinkTints(),
+          const _SectionGap(),
+          const _SectionHeading('Type voices'),
+          const _TypeVoices(),
+          const _SectionGap(),
+          const _SectionHeading('Spacing'),
+          const _Spacing(),
+          const _SectionGap(),
+          const _SectionHeading('Radius'),
+          const _Shapes(),
+          const _SectionGap(),
+          const _SectionHeading('Motion durations'),
+          const _Motion(),
+          const _SectionGap(),
+          const _SectionHeading('Appendix: widgets'),
+          const _SectionHeading('CurreGlyph (Solar Bold)'),
+          const _Glyphs(),
+          const _SectionGap(),
+          const _SectionHeading('SpanText (rune-safe highlights)'),
+          const _SpanTextDemo(),
+          const _SectionGap(),
+          const _SectionHeading('DoorRow'),
+          const _DoorRows(),
+          const _SectionGap(),
+          const _SectionHeading('HorizonLine'),
+          const _HorizonLines(),
+          const _SectionGap(),
+          const _SectionHeading('SkyScene'),
+          const _SkyScenes(),
+          const _SectionGap(),
+          const _SectionHeading('OutcomeCard'),
+          const _OutcomeCards(),
+          const _SectionGap(),
+          const _SectionHeading('KindChip'),
+          const _KindChips(),
+          const _SectionGap(),
+          const _SectionHeading('RisingDisc'),
+          const _RisingDiscDemo(),
+          const _SectionGap(),
+          const _SectionHeading('PeekMascot'),
+          const _PeekMascotDemo(),
+          const _SectionGap(),
         ],
       ),
+    );
+  }
+}
+
+class _Note extends StatelessWidget {
+  const _Note(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: CurreSpace.s3),
+      child: Text(text),
     );
   }
 }
@@ -87,17 +166,36 @@ class _SectionGap extends StatelessWidget {
 /// side by side, so a reviewer sees both without touching the device
 /// theme setting.
 class _DualTheme extends StatelessWidget {
-  const _DualTheme({required this.builder});
+  const _DualTheme({required this.builder, this.stacked = false});
   final WidgetBuilder builder;
+
+  /// True stacks the light and dark panes full-width, one above the other,
+  /// instead of side by side. Use for content too wide for a half-screen
+  /// column (e.g. KindChip's confidence meter + label).
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
+    if (stacked) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ThemedPane(brightness: Brightness.light, builder: builder),
+          const SizedBox(height: CurreSpace.s3),
+          _ThemedPane(brightness: Brightness.dark, builder: builder),
+        ],
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: _ThemedPane(brightness: Brightness.light, builder: builder)),
+        Expanded(
+          child: _ThemedPane(brightness: Brightness.light, builder: builder),
+        ),
         const SizedBox(width: CurreSpace.s4),
-        Expanded(child: _ThemedPane(brightness: Brightness.dark, builder: builder)),
+        Expanded(
+          child: _ThemedPane(brightness: Brightness.dark, builder: builder),
+        ),
       ],
     );
   }
@@ -125,10 +223,7 @@ class _ThemedPane extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                brightness == Brightness.light ? 'Light' : 'Dark',
-                style: theme.extension<CurreType>()!.meta,
-              ),
+              Text(brightness == Brightness.light ? 'Light' : 'Dark', style: theme.extension<CurreType>()!.meta),
               const SizedBox(height: CurreSpace.s2),
               Builder(builder: builder),
             ],
@@ -194,7 +289,9 @@ class _ColorTokens extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final e in tokens.entries) _Swatch(label: e.key, pair: Pair(e.value, c.ink)),
+            for (final e in tokens.entries)
+              // Highlighter marks always carry mark ink, in both themes.
+              _Swatch(label: e.key, pair: Pair(e.value, e.key == 'marker' || e.key == 'guardMark' ? c.markInk : c.ink)),
           ],
         );
       },
@@ -213,8 +310,32 @@ class _Skies extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final s in Session.values)
-              _Swatch(label: s.name, pair: c.sky(s)),
+            for (final s in Session.values) ...[
+              _Swatch(label: '${s.name} sky + on-sky', pair: c.sky(s)),
+              _Swatch(label: '${s.name} ground', pair: Pair(c.ground(s), c.sky(s).fg)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LinkTints extends StatelessWidget {
+  const _LinkTints();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      builder: (context) {
+        final c = Theme.of(context).extension<CurreColors>()!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var n = 1; n <= c.links.length; n++) ...[
+              _Swatch(label: 'link $n mark (words)', pair: Pair(c.link(n).mark, c.markInk)),
+              _Swatch(label: 'link $n door card', pair: c.link(n).card),
+            ],
           ],
         );
       },
@@ -234,7 +355,10 @@ class _OutcomeTints extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final o in [Outcome.open, Outcome.specify, Outcome.flagged, Outcome.unavailable])
-              _Swatch(label: o.name, pair: c.outcome(o, laterTarget: Session.evening)),
+              _Swatch(
+                label: o.name,
+                pair: c.outcome(o, laterTarget: Session.evening),
+              ),
             _Swatch(
               label: 'later (borrows evening sky)',
               pair: c.outcome(Outcome.later, laterTarget: Session.evening),
@@ -299,9 +423,16 @@ class _Spacing extends StatelessWidget {
         final c = Theme.of(context).extension<CurreColors>()!;
         final t = Theme.of(context).extension<CurreType>()!;
         const steps = {
-          's1': CurreSpace.s1, 's2': CurreSpace.s2, 's3': CurreSpace.s3, 's4': CurreSpace.s4,
-          'gutter': CurreSpace.gutter, 's6': CurreSpace.s6, 's8': CurreSpace.s8,
-          's10': CurreSpace.s10, 's12': CurreSpace.s12, 's16': CurreSpace.s16,
+          's1': CurreSpace.s1,
+          's2': CurreSpace.s2,
+          's3': CurreSpace.s3,
+          's4': CurreSpace.s4,
+          's5 (gutter)': CurreSpace.s5,
+          's6': CurreSpace.s6,
+          's8': CurreSpace.s8,
+          's10': CurreSpace.s10,
+          's12': CurreSpace.s12,
+          's16': CurreSpace.s16,
         };
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +468,15 @@ class _Shapes extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: CurreSpace.s2),
           child: Row(
             children: [
-              Container(width: 48, height: 32, decoration: BoxDecoration(color: c.raised, borderRadius: radius, border: Border.all(color: c.hairline))),
+              Container(
+                width: 48,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: c.raised,
+                  borderRadius: radius,
+                  border: Border.all(color: c.hairline),
+                ),
+              ),
               const SizedBox(width: CurreSpace.s2),
               Text(label, style: t.caption),
             ],
@@ -347,9 +486,10 @@ class _Shapes extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             box('xs (6)', CurreShape.xs),
-            box('md (16)', CurreShape.md),
-            box('dome (24/10)', CurreShape.dome),
-            box('sheet (24 top)', CurreShape.sheet),
+            box('md (20)', CurreShape.md),
+            box('lg (28)', CurreShape.lg),
+            box('dome (28/12)', CurreShape.dome),
+            box('sheet (28 top)', CurreShape.sheet),
           ],
         );
       },
@@ -366,17 +506,19 @@ class _Motion extends StatelessWidget {
       builder: (context) {
         final t = Theme.of(context).extension<CurreType>()!;
         const rows = {
-          'tap': CurreMotion.tap, 'quick': CurreMotion.quick, 'base': CurreMotion.base,
-          'rise': CurreMotion.rise, 'set': CurreMotion.set, 'sky': CurreMotion.sky,
-          'stagger': CurreMotion.stagger, 'tick': CurreMotion.tick,
+          'tap': CurreMotion.tap,
+          'quick': CurreMotion.quick,
+          'base': CurreMotion.base,
+          'rise': CurreMotion.rise,
+          'set': CurreMotion.set,
+          'sky': CurreMotion.sky,
+          'stagger': CurreMotion.stagger,
+          'tick': CurreMotion.tick,
           'countdown (linear)': CurreMotion.countdown,
         };
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final e in rows.entries)
-              Text('${e.key}: ${e.value.inMilliseconds} ms', style: t.meta),
-          ],
+          children: [for (final e in rows.entries) Text('${e.key}: ${e.value.inMilliseconds} ms', style: t.meta)],
         );
       },
     );
@@ -389,27 +531,25 @@ class _Glyphs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _DualTheme(
+      stacked: true,
       builder: (context) {
         final c = Theme.of(context).extension<CurreColors>()!;
         final t = Theme.of(context).extension<CurreType>()!;
         return Wrap(
-          spacing: CurreSpace.s3,
+          spacing: CurreSpace.s2,
           runSpacing: CurreSpace.s3,
           children: [
             for (final k in CurreGlyphKind.values)
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CurreGlyph(k, size: 24, color: c.ink, semanticLabel: k.name),
-                      const SizedBox(width: CurreSpace.s1),
-                      CurreGlyph(k, size: 24, color: c.ink, filled: true, semanticLabel: k.name),
-                    ],
-                  ),
-                  Text(k.name, style: t.meta),
-                ],
+              SizedBox(
+                width: 136,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CurreGlyph(k, size: 28, color: c.ink, semanticLabel: k.name),
+                    const SizedBox(height: CurreSpace.s1),
+                    Text(k.name, style: t.meta, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
           ],
         );
@@ -427,25 +567,30 @@ class _SpanTextDemo extends StatelessWidget {
       builder: (context) {
         final c = Theme.of(context).extension<CurreColors>()!;
         final t = Theme.of(context).extension<CurreType>()!;
-        const text = '😀 reply Ada about rehearsal';
-        // Code-point offsets: "😀" is 1 code point, " reply " is 7, "Ada" starts at 8.
+        const emoji = '😀 reply Ada about rehearsal';
+        const nonLatin = '读書 then reply Ada';
+        TextStyle mark(int n) => t.you.copyWith(backgroundColor: c.link(n).mark, color: c.markInk);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text('emoji first: "Ada" is code points 8–11', style: t.meta),
             SpanText(
-              text,
+              emoji,
               style: t.you,
               highlights: [
-                SpanHighlight(8, 11, style: t.you.copyWith(backgroundColor: c.marker)),
-                SpanHighlight(18, 28, style: t.you.copyWith(backgroundColor: c.marker)),
+                SpanHighlight(8, 11, style: mark(1)),
+                SpanHighlight(18, 27, style: mark(2)),
               ],
             ),
-            const SizedBox(height: CurreSpace.s2),
-            Text('non-Latin: "读書 reply" highlighted on 读書', style: t.meta),
+            const SizedBox(height: CurreSpace.s3),
+            Text('non-Latin: "读書" is code points 0–2', style: t.meta),
             SpanText(
-              '读書 reply',
+              nonLatin,
               style: t.you,
-              highlights: const [],
+              highlights: [
+                SpanHighlight(0, 2, style: mark(3)),
+                SpanHighlight(14, 17, style: mark(1)),
+              ],
             ),
           ],
         );
@@ -462,20 +607,36 @@ class _DoorRows extends StatelessWidget {
     return _DualTheme(
       builder: (context) {
         final t = Theme.of(context).extension<CurreType>()!;
+        final c = Theme.of(context).extension<CurreColors>()!;
+        TextStyle words(int n) => t.youSmall.copyWith(fontSize: 16, color: c.link(n).card.fg);
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const DoorRow(appName: 'Spotify', destination: '→\u00A0Search “worship”'),
+            const SizedBox(height: CurreSpace.s2),
             DoorRow(
               appName: 'YouTube',
-              destination: 'Search "G chord"',
-              destinationHighlights: [SpanHighlight(8, 16, style: t.youSmall)],
+              destination: '→\u00A0Search “G chord”',
+              link: 1,
+              destinationHighlights: [SpanHighlight(9, 18, style: words(1))],
             ),
+            const SizedBox(height: CurreSpace.s2),
             DoorRow(
               appName: 'Spotify',
-              destination: 'Search "worship"',
-              destinationHighlights: [SpanHighlight(8, 17, style: t.youSmall)],
+              destination: '→\u00A0Search “worship”',
+              link: 2,
+              destinationHighlights: [SpanHighlight(9, 18, style: words(2))],
             ),
-            const DoorRow(appName: 'Instagram', destination: 'Messages → Ada'),
+            const SizedBox(height: CurreSpace.s2),
+            DoorRow(
+              appName: 'Instagram',
+              destination: '→\u00A0Messages · Ada',
+              tint: c.outcome(Outcome.open, laterTarget: Session.evening),
+              trailing: Text(
+                '3:12',
+                style: t.figure.copyWith(color: c.outcome(Outcome.open, laterTarget: Session.evening).fg),
+              ),
+            ),
           ],
         );
       },
@@ -495,10 +656,47 @@ class _HorizonLines extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('still', style: t.meta),
+            const SizedBox(height: CurreSpace.s2),
             const HorizonLine(),
             const SizedBox(height: CurreSpace.s4),
-            Text('scanning', style: t.meta),
+            Text('scanning (the only busy state)', style: t.meta),
+            const SizedBox(height: CurreSpace.s2),
             const HorizonLine(scanning: true, semanticLabel: 'Reading your reason'),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SkyScenes extends StatelessWidget {
+  const _SkyScenes();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      builder: (context) {
+        final t = Theme.of(context).extension<CurreType>()!;
+        final c = Theme.of(context).extension<CurreColors>()!;
+        Widget scene(Session s, SkySun sun, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: CurreSpace.s2),
+          child: SizedBox(
+            height: 112,
+            child: SkyScene(
+              session: s,
+              sun: sun,
+              sunSize: sun == SkySun.disc ? 36 : 84,
+              sunRise: sun == SkySun.disc ? .6 : .74,
+              padding: const EdgeInsets.all(CurreSpace.s3),
+              child: Text(label, style: t.caption.copyWith(color: c.sky(s).fg)),
+            ),
+          ),
+        );
+        return Column(
+          children: [
+            scene(Session.morning, SkySun.peek, 'morning · Peek (check-in)'),
+            scene(Session.afternoon, SkySun.disc, 'afternoon · disc (Home)'),
+            scene(Session.evening, SkySun.none, 'evening · no sun'),
           ],
         );
       },
@@ -517,15 +715,15 @@ class _OutcomeCards extends StatelessWidget {
           children: [
             OutcomeCard(
               outcome: Outcome.open,
-              headline: 'YouTube → Search "capo tutorial"',
-              body: '15 min because you said 15 min',
+              headline: 'Opens at YouTube\u00A0→\u00A0Search “capo tutorial”',
+              body: '15 minutes, because you said 15 min',
             ),
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
               outcome: Outcome.later,
               laterTarget: Session.evening,
-              headline: 'Not now. Save it for this evening?',
-              body: "It'll be waiting at your 17:00 check-in.",
+              headline: 'Not now',
+              body: 'Sounds like browsing, so it can wait for a browsing time.',
             ),
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
@@ -542,8 +740,8 @@ class _OutcomeCards extends StatelessWidget {
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
               outcome: Outcome.unavailable,
-              headline: 'No answer · Opening anyway, in a minute',
-              body: "The gate didn't reply in 8 s. You may be offline.",
+              headline: 'No answer. Opening anyway, in a minute',
+              body: 'The gate didn’t reply in 8 s. You may be offline.',
             ),
           ],
         );
@@ -558,6 +756,7 @@ class _KindChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _DualTheme(
+      stacked: true,
       builder: (context) {
         return const Wrap(
           spacing: CurreSpace.s2,
@@ -583,14 +782,69 @@ class _RisingDiscDemo extends StatelessWidget {
     return _DualTheme(
       builder: (context) {
         final t = Theme.of(context).extension<CurreType>()!;
+        final c = Theme.of(context).extension<CurreColors>()!;
+        final sky = c.sky(Session.morning);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Shortened to 6s here purely so the gallery shows visible
-            // motion; the real override is 60 s (CurreMotion.countdown).
-            const RisingDisc(duration: Duration(seconds: 6)),
+            ClipRRect(
+              borderRadius: CurreShape.md,
+              child: ColoredBox(
+                color: sky.bg,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: CurreSpace.s4),
+                  // Shortened to 6 s here so the gallery shows the rise;
+                  // the real wait is 60 s (CurreMotion.countdown), linear.
+                  child: LayoutBuilder(
+                    builder: (context, box) => RisingDisc(
+                      duration: const Duration(seconds: 6),
+                      diameter: 48,
+                      width: box.maxWidth,
+                      lineColor: sky.fg,
+                      groundColor: c.ground(Session.morning),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(height: CurreSpace.s2),
-            Text('duration shortened for this gallery; default is 60 s, linear', style: t.meta),
+            Text('6 s here; the real wait is 60 s, linear', style: t.meta),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _PeekMascotDemo extends StatelessWidget {
+  const _PeekMascotDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      stacked: true,
+      builder: (context) {
+        final t = Theme.of(context).extension<CurreType>()!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Wrap(
+              spacing: CurreSpace.s6,
+              runSpacing: CurreSpace.s4,
+              crossAxisAlignment: WrapCrossAlignment.end,
+              children: [
+                PeekMascot(size: 120),
+                PeekMascot(size: 40, compact: true, animate: false, groundShadow: false),
+                PeekMascot(size: 72, animate: false, lit: 0, rays: 0, eyesOpen: 0),
+                PeekMascot(size: 72, animate: false, lit: .6, rays: .5, eyesOpen: 0),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s2),
+            Text(
+              'Base pose (floats and blinks) · small master · waking: dormant, half-lit. '
+              'Check-in and onboarding only, never Home with a plan, never the gate.',
+              style: t.meta,
+            ),
           ],
         );
       },

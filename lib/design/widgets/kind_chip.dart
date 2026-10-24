@@ -22,19 +22,14 @@ const Map<ReasonKind, CurreGlyphKind> kindGlyphs = {
   ReasonKind.unclear: CurreGlyphKind.kindUnclear,
 };
 
-/// The reason-kind chip (design report 3.2 / 4.6): a raised chip, a glyph
+/// The reason-kind chip (design report 3.2 / 4.6): a raised pill, a glyph
 /// and a word, **never coloured** by outcome — colour stays the single
 /// signal that belongs to the outcome card, not the kind. When [confidence]
 /// (0–1) is given, it is shown as a small ember meter with a tick at
 /// [threshold] plus the mono number, as on the gate's "Ask" and "Thinking"
 /// states.
 class KindChip extends StatelessWidget {
-  const KindChip({
-    super.key,
-    required this.kind,
-    this.confidence,
-    this.threshold = 0.70,
-  });
+  const KindChip({super.key, required this.kind, this.confidence, this.threshold = 0.70});
 
   final ReasonKind kind;
 
@@ -49,31 +44,33 @@ class KindChip extends StatelessWidget {
     final label = kindLabels[kind]!;
 
     return Semantics(
-      label: confidence == null
-          ? label
-          : '$label, confidence ${(confidence! * 100).round()} percent',
+      label: confidence == null ? label : '$label, confidence ${(confidence! * 100).round()} percent',
+      excludeSemantics: true,
       child: DecoratedBox(
-        decoration: BoxDecoration(
+        decoration: ShapeDecoration(
           color: c.raised,
-          borderRadius: CurreShape.xs,
-          border: Border.all(color: c.hairline, width: 1),
+          shape: StadiumBorder(side: BorderSide(color: c.hairline)),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: CurreSpace.s3, vertical: CurreSpace.s2),
+          padding: const EdgeInsets.fromLTRB(CurreSpace.s3, CurreSpace.s2, CurreSpace.s4, CurreSpace.s2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               CurreGlyph(kindGlyphs[kind]!, size: 18, color: c.ink),
               const SizedBox(width: CurreSpace.s2),
-              Text(label, style: t.label),
+              Flexible(
+                child: Text(
+                  label,
+                  style: t.label.weight(640).copyWith(color: c.ink, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
               if (confidence != null) ...[
                 const SizedBox(width: CurreSpace.s3),
                 _ConfidenceMeter(value: confidence!, threshold: threshold, colors: c),
-                const SizedBox(width: CurreSpace.s1),
-                Text(
-                  '${(confidence! * 100).round()}%',
-                  style: t.meta,
-                ),
+                const SizedBox(width: CurreSpace.s2),
+                Text('${(confidence! * 100).round()}%', style: t.figure.copyWith(fontSize: 13, color: c.ink2)),
               ],
             ],
           ),
@@ -111,12 +108,7 @@ class _ConfidenceMeter extends StatelessWidget {
 }
 
 class _ConfidenceMeterPainter extends CustomPainter {
-  _ConfidenceMeterPainter({
-    required this.value,
-    required this.threshold,
-    required this.track,
-    required this.fill,
-  });
+  _ConfidenceMeterPainter({required this.value, required this.threshold, required this.track, required this.fill});
 
   final double value;
   final double threshold;
@@ -126,10 +118,7 @@ class _ConfidenceMeterPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final radius = size.height / 2;
-    final trackRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Radius.circular(radius),
-    );
+    final trackRect = RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, size.width, size.height), Radius.circular(radius));
     canvas.drawRRect(trackRect, Paint()..color = track);
 
     if (value > 0) {
@@ -155,5 +144,8 @@ class _ConfidenceMeterPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ConfidenceMeterPainter oldDelegate) =>
-      oldDelegate.value != value || oldDelegate.threshold != threshold || oldDelegate.track != track || oldDelegate.fill != fill;
+      oldDelegate.value != value ||
+      oldDelegate.threshold != threshold ||
+      oldDelegate.track != track ||
+      oldDelegate.fill != fill;
 }

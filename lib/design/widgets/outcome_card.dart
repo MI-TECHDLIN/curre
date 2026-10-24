@@ -5,9 +5,16 @@ import '../curre_tokens.dart';
 import '../curre_type.dart';
 import 'curre_glyph.dart';
 
-CurreGlyphKind _glyphFor(Outcome o) => switch (o) {
+/// The glyph each outcome carries. `later` shows the sky of the session
+/// it can wait for (its card borrows that sky too), so the icon and the
+/// colour say the same thing: "this evening".
+CurreGlyphKind outcomeGlyph(Outcome o, {Session laterTarget = Session.evening}) => switch (o) {
   Outcome.open => CurreGlyphKind.door,
-  Outcome.later => CurreGlyphKind.later,
+  Outcome.later => switch (laterTarget) {
+    Session.morning => CurreGlyphKind.sessionMorning,
+    Session.afternoon => CurreGlyphKind.sessionAfternoon,
+    Session.evening => CurreGlyphKind.sessionEvening,
+  },
   Outcome.specify => CurreGlyphKind.editSpecify,
   Outcome.flagged => CurreGlyphKind.guardFlagged,
   Outcome.unavailable => CurreGlyphKind.unavailable,
@@ -54,7 +61,7 @@ class OutcomeCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(color: pair.bg, borderRadius: CurreShape.dome),
       child: Padding(
-        padding: const EdgeInsets.all(CurreSpace.s4),
+        padding: const EdgeInsets.fromLTRB(CurreSpace.s4, CurreSpace.s4, CurreSpace.s4, CurreSpace.s5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -62,26 +69,38 @@ class OutcomeCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CurreGlyph(
-                  _glyphFor(outcome),
-                  size: 22,
-                  color: pair.fg,
-                  semanticLabel: outcomeGlyphLabel(outcome),
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: pair.fg.withValues(alpha: .12), shape: BoxShape.circle),
+                  child: CurreGlyph(
+                    outcomeGlyph(outcome, laterTarget: laterTarget),
+                    size: 20,
+                    color: pair.fg,
+                    semanticLabel: outcomeGlyphLabel(outcome),
+                  ),
                 ),
-                const SizedBox(width: CurreSpace.s2),
+                const SizedBox(width: CurreSpace.s3),
                 Expanded(
-                  child: Text(headline, style: t.title.copyWith(color: pair.fg)),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      headline,
+                      style: t.title.copyWith(color: pair.fg, fontSize: 20, height: 26 / 20),
+                    ),
+                  ),
                 ),
               ],
             ),
             if (body != null) ...[
               const SizedBox(height: CurreSpace.s2),
-              Text(body!, style: t.body.copyWith(color: pair.fg)),
+              Padding(
+                padding: const EdgeInsets.only(left: 48),
+                child: Text(body!, style: t.body.copyWith(color: pair.fg.withValues(alpha: .86))),
+              ),
             ],
-            if (child != null) ...[
-              const SizedBox(height: CurreSpace.s3),
-              child!,
-            ],
+            if (child != null) ...[const SizedBox(height: CurreSpace.s3), child!],
           ],
         ),
       ),

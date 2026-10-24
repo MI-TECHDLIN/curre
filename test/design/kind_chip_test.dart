@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:curre/design/design.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -15,20 +15,24 @@ void main() {
     }
   });
 
-  testWidgets('KindChip is never tinted by outcome colour: it always uses the raised surface', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: curreTheme(Brightness.light),
-        home: const Scaffold(body: KindChip(kind: ReasonKind.task, confidence: 0.94)),
-      ),
-    );
-
-    final decoration =
-        (tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration) as BoxDecoration;
-    expect(decoration.color, CurreColors.light.raised);
-    expect(find.textContaining('94%'), findsOneWidget);
+  testWidgets('KindChip is never tinted by an outcome: it is always a raised pill', (tester) async {
+    for (final brightness in Brightness.values) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: curreTheme(brightness),
+          themeAnimationDuration: Duration.zero,
+          home: const Scaffold(body: KindChip(kind: ReasonKind.task, confidence: 0.94)),
+        ),
+      );
+      final box = tester.widget<DecoratedBox>(
+        find.descendant(of: find.byType(KindChip), matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = box.decoration as ShapeDecoration;
+      final colors = brightness == Brightness.light ? CurreColors.light : CurreColors.dark;
+      expect(decoration.color, colors.raised);
+      expect(decoration.shape, isA<StadiumBorder>());
+      expect(find.text('94%'), findsOneWidget);
+    }
   });
 
   testWidgets('KindChip without confidence hides the meter', (tester) async {
@@ -39,5 +43,17 @@ void main() {
       ),
     );
     expect(find.textContaining('%'), findsNothing);
+  });
+
+  testWidgets('KindChip reads its kind and confidence as one label', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: const Scaffold(body: KindChip(kind: ReasonKind.person, confidence: 0.94)),
+      ),
+    );
+    expect(find.bySemanticsLabel('Person waiting, confidence 94 percent'), findsOneWidget);
+    handle.dispose();
   });
 }

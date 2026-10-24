@@ -6,7 +6,7 @@ import 'doors/door_lab_screen.dart';
 import 'gallery/gallery_screen.dart';
 
 void main() {
-  registerCurreFontLicenses();
+  registerCurreLicenses();
   runApp(const CurreApp());
 }
 

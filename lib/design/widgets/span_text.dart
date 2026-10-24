@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// over the base style for the run between [start] and [end].
 @immutable
 class SpanHighlight {
-  const SpanHighlight(this.start, this.end, {required this.style, this.semanticsLabel});
+  const SpanHighlight(this.start, this.end, {required this.style, this.semanticsLabel, this.after});
 
   /// Code-point offset of the first highlighted character.
   final int start;
@@ -21,6 +21,10 @@ class SpanHighlight {
   /// Optional label read in place of the highlighted text, e.g.
   /// "Ada → matched a chat on this phone" (design report 4.6).
   final String? semanticsLabel;
+
+  /// Optional inline span placed right after the highlighted run, e.g. the
+  /// link number that ties these words to the door they opened.
+  final InlineSpan? after;
 }
 
 /// Renders [text] with [highlights] applied, slicing by Unicode **runes**
@@ -82,12 +86,10 @@ class SpanText extends StatelessWidget {
     return Text.rich(
       TextSpan(
         children: [
-          for (final (runText, highlight) in runs)
-            TextSpan(
-              text: runText,
-              style: highlight?.style,
-              semanticsLabel: highlight?.semanticsLabel,
-            ),
+          for (final (runText, highlight) in runs) ...[
+            TextSpan(text: runText, style: highlight?.style, semanticsLabel: highlight?.semanticsLabel),
+            if (highlight?.after != null) highlight!.after!,
+          ],
         ],
       ),
       style: base,

@@ -7,8 +7,9 @@ abstract final class CurreSpace {
   static const s3 = 12.0;
   static const s4 = 16.0;
 
-  /// Screen gutter.
-  static const gutter = 20.0;
+  /// Screen gutter (the report's s5).
+  static const s5 = 20.0;
+  static const gutter = s5;
   static const s6 = 24.0;
   static const s8 = 32.0;
   static const s10 = 40.0;
@@ -26,23 +27,27 @@ abstract final class CurreSpace {
   static const doorRowMinHeight = 56.0;
 }
 
-/// Radii and the signature "dome" shape (design report 3.5).
+/// Radii and the signature "dome" shape (design report 3.5). Pushed more
+/// generous than the report's first draft (captain's redesign steer,
+/// 2026-10-24: "more generous rounded cards" is one of the ways to put life
+/// into the system without abandoning it) — `md` grew from 16 to 20 and a
+/// new `lg` covers full-bleed hero cards (sky header, grant banner body,
+/// mascot stage) that want to read as one soft block of colour.
 abstract final class CurreShape {
   static const radiusXs = Radius.circular(6);
-  static const radiusMd = Radius.circular(16);
+  static const radiusMd = Radius.circular(20);
+  static const radiusLg = Radius.circular(28);
 
   static const xs = BorderRadius.all(radiusXs);
   static const md = BorderRadius.all(radiusMd);
+  static const lg = BorderRadius.all(radiusLg);
 
   /// The signature shape: only for surfaces that rise (check-in prompt,
   /// gate outcome card, grant banner).
-  static const dome = BorderRadius.vertical(
-    top: Radius.circular(24),
-    bottom: Radius.circular(10),
-  );
+  static const dome = BorderRadius.vertical(top: Radius.circular(28), bottom: Radius.circular(12));
 
   /// Bottom sheets (Under the hood).
-  static const sheet = BorderRadius.vertical(top: Radius.circular(24));
+  static const sheet = BorderRadius.vertical(top: Radius.circular(28));
 
   static const pill = StadiumBorder();
 }
@@ -82,6 +87,5 @@ abstract final class CurreMotion {
   /// otherwise [d]. Countdown durations should not be passed through this:
   /// the countdown always counts, even with reduced motion (it is
   /// information, design report 3.8).
-  static Duration of(BuildContext context, Duration d) =>
-      MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
+  static Duration of(BuildContext context, Duration d) => MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }

@@ -31,10 +31,7 @@ class HorizonLine extends StatefulWidget {
 class _HorizonLineState extends State<HorizonLine> with SingleTickerProviderStateMixin {
   static const _scanDuration = Duration(milliseconds: 1200);
 
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: _scanDuration,
-  );
+  late final AnimationController _controller = AnimationController(vsync: this, duration: _scanDuration);
 
   /// Exposed for tests, so they can assert on this widget's own animation
   /// instead of the binding's global transient-callback count (which other
@@ -96,13 +93,7 @@ class _HorizonLineState extends State<HorizonLine> with SingleTickerProviderStat
                           width: scanWidth,
                           height: widget.thickness,
                           decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Color(0x00E85F2E),
-                                Color(0xFFE85F2E),
-                                Color(0x00E85F2E),
-                              ],
-                            ),
+                            gradient: LinearGradient(colors: [Color(0x00E85F2E), Color(0xFFE85F2E), Color(0x00E85F2E)]),
                           ),
                         ),
                       );

@@ -5,7 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('HorizonLine renders a hairline without animating when still', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(theme: curreTheme(Brightness.light), home: const Scaffold(body: HorizonLine())),
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: const Scaffold(body: HorizonLine()),
+      ),
     );
     expect(tester.hasRunningAnimations, isFalse);
     expect(find.byType(HorizonLine), findsOneWidget);

@@ -8,5 +8,7 @@ export 'widgets/door_row.dart';
 export 'widgets/horizon_line.dart';
 export 'widgets/kind_chip.dart';
 export 'widgets/outcome_card.dart';
+export 'widgets/peek_mascot.dart';
 export 'widgets/rising_disc.dart';
+export 'widgets/sky_scene.dart';
 export 'widgets/span_text.dart';

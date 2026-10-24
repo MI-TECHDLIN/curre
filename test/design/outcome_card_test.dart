@@ -1,11 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:curre/design/design.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('OutcomeCard shows the headline, body and outcome glyph for every outcome', (
-    tester,
-  ) async {
+  testWidgets('OutcomeCard shows the headline, body and outcome glyph for every outcome', (tester) async {
     for (final outcome in Outcome.values) {
       await tester.pumpWidget(
         MaterialApp(
@@ -19,30 +17,26 @@ void main() {
           ),
         ),
       );
-
       expect(find.text('Headline for ${outcome.name}'), findsOneWidget);
       expect(find.text('Body for ${outcome.name}'), findsOneWidget);
+      expect(find.byType(CurreGlyph), findsOneWidget);
       expect(tester.takeException(), isNull);
     }
   });
 
-  testWidgets("`later`'s tint resolves to the target session's sky", (tester) async {
+  testWidgets('`later` borrows the target session\'s sky, colour and glyph alike', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: curreTheme(Brightness.light),
         home: const Scaffold(
-          body: OutcomeCard(
-            outcome: Outcome.later,
-            laterTarget: Session.evening,
-            headline: 'Not now',
-          ),
+          body: OutcomeCard(outcome: Outcome.later, laterTarget: Session.evening, headline: 'Not now'),
         ),
       ),
     );
-
-    final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
-    final decoration = decoratedBox.decoration as BoxDecoration;
-    expect(decoration.color, CurreColors.light.sky(Session.evening).bg);
+    final box = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
+    expect((box.decoration as BoxDecoration).color, CurreColors.light.sky(Session.evening).bg);
+    expect(tester.widget<CurreGlyph>(find.byType(CurreGlyph)).kind, CurreGlyphKind.sessionEvening);
+    expect(outcomeGlyph(Outcome.later, laterTarget: Session.afternoon), CurreGlyphKind.sessionAfternoon);
   });
 
   testWidgets('OutcomeCard renders extra content passed as child', (tester) async {
@@ -50,11 +44,7 @@ void main() {
       MaterialApp(
         theme: curreTheme(Brightness.light),
         home: const Scaffold(
-          body: OutcomeCard(
-            outcome: Outcome.open,
-            headline: 'Opens',
-            child: Text('actions go here'),
-          ),
+          body: OutcomeCard(outcome: Outcome.open, headline: 'Opens', child: Text('actions go here')),
         ),
       ),
     );

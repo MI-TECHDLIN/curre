@@ -38,10 +38,7 @@ void main() {
       final style = const TextStyle(fontStyle: FontStyle.italic);
       // "读書" is 2 code points; "Ada" starts right after "读書 reply ".
       final adaStart = '读書 reply '.runes.length;
-      final runs = SpanText.buildRuns(
-        text,
-        [SpanHighlight(adaStart, adaStart + 3, style: style)],
-      );
+      final runs = SpanText.buildRuns(text, [SpanHighlight(adaStart, adaStart + 3, style: style)]);
 
       final highlighted = runs.where((r) => r.$2 != null).map((r) => r.$1).toList();
       expect(highlighted, ['Ada']);
@@ -68,9 +65,7 @@ void main() {
         home: Scaffold(
           body: SpanText(
             '😀 reply Ada about rehearsal',
-            highlights: [
-              SpanHighlight(8, 11, style: const TextStyle(backgroundColor: Colors.yellow)),
-            ],
+            highlights: [SpanHighlight(8, 11, style: const TextStyle(backgroundColor: Colors.yellow))],
           ),
         ),
       ),
@@ -80,5 +75,28 @@ void main() {
     final richText = tester.widget<RichText>(find.byType(RichText).first);
     final root = richText.text as TextSpan;
     expect(root.toPlainText(), '😀 reply Ada about rehearsal');
+  });
+
+  testWidgets('SpanText places a highlight\'s trailing span right after it, past an emoji', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SpanText(
+            '😀 reply Ada about rehearsal',
+            highlights: [
+              SpanHighlight(
+                8,
+                11,
+                style: const TextStyle(backgroundColor: Colors.yellow),
+                after: const TextSpan(text: '[1]'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final richText = tester.widget<RichText>(find.byType(RichText).first);
+    expect((richText.text as TextSpan).toPlainText(), '😀 reply Ada[1] about rehearsal');
   });
 }

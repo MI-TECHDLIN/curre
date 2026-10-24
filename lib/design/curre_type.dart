@@ -48,50 +48,54 @@ class CurreType extends ThemeExtension<CurreType> {
     // Variable fonts: set both FontWeight (fallback) and the `wght`
     // FontVariation axis. Flutter does not reliably map FontWeight onto a
     // variable font's axis on Android (design report 3.10 note 2).
-    TextStyle geo(double size, double lh, double w, {double ls = 0, Color? color}) =>
-        TextStyle(
-          fontFamily: 'Geologica',
-          fontSize: size,
-          height: lh / size,
-          letterSpacing: ls,
-          color: color ?? c.ink,
-          fontWeight: _nearestWeight(w),
-          fontVariations: [FontVariation('wght', w), const FontVariation('SHRP', 0)],
-        );
+    TextStyle geo(double size, double lh, double w, {double ls = 0, Color? color}) => TextStyle(
+      fontFamily: 'Geologica',
+      fontSize: size,
+      height: lh / size,
+      letterSpacing: ls,
+      color: color ?? c.ink,
+      fontWeight: _nearestWeight(w),
+      fontVariations: [FontVariation('wght', w), const FontVariation('SHRP', 0)],
+    );
     TextStyle you(double size, double lh) => TextStyle(
       fontFamily: 'Newsreader',
       fontStyle: FontStyle.italic,
       fontSize: size,
       height: lh / size,
       color: c.ink,
-      fontVariations: [const FontVariation('wght', 400), FontVariation('opsz', size)],
+      fontWeight: FontWeight.w400,
+      fontVariations: [const FontVariation('wght', 430), FontVariation('opsz', size)],
     );
-    TextStyle mono(double size, double lh, double w, {double ls = 0, Color? color}) =>
-        TextStyle(
-          fontFamily: 'AtkinsonHyperlegibleMono',
-          fontSize: size,
-          height: lh / size,
-          letterSpacing: ls,
-          color: color ?? c.ink,
-          fontWeight: _nearestWeight(w),
-          fontVariations: [FontVariation('wght', w)],
-          fontFeatures: const [FontFeature.tabularFigures()],
-        );
+    TextStyle mono(double size, double lh, double w, {double ls = 0, Color? color}) => TextStyle(
+      fontFamily: 'AtkinsonHyperlegibleMono',
+      fontSize: size,
+      height: lh / size,
+      letterSpacing: ls,
+      color: color ?? c.ink,
+      fontWeight: _nearestWeight(w),
+      fontVariations: [FontVariation('wght', w)],
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
 
     return CurreType(
-      display: geo(40, 44, 640, ls: -1.2),
-      headline: geo(28, 34, 640, ls: -.6),
-      title: geo(20, 26, 620),
-      body: geo(16, 24, 400),
-      label: geo(14, 18, 560, ls: .1),
-      caption: geo(12, 16, 500, ls: .3),
+      // Level-up (captain's reviews, 2026-10-24): the references' big,
+      // friendly headlines (Mombo's greeting, the mood trio's heavy
+      // question) and the learning plan's big numerals. Still the three
+      // voices from report 3.3; only size and weight move, and body copy
+      // keeps the report's reading comfort.
+      display: geo(48, 52, 720, ls: -1.4),
+      headline: geo(30, 36, 700, ls: -.6),
+      title: geo(22, 28, 680, ls: -.3),
+      body: geo(16, 24, 420),
+      label: geo(15, 20, 620),
+      caption: geo(13, 18, 520, ls: .1),
       listItem: geo(18, 24, 400, color: c.ink2),
       youLarge: you(26, 34),
-      you: you(19, 28),
+      you: you(20, 28),
       youSmall: you(16, 22),
-      figureXL: mono(64, 64, 500),
-      figure: mono(16, 20, 500),
-      meta: mono(12, 16, 400, ls: .2, color: c.ink3),
+      figureXL: mono(72, 76, 600, ls: -1),
+      figure: mono(16, 20, 600),
+      meta: mono(12, 16, 500, ls: .2, color: c.ink3),
     );
   }
 
@@ -152,5 +156,20 @@ class CurreType extends ThemeExtension<CurreType> {
       figure: TextStyle.lerp(figure, other.figure, t)!,
       meta: TextStyle.lerp(meta, other.meta, t)!,
     );
+  }
+}
+
+/// Weight changes for Curre's variable fonts. `copyWith(fontWeight: …)`
+/// alone does not move a variable font's `wght` axis once a style carries
+/// a `wght` [FontVariation] (the axis wins), so use [weight] instead: it
+/// sets the axis and the [FontWeight] fallback together and keeps every
+/// other axis (Geologica's SHRP, Newsreader's opsz) as it was.
+extension CurreTextWeight on TextStyle {
+  TextStyle weight(double w) {
+    final others = [
+      for (final v in fontVariations ?? const <FontVariation>[])
+        if (v.axis != 'wght') v,
+    ];
+    return copyWith(fontWeight: CurreType._nearestWeight(w), fontVariations: [FontVariation('wght', w), ...others]);
   }
 }
