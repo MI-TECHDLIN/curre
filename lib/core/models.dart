@@ -176,7 +176,9 @@ class Settings {
     Set<String> candidates = const <String>{},
     this.unlockMinutes = 5,
     this.threshold = 0.7,
-  }) : sessionStarts = Map.unmodifiable(
+    String? displayName,
+  }) : displayName = normalizeDisplayName(displayName),
+       sessionStarts = Map.unmodifiable(
          sessionStarts ??
              const <SessionName, LocalTime>{
                SessionName.morning: LocalTime(4),
@@ -203,6 +205,8 @@ class Settings {
       candidates: _stringSet(json['candidates'], 'candidates'),
       unlockMinutes: _int(json['unlockMinutes'], 'unlockMinutes'),
       threshold: _number(json['threshold'], 'threshold').toDouble(),
+      // Absent in settings saved before names existed, which still load.
+      displayName: _nullableString(json['displayName'], 'displayName'),
     );
   }
 
@@ -211,6 +215,19 @@ class Settings {
   final Set<String> candidates;
   final int unlockMinutes;
   final double threshold;
+
+  /// What the greeting calls the user ("Good morning, Chidi"), or null when
+  /// they have not given a name. Onboarding will ask for it; until then the
+  /// greeting stands alone.
+  final String? displayName;
+
+  /// Trims [name] and collapses inner runs of whitespace; a blank name is
+  /// no name, so the greeting never ends in a dangling comma.
+  static String? normalizeDisplayName(String? name) {
+    if (name == null) return null;
+    final tidy = name.trim().replaceAll(RegExp(r'\s+'), ' ');
+    return tidy.isEmpty ? null : tidy;
+  }
 
   void _validate() {
     if (sessionStarts.length != SessionName.values.length ||
@@ -242,6 +259,7 @@ class Settings {
     'candidates': candidates.toList()..sort(),
     'unlockMinutes': unlockMinutes,
     'threshold': threshold,
+    if (displayName != null) 'displayName': displayName,
   };
 }
 
@@ -439,6 +457,52 @@ class Attempt {
     'confidence': confidence,
     'overridden': overridden,
     if (kind != null) 'kind': kind!.wireValue,
+  };
+}
+
+/// One open of a plan's app from its row on Home: the start trace that
+/// today's progress counts, and that a proof-backed streak will need before
+/// it accepts a completion note.
+class DoorUse {
+  DoorUse({
+    required this.planId,
+    required this.date,
+    required this.packageName,
+    required DateTime at,
+  }) : at = _asUtc(at);
+
+  /// A use of [packageName]'s row on [plan], dated to the plan's Curre day.
+  factory DoorUse.forPlan(Plan plan, String packageName, DateTime at) {
+    if (!plan.packages.contains(packageName)) {
+      throw ArgumentError.value(packageName, 'packageName', 'Not in the plan');
+    }
+    return DoorUse(
+      planId: plan.id,
+      date: plan.date,
+      packageName: packageName,
+      at: at,
+    );
+  }
+
+  factory DoorUse.fromJson(Map<String, Object?> json) => DoorUse(
+    planId: _string(json['planId'], 'planId'),
+    date: LocalDate.fromJson(json['date']),
+    packageName: _string(json['package'], 'package'),
+    at: _instant(json['at'], 'at'),
+  );
+
+  final String planId;
+
+  /// The Curre day of the plan the row belongs to.
+  final LocalDate date;
+  final String packageName;
+  final DateTime at;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'planId': planId,
+    'date': date.toJson(),
+    'package': packageName,
+    'at': at.toIso8601String(),
   };
 }
 
