@@ -12,6 +12,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   each) lives in `server/`; see `server/README.md` for setup, tests and the
   endpoint map. Validate backend changes with `server/.venv`'s `pytest` and
   `ruff check server`.
+- Phone-owned models, sessions, visibility, grants, the typed backend client
+  and local persistence live in `lib/core/`; its client reads
+  `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`.
 - clocked-sdk 0.7.0 response shapes are easy to get wrong: Decide answers
   are under `result["answers"]` (a `choice` answer's label is `["choice"]`,
   a `multiselect` answer's labels are `["selected"]`); Fill and Extract
