@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
 
+import '../../core/models.dart' show Settings;
 import '../../design/design.dart';
 
 // Shared parts for the review-only screen previews. Every measure sits on
@@ -133,34 +134,80 @@ class RoundGlyphButton extends StatelessWidget {
 }
 
 /// The session greeting, after the Mombo and "Morning, Budi" references:
-/// a big friendly line, the date, and one round button.
+/// a big friendly line that names the user ("Good morning, Chidi"), the
+/// date, and one round button. With no name it is the greeting alone, never
+/// a dangling comma. A long name never overflows: the line steps down from
+/// 30 to 26, then wraps onto a second line, then steps down to 22 and ends
+/// in an ellipsis, measured at the phone's own text scale.
 class Greeting extends StatelessWidget {
-  const Greeting({super.key, required this.title, required this.subtitle, this.trailing});
+  const Greeting({super.key, required this.greeting, this.name, required this.subtitle, this.trailing});
 
-  final String title;
+  final String greeting;
+
+  /// The user's display name (core `Settings.displayName`), if any.
+  final String? name;
   final String subtitle;
   final Widget? trailing;
+
+  /// "Good morning, Chidi", or "Good morning" when [name] is blank, using
+  /// the same tidy-up rule the core settings apply.
+  static String compose(String greeting, String? name) {
+    final tidy = Settings.normalizeDisplayName(name);
+    return tidy == null ? greeting : '$greeting, $tidy';
+  }
+
+  /// Font size, line height and line count, tried in order.
+  static const _fits = <(double, double, int)>[(30, 36, 1), (26, 32, 1), (26, 32, 2), (22, 28, 2)];
 
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
+    final text = compose(greeting, name);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: t.headline, maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: t.body.copyWith(color: c.ink2),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final scaler = MediaQuery.textScalerOf(context);
+              var fit = _fits.last;
+              for (final candidate in _fits) {
+                final painter = TextPainter(
+                  text: TextSpan(
+                    text: text,
+                    style: t.headline.copyWith(fontSize: candidate.$1, height: candidate.$2 / candidate.$1),
+                  ),
+                  maxLines: candidate.$3,
+                  textDirection: TextDirection.ltr,
+                  textScaler: scaler,
+                )..layout(maxWidth: box.maxWidth);
+                final fits = !painter.didExceedMaxLines;
+                painter.dispose();
+                if (fits) {
+                  fit = candidate;
+                  break;
+                }
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    text,
+                    style: t.headline.copyWith(fontSize: fit.$1, height: fit.$2 / fit.$1),
+                    maxLines: fit.$3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: t.body.copyWith(color: c.ink2),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              );
+            },
           ),
         ),
         if (trailing != null) ...[const SizedBox(width: CurreSpace.s3), trailing!],

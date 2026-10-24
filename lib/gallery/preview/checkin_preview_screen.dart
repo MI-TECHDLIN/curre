@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import '../../design/design.dart';
 import 'parts.dart';
 
+/// The sample user the previews greet. Not "Ada": in the demo Ada is the
+/// friend waiting for a reply.
+const previewName = 'Chidi';
+
+/// A deliberately long name, for the detail pass at 360 dp.
+const longPreviewName = 'Oluwadamilare Adeyemi-Okonkwo';
+
 /// The week the previews share: Saturday 24 October 2026, four mornings
 /// kept before it (Tuesday to Friday), Monday quiet, Sunday to come.
 const previewWeek = <WeekDay>[
@@ -33,8 +40,16 @@ const previewWeek = <WeekDay>[
 /// with only a prompt and the essentials. They return on Home as door
 /// cards. For the review only, not the production screen.
 class CheckinPreviewScreen extends StatelessWidget {
-  const CheckinPreviewScreen({super.key, this.week = previewWeek, this.streak = 4, this.outOfSight = 23});
+  const CheckinPreviewScreen({
+    super.key,
+    this.name = previewName,
+    this.week = previewWeek,
+    this.streak = 4,
+    this.outOfSight = 23,
+  });
 
+  /// The user's display name; null shows the greeting alone.
+  final String? name;
   final List<WeekDay> week;
   final int streak;
   final int outOfSight;
@@ -51,10 +66,14 @@ class CheckinPreviewScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Greeting(
-                  title: 'Good morning',
+                Greeting(
+                  greeting: 'Good morning',
+                  name: name,
                   subtitle: 'Saturday, 24 October',
-                  trailing: RoundGlyphButton(glyph: CurreGlyphKind.curreSettings, semanticLabel: 'Curre settings'),
+                  trailing: const RoundGlyphButton(
+                    glyph: CurreGlyphKind.curreSettings,
+                    semanticLabel: 'Curre settings',
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s6),
                 WeekStrip(days: week),

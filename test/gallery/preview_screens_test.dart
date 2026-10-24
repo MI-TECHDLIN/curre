@@ -15,10 +15,13 @@ const _phones = {'390x844': Size(390, 844), '360x740': Size(360, 740)};
 
 final _screens = <String, Widget Function()>{
   'check-in': () => const CheckinPreviewScreen(),
+  'check-in, no name': () => const CheckinPreviewScreen(name: null),
+  'check-in, long name': () => const CheckinPreviewScreen(name: longPreviewName),
   'reveal': () => const RevealPreviewScreen(),
   'reveal, long plan': () => const RevealPreviewScreen(plan: longPlan),
   'home': () => const HomePreviewScreen(),
   'home, long plan': () => const HomePreviewScreen(plan: longPlan),
+  'home, long plan and long name': () => const HomePreviewScreen(plan: longPlan, name: longPreviewName),
   'gate': () => const GatePreviewScreen(),
   'gate, long app name': () => const GatePreviewScreen(app: 'Samsung Health Monitor'),
   'wait': () => const WaitPreviewScreen(),
@@ -55,7 +58,7 @@ void main() {
 
   testWidgets('the check-in carries the real copy and the streak', (tester) async {
     await _pumpScreen(tester, const CheckinPreviewScreen(), const Size(390, 844), Brightness.light);
-    expect(find.text('Good morning'), findsOneWidget);
+    expect(find.text('Good morning, $previewName'), findsOneWidget);
     expect(find.text('What’s this morning for?'), findsOneWidget);
     expect(find.text('4 days in a row'), findsOneWidget);
     expect(find.text('23 out of sight'), findsOneWidget);

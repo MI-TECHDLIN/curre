@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 import '../../design/design.dart';
+import 'checkin_preview_screen.dart' show previewName;
 import 'parts.dart';
 import 'plan_sample.dart';
 
@@ -16,8 +17,16 @@ import 'plan_sample.dart';
 /// joins them with its ember ring draining. No mascot. For the review
 /// only.
 class HomePreviewScreen extends StatelessWidget {
-  const HomePreviewScreen({super.key, this.plan = demoPlan, this.showGrant = true, this.outOfSight = 23});
+  const HomePreviewScreen({
+    super.key,
+    this.name = previewName,
+    this.plan = demoPlan,
+    this.showGrant = true,
+    this.outOfSight = 23,
+  });
 
+  /// The user's display name; null shows the greeting alone.
+  final String? name;
   final PlanSample plan;
   final bool showGrant;
   final int outOfSight;
@@ -36,10 +45,14 @@ class HomePreviewScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Greeting(
-                  title: 'Good morning',
+                Greeting(
+                  greeting: 'Good morning',
+                  name: name,
                   subtitle: 'Saturday, 24 October',
-                  trailing: RoundGlyphButton(glyph: CurreGlyphKind.curreSettings, semanticLabel: 'Curre settings'),
+                  trailing: const RoundGlyphButton(
+                    glyph: CurreGlyphKind.curreSettings,
+                    semanticLabel: 'Curre settings',
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s6),
                 PlanCard(plan: plan),
