@@ -25,6 +25,11 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Phone-owned models, sessions, visibility, grants, the typed backend client
   and local persistence live in `lib/core/`; its client reads
   `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`.
+- The check-in card's water is core `DayProgress` (`lib/core/progress.dart`),
+  which counts `DoorUse`s: a screen that opens a plan's app must call
+  `CurreLocalStore.recordDoorUse`, or the water never rises. Motion (Peek,
+  `LiveSky`, `RisingWater`) belongs to the check-in and moments of choice,
+  never Home, and must hold still under reduce-motion.
 - clocked-sdk 0.7.0 response shapes are easy to get wrong: Decide answers
   are under `result["answers"]` (a `choice` answer's label is `["choice"]`,
   a `multiselect` answer's labels are `["selected"]`); Fill and Extract

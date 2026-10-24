@@ -95,7 +95,7 @@ IconData? curreGlyphIcon(CurreGlyphKind kind) => switch (kind) {
   CurreGlyphKind.back => SolarIconsBold.arrowLeft,
   CurreGlyphKind.go => SolarIconsBold.arrowRight,
   CurreGlyphKind.streak => SolarIconsBold.sun,
-  CurreGlyphKind.water => SolarIconsBold.waterdrop,
+  CurreGlyphKind.water => SolarIconsBold.water,
   CurreGlyphKind.cloudDay => SolarIconsBold.cloud,
   CurreGlyphKind.kindUnclear || CurreGlyphKind.guardFlagged || CurreGlyphKind.info => null,
 };

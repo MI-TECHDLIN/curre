@@ -86,7 +86,7 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionHeading('Colour'),
           const _ColorTokens(),
           const _SectionGap(),
-          const _SectionHeading('Session skies and grounds'),
+          const _SectionHeading('Session skies, grounds and water'),
           const _Skies(),
           const _SectionGap(),
           const _SectionHeading('Outcome tints'),
@@ -333,6 +333,7 @@ class _Skies extends StatelessWidget {
             for (final s in Session.values) ...[
               _Swatch(label: '${s.name} sky + on-sky', pair: c.sky(s)),
               _Swatch(label: '${s.name} ground', pair: Pair(c.ground(s), c.sky(s).fg)),
+              _Swatch(label: '${s.name} water + crest', pair: c.water(s)),
             ],
           ],
         );

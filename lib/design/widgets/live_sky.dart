@@ -330,7 +330,7 @@ class LiveSkyPainter extends CustomPainter {
     required int bumps,
     double scale = 1,
   }) {
-    final h = math.min(lane.height, 30.0) * scale;
+    final h = math.min(lane.height, 28.0) * scale;
     if (h < 9) return;
     final cw = h / .34;
     final x = ((v * laps + offset) % 1) * (size.width + cw) - cw;
@@ -349,7 +349,8 @@ class LiveSkyPainter extends CustomPainter {
   }) {
     final side = lanes.side;
     const sway = 8.0;
-    final cw = math.min(side.width - 2 * sway - 16, lanes.size.width * width);
+    // Clouds keep a cloud's size on a wide card: at most 128 dp across.
+    final cw = math.min(math.min(side.width - 2 * sway - 16, lanes.size.width * width), 128.0);
     if (cw < 48) return;
     final h = cw * .34;
     final x = side.left + (side.width - cw) / 2 + sway * math.sin(_tau * v * 2);
