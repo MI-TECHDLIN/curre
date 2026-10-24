@@ -3,10 +3,11 @@
 This file is the project's committed home for project-intrinsic agent knowledge: build, test, release, architecture, and sharp-edge notes that should travel with the code.
 
 - The Android launcher channel contract lives in
-  `android/app/src/main/kotlin/com/example/curre/MainActivity.kt`; its Dart
+  `android/app/src/main/kotlin/com/mitech/curre/MainActivity.kt`; its Dart
   adapter and pure door-order policy live in `lib/doors/`.
-- Keep the Android package as `com.example.curre` until the separate package
-  naming decision is made.
+- The permanent Android namespace and application ID are `com.mitech.curre`.
+- Screen-facing notification, speech-input and Home-refresh plumbing lives in
+  `lib/platform/`.
 - Validate Flutter changes with `flutter analyze` and `flutter test`.
 - The backend (`/v1/plan`, `/v1/unlock` over one `clocked-sdk` Pipeline call
   each) lives in `server/`; see `server/README.md` for setup, tests and the

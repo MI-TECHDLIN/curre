@@ -1,6 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Curre's notification channel never vibrates. Remove the plugin default. -->
+    <uses-permission
+        android:name="android.permission.VIBRATE"
+        tools:node="remove"/>
     <application
-        android:label="curre"
+        android:label="Curre"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -30,6 +36,13 @@
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
+        <!-- Delivers inexact grant-expiry nudges. They are rebuilt from stored
+             grants when Curre next runs, so no notification boot receiver is
+             needed. Android retains the default HOME choice across reboot and
+             starts the activity through the HOME filter above. -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -49,6 +62,9 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH"/>
         </intent>
     </queries>
 </manifest>
