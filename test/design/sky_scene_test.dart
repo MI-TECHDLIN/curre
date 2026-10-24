@@ -41,4 +41,35 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('a living sky with water draws for every session in both themes', (tester) async {
+    for (final brightness in Brightness.values) {
+      for (final session in Session.values) {
+        await tester.pumpWidget(
+          _host(
+            SkyScene(
+              session: session,
+              groundHeight: 72,
+              live: true,
+              keepClear: const Rect.fromLTWH(20, 24, 180, 80),
+              water: .4,
+              waterFrom: .1,
+              waterLabel: 'Today so far',
+            ),
+            brightness: brightness,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+        expect(tester.takeException(), isNull);
+        expect(find.byType(LiveSky), findsOneWidget);
+        expect(find.byType(RisingWater), findsOneWidget);
+      }
+    }
+  });
+
+  testWidgets('a plain sky has neither', (tester) async {
+    await tester.pumpWidget(_host(const SkyScene(session: Session.morning)));
+    expect(find.byType(LiveSky), findsNothing);
+    expect(find.byType(RisingWater), findsNothing);
+  });
 }

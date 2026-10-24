@@ -7,9 +7,9 @@ import 'package:solar_icons/solar_icons.dart';
 /// semantic, so screens ask for a meaning ("kind: person", "out of
 /// sight") and never for a Solar name; the mapping lives here alone.
 ///
-/// Covers the report's full list of 31 glyphs plus [streak]: sessions,
-/// visibility, doors and reasons, gate states and utilities. There is
-/// still no padlock (friction, not a lock).
+/// Covers the report's full list of 31 glyphs plus [streak], [water] and
+/// [cloudDay]: sessions, visibility, doors and reasons, gate states and
+/// utilities. There is still no padlock (friction, not a lock).
 ///
 /// A few Solar Bold glyphs lose an inner cut-out in the `solar_icons`
 /// 0.2.0 font (the question mark, the info dot, the warning shield's
@@ -57,6 +57,10 @@ enum CurreGlyphKind {
   // Outside the report's 31: the kept-day mark of the streak the captain
   // added (2026-10-24). Its counting rules come from a separate audit.
   streak,
+  // Also outside the 31: today's water (the check-in card's progress) and
+  // the streak's cloud day (proof audit §3, rule 7).
+  water,
+  cloudDay,
 }
 
 /// The Solar Bold glyph behind each stock kind; `null` for the three
@@ -91,6 +95,8 @@ IconData? curreGlyphIcon(CurreGlyphKind kind) => switch (kind) {
   CurreGlyphKind.back => SolarIconsBold.arrowLeft,
   CurreGlyphKind.go => SolarIconsBold.arrowRight,
   CurreGlyphKind.streak => SolarIconsBold.sun,
+  CurreGlyphKind.water => SolarIconsBold.waterdrop,
+  CurreGlyphKind.cloudDay => SolarIconsBold.cloud,
   CurreGlyphKind.kindUnclear || CurreGlyphKind.guardFlagged || CurreGlyphKind.info => null,
 };
 

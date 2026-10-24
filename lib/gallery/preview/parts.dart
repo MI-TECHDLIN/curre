@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 import '../../core/models.dart' show Settings;
+import '../../core/progress.dart' show DayProgress;
 import '../../design/design.dart';
 
 // Shared parts for the review-only screen previews. Every measure sits on
@@ -138,7 +141,9 @@ class RoundGlyphButton extends StatelessWidget {
 /// date, and one round button. With no name it is the greeting alone, never
 /// a dangling comma. A long name never overflows: the line steps down from
 /// 30 to 26, then wraps onto a second line, then steps down to 22 and ends
-/// in an ellipsis, measured at the phone's own text scale.
+/// in an ellipsis, measured at the phone's own text scale. The size is the
+/// one at which every session's greeting fits with this name, so it does
+/// not change between the morning and the afternoon.
 class Greeting extends StatelessWidget {
   const Greeting({super.key, required this.greeting, this.name, required this.subtitle, this.trailing});
 
@@ -159,11 +164,15 @@ class Greeting extends StatelessWidget {
   /// Font size, line height and line count, tried in order.
   static const _fits = <(double, double, int)>[(30, 36, 1), (26, 32, 1), (26, 32, 2), (22, 28, 2)];
 
+  /// The three session greetings; the longest sets the size.
+  static const sessionGreetings = ['Good morning', 'Good afternoon', 'Good evening'];
+
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
     final text = compose(greeting, name);
+    final sized = {text, for (final g in sessionGreetings) compose(g, name)};
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -172,19 +181,26 @@ class Greeting extends StatelessWidget {
             builder: (context, box) {
               final scaler = MediaQuery.textScalerOf(context);
               var fit = _fits.last;
+              bool fitsAll((double, double, int) candidate) {
+                for (final line in sized) {
+                  final painter = TextPainter(
+                    text: TextSpan(
+                      text: line,
+                      style: t.headline.copyWith(fontSize: candidate.$1, height: candidate.$2 / candidate.$1),
+                    ),
+                    maxLines: candidate.$3,
+                    textDirection: TextDirection.ltr,
+                    textScaler: scaler,
+                  )..layout(maxWidth: box.maxWidth);
+                  final fits = !painter.didExceedMaxLines;
+                  painter.dispose();
+                  if (!fits) return false;
+                }
+                return true;
+              }
+
               for (final candidate in _fits) {
-                final painter = TextPainter(
-                  text: TextSpan(
-                    text: text,
-                    style: t.headline.copyWith(fontSize: candidate.$1, height: candidate.$2 / candidate.$1),
-                  ),
-                  maxLines: candidate.$3,
-                  textDirection: TextDirection.ltr,
-                  textScaler: scaler,
-                )..layout(maxWidth: box.maxWidth);
-                final fits = !painter.didExceedMaxLines;
-                painter.dispose();
-                if (fits) {
+                if (fitsAll(candidate)) {
                   fit = candidate;
                   break;
                 }
@@ -218,11 +234,15 @@ class Greeting extends StatelessWidget {
 
 /// How a day reads in the [WeekStrip].
 enum DayState {
-  /// That day's plan was kept: a sun rose (ember).
-  kept,
+  /// A proof day: a task with proof raised that day's sun (ember ring).
+  proof,
 
-  /// A past day without a kept plan: plain. Never red, never crossed out.
+  /// A past day without proof: plain. Never red, never crossed out.
   quiet,
+
+  /// An empty day a cloud day covered: a soft cloud, adding nothing to the
+  /// count (proof audit §3, rule 7).
+  cloud,
 
   /// Today, still open: the session's sky, as the check-in card is.
   today,
@@ -240,11 +260,12 @@ class WeekDay {
   final DayState state;
 }
 
-/// The Mombo week strip, carrying Curre's streak: past days whose plan
-/// was kept are lit ember (a sun rose), today wears the session's sky
-/// like the check-in card below it, and a quiet day is simply unlit.
-/// [todayLit] (0–1) turns today from open to kept, for the moment a plan
-/// is kept. Display only in core: the days are not buttons.
+/// The Mombo week strip, carrying Curre's Prooflight streak: past proof
+/// days wear an ember ring (a sun rose), a day a cloud day covered wears a
+/// soft cloud, today wears the session's sky like the check-in card below
+/// it, and a quiet day is simply unlit. [todayLit] (0–1) turns today from
+/// open to a proof day, for the moment today's sun rises. Display only in
+/// core: the days are not buttons.
 class WeekStrip extends StatelessWidget {
   const WeekStrip({super.key, required this.days, this.session = Session.morning, this.todayLit = 0});
 
@@ -312,12 +333,15 @@ class _DayDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = colors;
-    // A kept day wears an ember ring (a sun that rose), quiet enough that
+    if (day.state == DayState.cloud) {
+      return CloudDayMark(size: diameter, label: '${day.date}', semanticLabel: 'Cloud day');
+    }
+    // A proof day wears an ember ring (a sun that rose), quiet enough that
     // the check-in card below stays the loudest thing on the screen.
-    final kept = BorderSide(color: c.ember, width: 2.5);
+    final proof = BorderSide(color: c.ember, width: 2.5);
     final (Color fill, Color fg, BorderSide side) = switch (day.state) {
-      DayState.kept => (c.raised, c.ink, kept),
-      DayState.quiet => (c.raised, c.ink2, BorderSide(color: c.hairline)),
+      DayState.proof => (c.raised, c.ink, proof),
+      DayState.cloud || DayState.quiet => (c.raised, c.ink2, BorderSide(color: c.hairline)),
       DayState.future => (Colors.transparent, c.ink3, BorderSide(color: c.hairline)),
       DayState.today => (
         Color.lerp(sky.bg, c.raised, lit)!,
@@ -373,47 +397,92 @@ class SectionLabel extends StatelessWidget {
   }
 }
 
-/// "4 days in a row", with the kept-day sun.
-class StreakCount extends StatelessWidget {
-  const StreakCount({super.key, required this.days});
-
-  final int days;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Theme.of(context).extension<CurreColors>()!;
-    final t = Theme.of(context).extension<CurreType>()!;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CurreGlyph(CurreGlyphKind.streak, size: 20, color: c.ember),
-        const SizedBox(width: 4),
-        Text('$days days in a row', style: t.label.copyWith(fontSize: 14, color: c.ink2)),
-      ],
-    );
-  }
-}
-
 /// The check-in card, descended from Mombo's: one question in the
-/// session's sky, Peek on Curre's horizon where Mombo has its sun over the
-/// hills. Peek stays still here (this sits on Home at a session's start).
+/// session's own living sky, Peek on Curre's horizon where Mombo has its
+/// sun over the hills, and today's water in the ground below the line.
+///
+/// Each session has its own sky ([LiveSky]: first light, the clear
+/// afternoon, the blue hour) and its own height for Peek (design report §5:
+/// lower in the morning, higher at noon, lower in the evening). [progress]
+/// fills the ground with water: today's plans so far (core
+/// `DayProgress`), rising from [progressFrom] (what the user last saw) with
+/// a slosh as the card appears. [progressLabel] says what the water
+/// measures, in Curre's words. [animate] off gives the still frame that
+/// reduced motion also gets.
 class CheckinCard extends StatelessWidget {
-  const CheckinCard({super.key, required this.session, required this.question, required this.hint, this.height = 280});
+  const CheckinCard({
+    super.key,
+    required this.session,
+    required this.question,
+    required this.hint,
+    this.progress,
+    this.progressFrom,
+    this.progressLabel,
+    this.height = 308,
+    this.animate = true,
+  });
 
   final Session session;
   final String question;
   final String hint;
+  final double? progress;
+  final double? progressFrom;
+  final String? progressLabel;
   final double height;
+  final bool animate;
+
+  /// Ground below the horizon: deep enough for the water to visibly rise.
+  static const ground = 84.0;
+
+  /// What today's water says it measures, in Curre's words.
+  static String waterLabel(DayProgress day) => switch ((day.plans, day.doorsUsed)) {
+    (0, _) => 'Today · nothing yet',
+    (1, 0) => 'Today · 1 plan',
+    (final plans, 0) => 'Today · $plans plans',
+    (_, 1) => 'Today · 1 door used',
+    (_, final doors) => 'Today · $doors doors used',
+  };
+
+  /// Where Peek stands for each session: across the card, and how far its
+  /// body has risen over the line.
+  static (double, double) peekPlace(Session session) => switch (session) {
+    Session.morning => (.76, .64),
+    Session.afternoon => (.74, 1.0),
+    Session.evening => (.79, .5),
+  };
+
+  /// The box the question and hint take up on a card [w] wide, measured at
+  /// the phone's text scale, so the sky's moving shapes can keep out of it.
+  Rect _wordsBox(BuildContext context, double w, TextStyle questionStyle, TextStyle hintStyle) {
+    final scaler = MediaQuery.textScalerOf(context);
+    Size measure(String text, TextStyle style, double maxWidth) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+      )..layout(maxWidth: maxWidth);
+      final size = painter.size;
+      painter.dispose();
+      return size;
+    }
+
+    final q = measure(question, questionStyle, w * .64);
+    final h = measure(hint, hintStyle, w * .66);
+    return Rect.fromLTWH(20, 24, math.max(q.width, h.width), q.height + 8 + h.height);
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
     final sky = c.sky(session);
+    final (sunAt, sunRise) = peekPlace(session);
+    final questionStyle = t.title.copyWith(fontSize: 26, height: 32 / 26, color: sky.fg).weight(720);
+    final hintStyle = t.body.copyWith(fontSize: 15, height: 20 / 15, color: sky.fg.withValues(alpha: .86));
     return LayoutBuilder(
       builder: (context, box) {
         final w = box.maxWidth;
-        const ground = 52.0;
+        final words = _wordsBox(context, w, questionStyle, hintStyle);
         // The card is at least [height] and grows with its words (large
         // system text), keeping the horizon a fixed distance from the
         // bottom so the words never reach the ground.
@@ -425,9 +494,16 @@ class CheckinCard extends StatelessWidget {
                 child: SkyScene(
                   session: session,
                   groundHeight: ground,
-                  sunAt: .77,
+                  sunAt: sunAt,
                   sunSize: (w * .36).clamp(104.0, 128.0),
-                  sunRise: .74,
+                  sunRise: sunRise,
+                  animatePeek: animate,
+                  live: true,
+                  animate: animate,
+                  keepClear: words,
+                  water: progress,
+                  waterFrom: progressFrom,
+                  waterLabel: progressLabel,
                 ),
               ),
               Padding(
@@ -438,22 +514,28 @@ class CheckinCard extends StatelessWidget {
                   children: [
                     ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: w * .64),
-                      child: Text(
-                        question,
-                        style: t.title.copyWith(fontSize: 26, height: 32 / 26, color: sky.fg).weight(720),
-                      ),
+                      child: Text(question, style: questionStyle),
                     ),
                     const SizedBox(height: 8),
                     ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: w * .66),
-                      child: Text(
-                        hint,
-                        style: t.body.copyWith(fontSize: 15, height: 20 / 15, color: sky.fg.withValues(alpha: .86)),
-                      ),
+                      child: Text(hint, style: hintStyle),
                     ),
                   ],
                 ),
               ),
+              if (progressLabel != null)
+                Positioned(
+                  left: 16,
+                  right: w * .3,
+                  bottom: (ground - 24) / 2 - 1,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: ExcludeSemantics(
+                      child: MetaPill(text: progressLabel!, glyph: CurreGlyphKind.water),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

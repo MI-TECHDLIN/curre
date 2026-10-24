@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../design/design.dart';
@@ -5,6 +7,7 @@ import 'preview/checkin_preview_screen.dart';
 import 'preview/gate_preview_screen.dart';
 import 'preview/home_preview_screen.dart';
 import 'preview/onboarding_preview_screen.dart';
+import 'preview/parts.dart' show CheckinCard;
 import 'preview/phone_frame.dart';
 import 'preview/plan_sample.dart';
 import 'preview/reveal_preview_screen.dart';
@@ -34,7 +37,15 @@ class DesignGalleryScreen extends StatelessWidget {
             'Not the production Home, check-in, gate or onboarding: those are a separate task.',
           ),
           const _SectionHeading('Check-in, at the start of a morning'),
+          const _Note('Today’s water is still low: nothing has run yet.'),
           PhoneFramePair(builder: (context) => const CheckinPreviewScreen()),
+          const _SectionGap(),
+          const _SectionHeading('Check-in, the afternoon'),
+          const _Note('The morning’s two doors filled a third of the day; the water rises to it as the card opens.'),
+          PhoneFramePair(builder: (context) => const CheckinPreviewScreen(session: Session.afternoon)),
+          const _SectionGap(),
+          const _SectionHeading('Check-in, the evening'),
+          PhoneFramePair(builder: (context) => const CheckinPreviewScreen(session: Session.evening)),
           const _SectionGap(),
           const _SectionHeading('Check-in, what Curre read'),
           PhoneFramePair(builder: (context) => const RevealPreviewScreen()),
@@ -51,8 +62,8 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionHeading('Onboarding, step 1 of 6'),
           PhoneFramePair(builder: (context) => const OnboardingPreviewScreen()),
           const _SectionGap(),
-          const _SectionHeading('Streak moment, a morning kept'),
-          const _Note('Plays, holds, rests and replays. Duolingo’s rhythm, Curre’s own sun.'),
+          const _SectionHeading('Prooflight moment, today’s sun rises'),
+          const _Note('Plays, holds, rests and replays. Duolingo’s rhythm, Curre’s own sun, with no face.'),
           PhoneFramePair(builder: (context) => const StreakMomentScreen()),
           const _SectionGap(),
           const _SectionHeading('Detail pass: 360 dp, a long plan'),
@@ -123,6 +134,15 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionGap(),
           const _SectionHeading('PeekMascot'),
           const _PeekMascotDemo(),
+          const _SectionGap(),
+          const _SectionHeading('LiveSky'),
+          const _LiveSkies(),
+          const _SectionGap(),
+          const _SectionHeading('RisingWater'),
+          const _RisingWaterDemo(),
+          const _SectionGap(),
+          const _SectionHeading('Prooflight'),
+          const _ProoflightDemo(),
           const _SectionGap(),
         ],
       ),
@@ -845,6 +865,167 @@ class _PeekMascotDemo extends StatelessWidget {
               'Check-in and onboarding only, never Home with a plan, never the gate.',
               style: t.meta,
             ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _LiveSkies extends StatelessWidget {
+  const _LiveSkies();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      stacked: true,
+      builder: (context) {
+        final t = Theme.of(context).extension<CurreType>()!;
+        return Column(
+          children: [
+            for (final s in Session.values) ...[
+              SizedBox(
+                height: 160,
+                child: SkyScene(
+                  session: s,
+                  groundHeight: 40,
+                  sunSize: 88,
+                  sunAt: CheckinCard.peekPlace(s).$1,
+                  sunRise: CheckinCard.peekPlace(s).$2,
+                  live: true,
+                  animatePeek: true,
+                  keepClear: const Rect.fromLTWH(16, 16, 150, 20),
+                  padding: const EdgeInsets.all(CurreSpace.s4),
+                  child: Text(switch (s) {
+                    Session.morning => 'morning · first light',
+                    Session.afternoon => 'afternoon · clear and bright',
+                    Session.evening => 'evening · the blue hour',
+                  }, style: t.caption.copyWith(color: Theme.of(context).extension<CurreColors>()!.sky(s).fg)),
+                ),
+              ),
+              const SizedBox(height: CurreSpace.s2),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Water that rises a step every few seconds, sloshing each time, then
+/// drains back to start again.
+class _RisingWaterDemo extends StatefulWidget {
+  const _RisingWaterDemo();
+
+  @override
+  State<_RisingWaterDemo> createState() => _RisingWaterDemoState();
+}
+
+class _RisingWaterDemoState extends State<_RisingWaterDemo> {
+  static const _steps = [0.0, 1 / 3, .56, 1.0];
+  int _step = 0;
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 3200), (_) {
+      if (mounted) setState(() => _step = (_step + 1) % _steps.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      builder: (context) {
+        final c = Theme.of(context).extension<CurreColors>()!;
+        final t = Theme.of(context).extension<CurreType>()!;
+        final brightness = Theme.of(context).brightness;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final s in Session.values) ...[
+              ClipRRect(
+                borderRadius: CurreShape.md,
+                child: ColoredBox(
+                  color: c.ground(s),
+                  child: SizedBox(
+                    height: 64,
+                    child: RisingWater(level: _steps[_step], style: SkyScene.waterStyle(c, brightness, s)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: CurreSpace.s2),
+            ],
+            Text('level ${(_steps[_step] * 100).round()}% · one input, rising with a slosh', style: t.meta),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ProoflightDemo extends StatelessWidget {
+  const _ProoflightDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      stacked: true,
+      builder: (context) {
+        final c = Theme.of(context).extension<CurreColors>()!;
+        final t = Theme.of(context).extension<CurreType>()!;
+        Widget sun(int rays, int days, String label) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ProoflightSun(rays: rays, proofDays: days, size: 88, lineColor: c.ink),
+            const SizedBox(height: CurreSpace.s1),
+            Text(label, style: t.meta),
+          ],
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: CurreSpace.s4,
+              runSpacing: CurreSpace.s3,
+              children: [
+                sun(0, 4, 'not yet today'),
+                sun(1, 5, '1 proved task'),
+                sun(3, 5, '3 proved tasks'),
+                sun(3, 7, '7 days: sparks'),
+                sun(4, 21, '21 days: a ring'),
+                sun(5, 50, '50 days: two rings'),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s4),
+            const Wrap(
+              spacing: CurreSpace.s6,
+              runSpacing: CurreSpace.s3,
+              children: [
+                ProofDaysLabel(days: 4),
+                ProofDaysLabel(days: 5, raysToday: 1),
+                ProofDaysLabel(days: 12, raysToday: 2, cloudDay: true),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s4),
+            Row(
+              children: [
+                const CloudDayMark(label: '21'),
+                const SizedBox(width: CurreSpace.s3),
+                Expanded(
+                  child: Text('A cloud day covers one empty day: it keeps the run and adds nothing.', style: t.caption),
+                ),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s4),
+            const RunEndedNote(endedAt: 12, best: 12, total: 31),
           ],
         );
       },

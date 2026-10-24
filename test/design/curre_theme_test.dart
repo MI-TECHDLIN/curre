@@ -63,10 +63,20 @@ void main() {
     }
   });
 
+  test('every session\'s water stands apart from its ground, with a visible crest', () {
+    for (final c in [CurreColors.light, CurreColors.dark]) {
+      for (final s in Session.values) {
+        expect(_contrast(c.water(s).bg, c.ground(s)), greaterThanOrEqualTo(1.4), reason: '$s water on its ground');
+        expect(_contrast(c.water(s).fg, c.water(s).bg), greaterThanOrEqualTo(2.5), reason: '$s crest on its water');
+      }
+    }
+  });
+
   test('CurreColors.lerp interpolates every field without throwing', () {
     final lerped = CurreColors.light.lerp(CurreColors.dark, .5);
     expect(lerped.skies.length, Session.values.length);
     expect(lerped.grounds.length, Session.values.length);
+    expect(lerped.waters.length, Session.values.length);
     expect(lerped.outcomes.length, CurreColors.light.outcomes.length);
     expect(lerped.links.length, CurreColors.light.links.length);
   });

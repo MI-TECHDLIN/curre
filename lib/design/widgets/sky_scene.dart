@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
+import 'live_sky.dart';
 import 'peek_mascot.dart';
+import 'rising_water.dart';
 
 /// What sits on a [SkyScene]'s horizon.
 enum SkySun {
@@ -33,6 +35,13 @@ enum SkySun {
 /// sky is fog grey above a rising band of session colour that grows from
 /// the line upward (the Duolingo streak's colour flood, slowed and grown
 /// from the horizon). [lit], [rays] and [eyesOpen] pass through to Peek.
+///
+/// [live] turns the flat sky into the session's living scene ([LiveSky]:
+/// morning first light, the clear afternoon, the evening's blue hour), and
+/// [water] fills the ground with [RisingWater] up to that level (0–1),
+/// rising from [waterFrom] when it first appears, with the light of the sun
+/// or the moon on it. Both only move where motion is welcome (the check-in
+/// card, a moment of choice), never on Home.
 class SkyScene extends StatelessWidget {
   const SkyScene({
     super.key,
@@ -50,6 +59,12 @@ class SkyScene extends StatelessWidget {
     this.eyesOpen = 1,
     this.borderRadius = CurreShape.lg,
     this.padding = const EdgeInsets.all(20),
+    this.live = false,
+    this.animate = true,
+    this.keepClear,
+    this.water,
+    this.waterFrom,
+    this.waterLabel,
     this.child,
   });
 
@@ -71,6 +86,22 @@ class SkyScene extends StatelessWidget {
   final double eyesOpen;
   final BorderRadius borderRadius;
   final EdgeInsets padding;
+  final bool live;
+
+  /// Whether the living sky and the water move; off gives the still frame
+  /// that reduced motion also gets.
+  final bool animate;
+
+  /// Where [child]'s words sit, so the living sky's clouds, birds and
+  /// stars never cross them.
+  final Rect? keepClear;
+
+  /// The ground's water level, 0–1, or null for a plain ground.
+  final double? water;
+  final double? waterFrom;
+
+  /// What the water measures, for screen readers.
+  final String? waterLabel;
 
   /// Content laid over the sky (a question, a plan), inside [padding].
   final Widget? child;
@@ -89,6 +120,7 @@ class SkyScene extends StatelessWidget {
           final w = box.maxWidth;
           final h = box.maxHeight;
           final lineY = groundHeight != null ? (h - groundHeight!).roundToDouble() : (h * horizon).roundToDouble();
+          final (sunCenter, sunRadius) = _sunBody(w, lineY);
           return Stack(
             clipBehavior: Clip.hardEdge,
             children: [
@@ -104,6 +136,32 @@ class SkyScene extends StatelessWidget {
                   ),
                 ),
               ),
+              if (live)
+                Positioned.fill(
+                  child: LiveSky(
+                    session: session,
+                    lineY: lineY,
+                    sunCenter: sunCenter,
+                    sunRadius: sunRadius,
+                    keepClear: keepClear,
+                    flood: f,
+                    animate: animate,
+                  ),
+                ),
+              if (water != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: lineY + CurreSpace.horizon / 2,
+                  bottom: 0,
+                  child: RisingWater(
+                    level: water!,
+                    from: waterFrom,
+                    animate: animate,
+                    style: waterStyle(c, Theme.of(context).brightness, session, sunAt: sunAt),
+                    semanticLabel: waterLabel,
+                  ),
+                ),
               if (sun != SkySun.none)
                 Positioned.fill(
                   child: ClipRect(
@@ -127,6 +185,43 @@ class SkyScene extends StatelessWidget {
         },
       ),
     );
+  }
+
+  /// The look of [session]'s water: the sun's warm glitter under a low
+  /// morning sun at [sunAt], sparkles under the high afternoon sun, the
+  /// moon's pale column in the evening.
+  static WaterStyle waterStyle(CurreColors c, Brightness brightness, Session session, {double sunAt = .76}) {
+    final water = c.water(session);
+    final dark = brightness == Brightness.dark;
+    return WaterStyle(
+      body: water.bg,
+      back: Color.lerp(water.bg, water.fg, .3)!,
+      crest: water.fg,
+      glint: switch (session) {
+        Session.morning => dark ? const Color(0xFFFFC08A) : const Color(0xFFFFE7B3),
+        Session.afternoon => dark ? const Color(0xFFE6FAFF) : const Color(0xFFFFFFFF),
+        Session.evening => c.sky(Session.evening).fg,
+      },
+      glintKind: switch (session) {
+        Session.morning => WaterGlint.sun,
+        Session.afternoon => WaterGlint.sparkle,
+        Session.evening => WaterGlint.moon,
+      },
+      // The evening moon hangs at 88% across (LiveSky).
+      glintAt: session == Session.evening ? .88 : sunAt,
+    );
+  }
+
+  /// Centre and radius of the sun's body, for the light round it.
+  (Offset, double) _sunBody(double w, double lineY) {
+    if (sun == SkySun.none) return (Offset.zero, 0);
+    final scale = sunSize / 120;
+    if (sun == SkySun.peek) {
+      final top = lineY - (20 * scale + sunRise * 76 * scale);
+      return (Offset(w * sunAt, top + 58 * scale), 38 * scale);
+    }
+    final top = lineY - sunRise * sunSize;
+    return (Offset(w * sunAt, top + sunSize / 2), sunSize / 2);
   }
 
   Widget _sun(CurreColors c, double w, double lineY) {

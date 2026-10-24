@@ -13,8 +13,8 @@ void main() {
     expect(find.byType(CurreGlyph), findsNWidgets(CurreGlyphKind.values.length));
   });
 
-  test('covers the report\'s 31 glyphs plus the streak mark', () {
-    expect(CurreGlyphKind.values.length, 32);
+  test('covers the report\'s 31 glyphs plus the streak, water and cloud-day marks', () {
+    expect(CurreGlyphKind.values.length, 34);
   });
 
   test('every kind is a Solar Bold glyph except the three composed ones', () {

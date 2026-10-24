@@ -5,29 +5,29 @@ import 'checkin_preview_screen.dart';
 import 'parts.dart';
 import 'plan_sample.dart';
 
-/// The one streak moment the captain asked for (2026-10-24): the screen
-/// that greets you when a morning's plan was kept. Curre now keeps a
-/// streak for plans with real proof they were done; the counting rules
-/// come from a separate audit and are not invented here, so this shows
-/// the feeling only.
+/// The Prooflight moment (proof audit §4): the first task of the Curre day
+/// with real proof raises today's sun and adds a proof day. Here Chidi is
+/// back from YouTube and said what changed; the note was specific, so it
+/// counts. The rules that decide that live elsewhere: this shows the
+/// moment only.
 ///
 /// It borrows Duolingo's mechanics of delight, beat by beat, and re-grows
 /// each one from Curre's own world:
 ///
-/// | Duolingo (the two recordings)           | Curre                                                  |
-/// | --------------------------------------- | ------------------------------------------------------ |
-/// | grey, dormant flame and grey "29"       | a grey sun asleep on the horizon, eyes shut, no rays   |
-/// | the flame squashes, fills orange        | the sun rises and takes its ember as it clears the line |
-/// | 0.1 s full-screen orange flood          | the morning sky floods up from the horizon in 650 ms   |
-/// | the owl pops in with particles          | Peek's own rays pop out one by one, then its eyes open |
-/// | "29" ticks to "30"                      | "4" rolls to "5" days in a row                         |
-/// | XP chips stagger in                     | the doors you actually went through stagger in         |
-/// | the week's check marks                  | today's day in the week strip lights ember             |
+/// | Duolingo (the two recordings)           | Curre                                                   |
+/// | --------------------------------------- | ------------------------------------------------------- |
+/// | grey, dormant flame and grey "29"       | today's sun, grey, still below the horizon              |
+/// | the flame squashes, fills orange        | the sun rises over the line and takes its ember, 650 ms |
+/// | 0.1 s full-screen orange flood          | the morning sky floods up from the horizon in 650 ms    |
+/// | the owl pops in with particles          | the sun's first ray grows in: one ray per proved task   |
+/// | "29" ticks to "30"                      | "4" rolls to "5" proof days                             |
+/// | XP chips stagger in                     | the proof arrives: the door, then the user's own words  |
+/// | the week's check marks                  | today's day in the week strip rings ember               |
 ///
-/// No flame, no owl, no Duolingo green, nothing about a lost streak: a
-/// missed day is simply never celebrated. Reduced motion shows the end
-/// state. [progress] (0–1) freezes the moment at one point for renders
-/// and tests; otherwise it plays and, with [loop], replays after a rest.
+/// No flame, no owl, no Duolingo green, and no face on the sun: Peek never
+/// judges the evidence. Reduced motion shows the end state. [progress]
+/// (0–1) freezes the moment at one point for renders and tests; otherwise
+/// it plays and, with [loop], replays after a rest.
 class StreakMomentScreen extends StatefulWidget {
   const StreakMomentScreen({super.key, this.progress, this.loop = true, this.from = 4, this.plan = demoPlan});
 
@@ -39,6 +39,9 @@ class StreakMomentScreen extends StatefulWidget {
   /// The moment's own length; [loop] adds [rest] after it.
   static const length = Duration(milliseconds: 3600);
   static const rest = Duration(milliseconds: 1600);
+
+  /// The proof caption Extract copied from the completion note.
+  static const note = 'switched from G to C without looking';
 
   @override
   State<StreakMomentScreen> createState() => _StreakMomentScreenState();
@@ -96,25 +99,22 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
 
-    // Enter: the sleeping sun rises and lights up.
-    final rise = _beat(ms, 300, 720, CurreMotion.riseCurve);
-    final lit = _beat(ms, 300, 820);
+    // Enter: today's sun rises over the line (the audit's 650 ms).
+    final rise = _beat(ms, 300, 950, CurreMotion.riseCurve);
     // The sky floods up from the line (the sky token, 650 ms).
     final flood = _beat(ms, 520, 1170, CurreMotion.standard);
-    // Peek wakes: rays pop out, then the eyes open.
-    final rays = _beat(ms, 820, 1180);
-    final eyes = _beat(ms, 1060, 1260, Curves.easeOut);
-    // Hold, then settle: the count rolls, today lights, proof arrives.
+    // The first ray grows in (the rise token, 420 ms).
+    final ray = _beat(ms, 950, 1370);
+    // Hold, then settle: the count rolls, today lights, the proof arrives.
     final words = _beat(ms, 700, 1100);
     final tick = _beat(ms, 1300, 1460, Curves.easeOutCubic);
     final today = _beat(ms, 1380, 1740);
     final cta = _beat(ms, 2100, 2400);
-
-    final week = [for (final d in previewWeek) d];
+    final door = widget.plan.doors.first;
 
     return Column(
       children: [
-        const StatusBar(time: '07:00'),
+        const StatusBar(time: '07:12'),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, CurreSpace.s3, CurreSpace.gutter, CurreSpace.s4),
@@ -123,29 +123,48 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
               children: [
                 Opacity(
                   opacity: words,
-                  child: Text('Morning kept', style: t.headline),
+                  child: Text('Today’s sun is up', style: t.headline),
                 ),
                 const SizedBox(height: CurreSpace.s1),
                 Opacity(
                   opacity: words,
-                  child: Text(
-                    'Your plan ended at ${widget.plan.endsAt}, and you went through both doors.',
-                    style: t.body.copyWith(color: c.ink2),
-                  ),
+                  child: Text('Your note on the ${door.words} counts as proof.', style: t.body.copyWith(color: c.ink2)),
                 ),
                 const SizedBox(height: CurreSpace.s5),
                 SizedBox(
                   height: 232,
-                  child: SkyScene(
-                    session: Session.morning,
-                    horizon: .78,
-                    sunAt: .5,
-                    sunSize: 132,
-                    sunRise: .16 + rise * .62,
-                    flood: flood,
-                    lit: lit,
-                    rays: rays,
-                    eyesOpen: eyes,
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      final lineY = (232 * .78).roundToDouble();
+                      const sunSize = 196.0;
+                      final sunHeight = ProoflightSun.heightFor(sunSize);
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: SkyScene(
+                              session: Session.morning,
+                              sun: SkySun.none,
+                              horizon: .78,
+                              live: true,
+                              flood: flood,
+                            ),
+                          ),
+                          // The sun sits on the scene's own line.
+                          Positioned(
+                            left: (box.maxWidth - sunSize) / 2,
+                            top: lineY - sunHeight + 1.5,
+                            child: ProoflightSun(
+                              rays: 1,
+                              proofDays: widget.from + 1,
+                              size: sunSize,
+                              rise: rise,
+                              grow: ray,
+                              semanticLabel: 'Today’s sun, one ray: one task with proof',
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: CurreSpace.s5),
@@ -157,7 +176,7 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
                       to: widget.from + 1,
                       t: tick,
                       style: t.display
-                          .copyWith(fontSize: 60, height: 1, color: Color.lerp(c.ink3, c.ink, lit))
+                          .copyWith(fontSize: 60, height: 1, color: Color.lerp(c.ink3, c.ink, rise))
                           .weight(760),
                     ),
                     const SizedBox(width: CurreSpace.s3),
@@ -165,7 +184,7 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('days in a row', style: t.title.copyWith(fontSize: 20, height: 26 / 20)),
+                          Text('proof days', style: t.title.copyWith(fontSize: 20, height: 26 / 20)),
                           Text('Tuesday to Saturday', style: t.caption.copyWith(color: c.ink3)),
                         ],
                       ),
@@ -173,15 +192,12 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
                   ],
                 ),
                 const SizedBox(height: CurreSpace.s4),
-                WeekStrip(days: week, todayLit: today),
+                WeekStrip(days: previewWeek, todayLit: today),
                 const SizedBox(height: CurreSpace.s5),
-                for (final (i, door) in widget.plan.doors.indexed) ...[
-                  if (i > 0) const SizedBox(height: CurreSpace.s2),
-                  _arrive(
-                    _beat(ms, 1640 + i * 120.0, 2000 + i * 120.0, CurreMotion.riseCurve),
-                    _ProofChip(door: door, link: i + 1),
-                  ),
-                ],
+                _arrive(
+                  _beat(ms, 1640, 2000, CurreMotion.riseCurve),
+                  _ProofCard(door: door, link: 1, note: StreakMomentScreen.note),
+                ),
               ],
             ),
           ),
@@ -217,8 +233,9 @@ class _RollingCount extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final h = (style.fontSize ?? 60) * 1.1;
+    final shown = t >= .5 ? to : from;
     return Semantics(
-      label: '${t >= .5 ? to : from} days in a row',
+      label: ProofDaysLabel.text(shown),
       excludeSemantics: true,
       child: ClipRect(
         child: SizedBox(
@@ -241,35 +258,47 @@ class _RollingCount extends StatelessWidget {
   }
 }
 
-/// One door the plan actually used: the proof, in its link colour.
-class _ProofChip extends StatelessWidget {
-  const _ProofChip({required this.door, required this.link});
+/// The proof: the door the task went through, in its link colour, and the
+/// user's own words about what changed, as Extract copied them.
+class _ProofCard extends StatelessWidget {
+  const _ProofCard({required this.door, required this.link, required this.note});
 
   final DoorSample door;
   final int link;
+  final String note;
 
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
     final card = c.link(link).card;
-    final text = '${door.app}\u00A0→\u00A0${door.destination} “${door.words}”';
+    final text = '${door.app} → ${door.destination} “${door.words}”';
     final (s, e) = spanOf(text, '“${door.words}”');
     return Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.fromLTRB(CurreSpace.s3, CurreSpace.s2, CurreSpace.s4, CurreSpace.s2),
+      padding: const EdgeInsets.fromLTRB(CurreSpace.s3, CurreSpace.s3, CurreSpace.s4, CurreSpace.s3),
       decoration: BoxDecoration(color: card.bg, borderRadius: CurreShape.md),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CurreGlyph(CurreGlyphKind.check, size: 24, color: card.fg, semanticLabel: 'Used'),
+          CurreGlyph(CurreGlyphKind.check, size: 24, color: card.fg, semanticLabel: 'Proved'),
           const SizedBox(width: CurreSpace.s3),
           Expanded(
-            child: SpanText(
-              text,
-              style: t.label.copyWith(color: card.fg),
-              highlights: [SpanHighlight(s, e, style: t.youSmall.copyWith(color: card.fg))],
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SpanText(
+                  text,
+                  style: t.label.copyWith(color: card.fg),
+                  highlights: [SpanHighlight(s, e, style: t.youSmall.copyWith(color: card.fg))],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: CurreSpace.s1),
+                Text(
+                  '“$note”',
+                  style: t.you.copyWith(fontSize: 18, height: 24 / 18, color: card.fg),
+                ),
+              ],
             ),
           ),
         ],

@@ -1,5 +1,6 @@
 import 'package:curre/design/design.dart';
 import 'package:curre/gallery/preview/checkin_preview_screen.dart';
+import 'package:curre/gallery/preview/day_sample.dart';
 import 'package:curre/gallery/preview/gate_preview_screen.dart';
 import 'package:curre/gallery/preview/home_preview_screen.dart';
 import 'package:curre/gallery/preview/onboarding_preview_screen.dart';
@@ -15,6 +16,8 @@ const _phones = {'390x844': Size(390, 844), '360x740': Size(360, 740)};
 
 final _screens = <String, Widget Function()>{
   'check-in': () => const CheckinPreviewScreen(),
+  'check-in, afternoon': () => const CheckinPreviewScreen(session: Session.afternoon),
+  'check-in, evening': () => const CheckinPreviewScreen(session: Session.evening),
   'check-in, no name': () => const CheckinPreviewScreen(name: null),
   'check-in, long name': () => const CheckinPreviewScreen(name: longPreviewName),
   'reveal': () => const RevealPreviewScreen(),
@@ -60,9 +63,38 @@ void main() {
     await _pumpScreen(tester, const CheckinPreviewScreen(), const Size(390, 844), Brightness.light);
     expect(find.text('Good morning, $previewName'), findsOneWidget);
     expect(find.text('What’s this morning for?'), findsOneWidget);
-    expect(find.text('4 days in a row'), findsOneWidget);
+    expect(find.text('4 proof days'), findsOneWidget);
+    expect(find.text('Today · nothing yet'), findsOneWidget);
     expect(find.text('23 out of sight'), findsOneWidget);
     expect(find.byType(PeekMascot), findsOneWidget);
+  });
+
+  testWidgets('each session has its own greeting, question, sky and water', (tester) async {
+    for (final (session, part, label) in const [
+      (Session.afternoon, 'afternoon', 'Today · 2 doors used'),
+      (Session.evening, 'evening', 'Today · 3 doors used'),
+    ]) {
+      await _pumpScreen(tester, CheckinPreviewScreen(session: session), const Size(390, 844), Brightness.light);
+      expect(find.text('Good $part, $previewName'), findsOneWidget);
+      expect(find.text('What’s this $part for?'), findsOneWidget);
+      expect(find.text('Plan my $part'), findsOneWidget);
+      expect(find.text(label), findsOneWidget);
+      expect(tester.widget<LiveSky>(find.byType(LiveSky)).session, session);
+    }
+  });
+
+  testWidgets('the water is today\'s progress from core, rising from the last check-in', (tester) async {
+    await _pumpScreen(
+      tester,
+      const CheckinPreviewScreen(session: Session.evening),
+      const Size(390, 844),
+      Brightness.light,
+    );
+    final water = tester.widget<RisingWater>(find.byType(RisingWater));
+    expect(water.level, SampleDay.atCheckin(Session.evening).value);
+    expect(water.from, SampleDay.atCheckin(Session.afternoon).value);
+    expect(water.level, greaterThan(water.from!));
+    expect(water.level, closeTo((1 + 2 / 3) / 3, 1e-9), reason: 'a full morning and two thirds of the afternoon');
   });
 
   testWidgets('Home with a plan has no mascot and keeps the essentials where the check-in has them', (tester) async {
@@ -70,6 +102,9 @@ void main() {
     final dockOnCheckin = tester.getRect(find.text('23 out of sight'));
     await _pumpScreen(tester, const HomePreviewScreen(), const Size(390, 844), Brightness.light);
     expect(find.byType(PeekMascot), findsNothing);
+    // Home never animates: no living sky and no water.
+    expect(find.byType(LiveSky), findsNothing);
+    expect(find.byType(RisingWater), findsNothing);
     expect(tester.getRect(find.text('23 out of sight')), dockOnCheckin);
   });
 

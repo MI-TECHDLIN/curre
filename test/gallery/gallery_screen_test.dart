@@ -29,6 +29,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       expect(tester.takeException(), isNull);
     }
-    expect(find.text('PeekMascot'), findsOneWidget);
+    expect(find.text('Prooflight'), findsOneWidget);
   });
 }

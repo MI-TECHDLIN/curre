@@ -23,28 +23,32 @@ Future<void> _pump(
   );
 }
 
-PeekMascot _peek(WidgetTester tester) => tester.widget<PeekMascot>(find.byType(PeekMascot));
+ProoflightSun _sun(WidgetTester tester) => tester.widget<ProoflightSun>(find.byType(ProoflightSun).first);
 
 void main() {
-  testWidgets('it starts dormant: a grey, rayless, sleeping sun and yesterday\'s count', (tester) async {
+  testWidgets('it starts dormant: today\'s sun below the line, no ray, yesterday\'s count', (tester) async {
     await _pump(tester, const StreakMomentScreen(progress: 0));
-    final peek = _peek(tester);
-    expect(peek.lit, 0);
-    expect(peek.rays, 0);
-    expect(peek.eyesOpen, 0);
-    expect(find.bySemanticsLabel('4 days in a row'), findsOneWidget);
+    final sun = _sun(tester);
+    expect(sun.rise, 0);
+    expect(sun.grow, 0);
+    expect(find.bySemanticsLabel('4 proof days'), findsOneWidget);
   });
 
-  testWidgets('it ends lit: Peek awake, the count rolled to 5, both doors as proof', (tester) async {
+  testWidgets('it ends lit: the sun up with one ray, five proof days, the proof in the user\'s words', (tester) async {
     await _pump(tester, const StreakMomentScreen(progress: 1));
-    final peek = _peek(tester);
-    expect(peek.lit, 1);
-    expect(peek.rays, 1);
-    expect(peek.eyesOpen, 1);
-    expect(find.bySemanticsLabel('5 days in a row'), findsOneWidget);
-    expect(find.text('Morning kept'), findsOneWidget);
-    expect(find.textContaining('G chord'), findsOneWidget);
-    expect(find.textContaining('worship'), findsOneWidget);
+    final sun = _sun(tester);
+    expect(sun.rise, 1);
+    expect(sun.grow, 1);
+    expect(sun.rays, 1);
+    expect(find.bySemanticsLabel('5 proof days'), findsOneWidget);
+    expect(find.text('Today’s sun is up'), findsOneWidget);
+    expect(find.textContaining('G chord'), findsWidgets);
+    expect(find.text('“${StreakMomentScreen.note}”'), findsOneWidget);
+  });
+
+  testWidgets('Peek never judges the evidence: the proof sun has no face', (tester) async {
+    await _pump(tester, const StreakMomentScreen(progress: 1));
+    expect(find.byType(PeekMascot), findsNothing);
   });
 
   testWidgets('it plays and loops without throwing, in dark too', (tester) async {
@@ -56,10 +60,10 @@ void main() {
     }
   });
 
-  testWidgets('with reduced motion it shows the kept state at once', (tester) async {
+  testWidgets('with reduced motion it shows the risen sun at once', (tester) async {
     await _pump(tester, const StreakMomentScreen(), reduceMotion: true);
     await tester.pump();
-    expect(_peek(tester).lit, 1);
-    expect(find.bySemanticsLabel('5 days in a row'), findsOneWidget);
+    expect(_sun(tester).rise, 1);
+    expect(find.bySemanticsLabel('5 proof days'), findsOneWidget);
   });
 }

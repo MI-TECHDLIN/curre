@@ -24,7 +24,8 @@ import '../curre_colors.dart';
 /// bigger eyes, no hands, feet, cheeks or eye-lights.
 ///
 /// [animate] runs a slow float plus a blink every few seconds: lively but
-/// calm, never a bounce or a spin. [lit], [rays] and [eyesOpen] (each 0–1)
+/// calm, never a bounce or a spin. Peek holds still when the system asks
+/// for reduced motion. [lit], [rays] and [eyesOpen] (each 0–1)
 /// are hooks for a moment that wakes Peek up: a grey, rayless, eyes-shut
 /// sun at 0, the base pose at 1.
 class PeekMascot extends StatefulWidget {
@@ -64,18 +65,24 @@ class _PeekMascotState extends State<PeekMascot> with SingleTickerProviderStateM
 
   late final AnimationController _controller = AnimationController(vsync: this, duration: _loop);
 
+  bool get _moving => widget.animate && !MediaQuery.disableAnimationsOf(context);
+
   @override
-  void initState() {
-    super.initState();
-    if (widget.animate) _controller.repeat();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
   }
 
   @override
   void didUpdateWidget(PeekMascot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.animate && !_controller.isAnimating) {
+    _sync();
+  }
+
+  void _sync() {
+    if (_moving && !_controller.isAnimating) {
       _controller.repeat();
-    } else if (!widget.animate && _controller.isAnimating) {
+    } else if (!_moving && _controller.isAnimating) {
       _controller.stop();
       _controller.reset();
     }
@@ -101,10 +108,11 @@ class _PeekMascotState extends State<PeekMascot> with SingleTickerProviderStateM
           animation: _controller,
           builder: (context, _) {
             final v = _controller.value;
-            final lift = widget.animate ? (1 - math.cos(v * 4 * math.pi)) / 2 * widget.size * .025 : 0.0;
+            final moving = _moving;
+            final lift = moving ? (1 - math.cos(v * 4 * math.pi)) / 2 * widget.size * .025 : 0.0;
             // Blink: close over ~120 ms, hold ~80 ms, open over ~160 ms.
             var blink = 1.0;
-            if (widget.animate) {
+            if (moving) {
               const start = .84, closed = .863, hold = .878, open = .909;
               if (v >= start && v < closed) {
                 blink = 1 - (v - start) / (closed - start);

@@ -84,6 +84,7 @@ class CurreColors extends ThemeExtension<CurreColors> {
     required this.guardMark,
     required this.skies,
     required this.grounds,
+    required this.waters,
     required this.outcomes,
     required this.links,
   });
@@ -118,6 +119,13 @@ class CurreColors extends ThemeExtension<CurreColors> {
   /// mood-face recording's idea): where things go out of sight.
   final Map<Session, Color> grounds;
 
+  /// Water + its light crest for each session: the water that rises in the
+  /// check-in card's ground as the day's plans run (`RisingWater`). Blue in
+  /// every session so it reads as water at a glance, tuned to sit with its
+  /// sky: a teal lagoon under the marigold morning, clear azure in the
+  /// afternoon, dusk-lit indigo in the evening.
+  final Map<Session, Pair> waters;
+
   /// Tint + ink for the four outcomes that have one of their own.
   /// `later` has no entry: it borrows the sky of the session it saves to
   /// (see [outcome]).
@@ -149,6 +157,11 @@ class CurreColors extends ThemeExtension<CurreColors> {
       Session.morning: Color(0xFFF0A43A),
       Session.afternoon: Color(0xFF6DB5D1),
       Session.evening: Color(0xFF222A5E),
+    },
+    waters: {
+      Session.morning: Pair(Color(0xFF3AA19C), Color(0xFFC6F0E8)),
+      Session.afternoon: Pair(Color(0xFF2A8DBE), Color(0xFFDDF5FC)),
+      Session.evening: Pair(Color(0xFF3B4EA6), Color(0xFFB4C0F6)),
     },
     outcomes: {
       Outcome.open: Pair(Color(0xFFCFE8C9), Color(0xFF1D4A22)),
@@ -188,6 +201,11 @@ class CurreColors extends ThemeExtension<CurreColors> {
       Session.afternoon: Color(0xFF0F3B4F),
       Session.evening: Color(0xFF1A2257),
     },
+    waters: {
+      Session.morning: Pair(Color(0xFF1D6A68), Color(0xFF7CCBC2)),
+      Session.afternoon: Pair(Color(0xFF1C7EA8), Color(0xFF94DCF2)),
+      Session.evening: Pair(Color(0xFF3446A0), Color(0xFFA2AEF2)),
+    },
     outcomes: {
       Outcome.open: Pair(Color(0xFF1F3A22), Color(0xFFBFE5B8)),
       Outcome.specify: Pair(Color(0xFF43231D), Color(0xFFF3C3B6)),
@@ -207,6 +225,9 @@ class CurreColors extends ThemeExtension<CurreColors> {
 
   /// The ground tone below [s]'s horizon.
   Color ground(Session s) => grounds[s]!;
+
+  /// Water + crest for [s].
+  Pair water(Session s) => waters[s]!;
 
   /// Link tint for span/door number [n] (1-based, as shown on screen),
   /// cycling once the palette runs out.
@@ -233,6 +254,7 @@ class CurreColors extends ThemeExtension<CurreColors> {
     Color? guardMark,
     Map<Session, Pair>? skies,
     Map<Session, Color>? grounds,
+    Map<Session, Pair>? waters,
     Map<Outcome, Pair>? outcomes,
     List<LinkTint>? links,
   }) {
@@ -252,6 +274,7 @@ class CurreColors extends ThemeExtension<CurreColors> {
       guardMark: guardMark ?? this.guardMark,
       skies: skies ?? this.skies,
       grounds: grounds ?? this.grounds,
+      waters: waters ?? this.waters,
       outcomes: outcomes ?? this.outcomes,
       links: links ?? this.links,
     );
@@ -276,6 +299,7 @@ class CurreColors extends ThemeExtension<CurreColors> {
       guardMark: Color.lerp(guardMark, other.guardMark, t)!,
       skies: {for (final s in Session.values) s: skies[s]!.lerp(other.skies[s]!, t)},
       grounds: {for (final s in Session.values) s: Color.lerp(grounds[s], other.grounds[s], t)!},
+      waters: {for (final s in Session.values) s: waters[s]!.lerp(other.waters[s]!, t)},
       outcomes: {for (final o in outcomes.keys) o: outcomes[o]!.lerp(other.outcomes[o]!, t)},
       links: [
         for (var i = 0; i < links.length; i++) i < other.links.length ? links[i].lerp(other.links[i], t) : links[i],
