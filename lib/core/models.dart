@@ -460,6 +460,52 @@ class Attempt {
   };
 }
 
+/// One open of a plan's app from its row on Home: the start trace that
+/// today's progress counts, and that a proof-backed streak will need before
+/// it accepts a completion note.
+class DoorUse {
+  DoorUse({
+    required this.planId,
+    required this.date,
+    required this.packageName,
+    required DateTime at,
+  }) : at = _asUtc(at);
+
+  /// A use of [packageName]'s row on [plan], dated to the plan's Curre day.
+  factory DoorUse.forPlan(Plan plan, String packageName, DateTime at) {
+    if (!plan.packages.contains(packageName)) {
+      throw ArgumentError.value(packageName, 'packageName', 'Not in the plan');
+    }
+    return DoorUse(
+      planId: plan.id,
+      date: plan.date,
+      packageName: packageName,
+      at: at,
+    );
+  }
+
+  factory DoorUse.fromJson(Map<String, Object?> json) => DoorUse(
+    planId: _string(json['planId'], 'planId'),
+    date: LocalDate.fromJson(json['date']),
+    packageName: _string(json['package'], 'package'),
+    at: _instant(json['at'], 'at'),
+  );
+
+  final String planId;
+
+  /// The Curre day of the plan the row belongs to.
+  final LocalDate date;
+  final String packageName;
+  final DateTime at;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'planId': planId,
+    'date': date.toJson(),
+    'package': packageName,
+    'at': at.toIso8601String(),
+  };
+}
+
 DateTime _asUtc(DateTime value) => value.toUtc();
 
 DateTime _instant(Object? value, String name) {

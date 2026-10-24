@@ -13,6 +13,7 @@ class CurreLocalStore {
   static const String _plansKey = 'curre.plans.v1';
   static const String _grantsKey = 'curre.grants.v1';
   static const String _attemptsKey = 'curre.attempts.v1';
+  static const String _doorUsesKey = 'curre.doorUses.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -47,10 +48,7 @@ class CurreLocalStore {
     required DateTime now,
     CurreTimeZone timeZone = const SystemCurreTimeZone(),
   }) async {
-    final day = SessionSchedule.fromSettings(
-      loadSettings(),
-      timeZone: timeZone,
-    ).current(now).localStartDate;
+    final day = _today(now, timeZone);
     final values = plans
         .where((plan) => plan.date == day)
         .map((plan) => plan.toJson())
@@ -62,10 +60,7 @@ class CurreLocalStore {
     required DateTime now,
     CurreTimeZone timeZone = const SystemCurreTimeZone(),
   }) async {
-    final day = SessionSchedule.fromSettings(
-      loadSettings(),
-      timeZone: timeZone,
-    ).current(now).localStartDate;
+    final day = _today(now, timeZone);
     final all = _readList(_plansKey, Plan.fromJson);
     final current = all
         .where((plan) => plan.date == day)
@@ -76,6 +71,32 @@ class CurreLocalStore {
         jsonEncode(current.map((plan) => plan.toJson()).toList()),
       );
     }
+    return current;
+  }
+
+  /// Records that one of a plan's apps was opened from its row on Home.
+  /// Uses are kept for the current Curre day only, like plans.
+  Future<void> recordDoorUse(
+    DoorUse use, {
+    required DateTime now,
+    CurreTimeZone timeZone = const SystemCurreTimeZone(),
+  }) async {
+    final current = await loadTodayDoorUses(now: now, timeZone: timeZone);
+    final updated = <DoorUse>[
+      ...current,
+      if (use.date == _today(now, timeZone)) use,
+    ]..sort((a, b) => a.at.compareTo(b.at));
+    await _writeDoorUses(updated);
+  }
+
+  Future<List<DoorUse>> loadTodayDoorUses({
+    required DateTime now,
+    CurreTimeZone timeZone = const SystemCurreTimeZone(),
+  }) async {
+    final day = _today(now, timeZone);
+    final all = _readList(_doorUsesKey, DoorUse.fromJson);
+    final current = all.where((use) => use.date == day).toList(growable: false);
+    if (current.length != all.length) await _writeDoorUses(current);
     return current;
   }
 
@@ -125,6 +146,21 @@ class CurreLocalStore {
   /// active unlock grant.
   Future<void> clearHistory() async {
     await _preferences.remove(_attemptsKey);
+  }
+
+  /// Curre's current local day, which begins at the morning session
+  /// boundary rather than at midnight.
+  LocalDate _today(DateTime now, CurreTimeZone timeZone) =>
+      SessionSchedule.fromSettings(
+        loadSettings(),
+        timeZone: timeZone,
+      ).current(now).localStartDate;
+
+  Future<void> _writeDoorUses(Iterable<DoorUse> uses) async {
+    await _preferences.setString(
+      _doorUsesKey,
+      jsonEncode(uses.map((use) => use.toJson()).toList()),
+    );
   }
 
   Future<void> _writeAttempts(Iterable<Attempt> attempts) async {
