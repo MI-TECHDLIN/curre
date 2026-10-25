@@ -1,0 +1,292 @@
+{
+  "metadata": {
+    "credits": 5,
+    "model_ms": 101.737792,
+    "recorded_at": "2026-10-25"
+  },
+  "route_request": {
+    "candidates": [
+      {
+        "id": "yt",
+        "label": "YouTube",
+        "query_door": true,
+        "shortcut_labels": [
+          "Search",
+          "Subscriptions"
+        ]
+      },
+      {
+        "id": "sp",
+        "label": "Spotify",
+        "query_door": true,
+        "shortcut_labels": [
+          "Search"
+        ]
+      },
+      {
+        "id": "wa",
+        "label": "WhatsApp",
+        "query_door": false,
+        "shortcut_labels": [
+          "Camera"
+        ]
+      },
+      {
+        "id": "cal",
+        "label": "Calendar",
+        "query_door": false,
+        "shortcut_labels": [
+          "New event"
+        ]
+      },
+      {
+        "id": "maps",
+        "label": "Google Maps",
+        "query_door": true,
+        "shortcut_labels": [
+          "Home",
+          "Work"
+        ]
+      },
+      {
+        "id": "notes",
+        "label": "Notes",
+        "query_door": false,
+        "shortcut_labels": [
+          "New note"
+        ]
+      },
+      {
+        "id": "tg",
+        "label": "Telegram",
+        "query_door": false,
+        "shortcut_labels": []
+      },
+      {
+        "id": "gmail",
+        "label": "Gmail",
+        "query_door": false,
+        "shortcut_labels": [
+          "Compose"
+        ]
+      },
+      {
+        "id": "drive",
+        "label": "Google Drive",
+        "query_door": true,
+        "shortcut_labels": [
+          "Scan"
+        ]
+      },
+      {
+        "id": "camera",
+        "label": "Camera",
+        "query_door": false,
+        "shortcut_labels": [
+          "Selfie",
+          "Video"
+        ]
+      },
+      {
+        "id": "clock",
+        "label": "Clock",
+        "query_door": false,
+        "shortcut_labels": [
+          "New alarm",
+          "Timer"
+        ]
+      },
+      {
+        "id": "calc",
+        "label": "Calculator",
+        "query_door": false,
+        "shortcut_labels": []
+      }
+    ],
+    "intention": "Pray, then learn the G chord on YouTube and play worship on Spotify till 7",
+    "session": "morning"
+  },
+  "response": {
+    "model": "clocked-1.0",
+    "steps": [
+      {
+        "endpoint": "fill",
+        "ms": 46,
+        "name": "plan",
+        "result": {
+          "fields": {
+            "apps": {
+              "confidence": 0.931,
+              "probabilities": {
+                "Calculator": 0.0042867649897938565,
+                "Calendar": 0.0062172665548316805,
+                "Camera": 0.006592966824447655,
+                "Clock": 0.03454037500638829,
+                "Gmail": 0.004769451858342766,
+                "Google Drive": 0.0037894062974738185,
+                "Google Maps": 0.003993937969645089,
+                "Notes": 0.010264173693691703,
+                "Spotify": 0.9949263808463674,
+                "Telegram": 0.005097696367237781,
+                "WhatsApp": 0.004574419982745326,
+                "YouTube": 0.995209677739257
+              },
+              "threshold": 0.7,
+              "value": [
+                "YouTube",
+                "Spotify"
+              ]
+            },
+            "door_cal": {
+              "confidence": 0.933,
+              "probabilities": {
+                "New event": 0.9664336039294416,
+                "The app itself": 0.033566396070558446
+              },
+              "value": "New event"
+            },
+            "door_drive": {
+              "confidence": 0.892,
+              "probabilities": {
+                "Scan": 0.054204986260657284,
+                "The app itself": 0.9457950137393427
+              },
+              "value": "The app itself"
+            },
+            "door_gmail": {
+              "confidence": 0.722,
+              "probabilities": {
+                "Compose": 0.13923820519956442,
+                "The app itself": 0.8607617948004356
+              },
+              "value": "The app itself"
+            },
+            "door_maps": {
+              "confidence": 0.753,
+              "probabilities": {
+                "Home": 0.06848360809708831,
+                "The app itself": 0.8351501694659595,
+                "Work": 0.09636622243695214
+              },
+              "value": "The app itself"
+            },
+            "door_notes": {
+              "confidence": 0.156,
+              "probabilities": {
+                "New note": 0.5781992517915099,
+                "The app itself": 0.4218007482084901
+              },
+              "value": "New note"
+            },
+            "door_sp": {
+              "confidence": 0.971,
+              "probabilities": {
+                "Search": 0.01451257985411425,
+                "The app itself": 0.9854874201458858
+              },
+              "value": "The app itself"
+            },
+            "door_wa": {
+              "confidence": 0.875,
+              "probabilities": {
+                "Camera": 0.062576984329338,
+                "The app itself": 0.937423015670662
+              },
+              "value": "The app itself"
+            },
+            "door_yt": {
+              "confidence": 0.315,
+              "probabilities": {
+                "Search": 0.5430205981818738,
+                "Subscriptions": 0.012270804714074062,
+                "The app itself": 0.4447085971040522
+              },
+              "value": "Search"
+            }
+          },
+          "model": "clocked-1.0",
+          "timing": {
+            "engine": "unified",
+            "generate_ms": 0,
+            "read_ms": 42,
+            "shared_read_generate_forwards": 0,
+            "shared_source_tokens": 48,
+            "source_prefills": 0,
+            "source_states": 1,
+            "total_ms": 46
+          }
+        },
+        "status": 200,
+        "step": 0
+      },
+      {
+        "endpoint": "extract",
+        "ms": 63,
+        "name": "spans",
+        "result": {
+          "fields": {
+            "ends": {
+              "confidence": 0.9999925823810407,
+              "end": 74,
+              "p_verify": 0.9999925823810407,
+              "start": 73,
+              "value": "7"
+            },
+            "q_drive": {
+              "confidence": 1,
+              "value": null
+            },
+            "q_maps": {
+              "confidence": 1,
+              "value": null
+            },
+            "q_sp": {
+              "confidence": 0.9999999964434718,
+              "end": 56,
+              "p_verify": 0.9999999964434718,
+              "start": 49,
+              "value": "worship"
+            },
+            "q_yt": {
+              "confidence": 0.9999975577973675,
+              "end": 28,
+              "p_verify": 0.9999975577973675,
+              "start": 17,
+              "value": "the G chord"
+            }
+          },
+          "model": "clocked-1.0",
+          "timing": {
+            "forwards": {
+              "fields": [
+                4,
+                0
+              ]
+            },
+            "read_ms": 59,
+            "server_ms": 63,
+            "stages": {
+              "fields": {
+                "assemble": 0,
+                "branches": 1,
+                "doc": 0,
+                "generate": 39,
+                "locate": 0,
+                "reader": "recognition",
+                "verify": 19
+              }
+            },
+            "total_ms": 59
+          }
+        },
+        "status": 200,
+        "step": 1
+      }
+    ],
+    "stopped": null,
+    "timing": {
+      "model_ms": 59,
+      "total_ms": 113
+    }
+  }
+}

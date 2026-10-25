@@ -1,0 +1,154 @@
+{
+  "metadata": {
+    "credits": 4,
+    "model_ms": 84.363394,
+    "recorded_at": "2026-10-25"
+  },
+  "route_request": {
+    "app_label": "Instagram",
+    "plan_intention": "pray, work, then put the phone away",
+    "reason": "reply Ada about rehearsal",
+    "shortcut_labels": [
+      "Messages",
+      "Camera"
+    ]
+  },
+  "response": {
+    "model": "clocked-1.0",
+    "steps": [
+      {
+        "endpoint": "injection",
+        "ms": 23,
+        "name": "guard",
+        "result": {
+          "categories": {
+            "benign": 0.9915995090811042,
+            "instruction override": 0.0019265196059653,
+            "obfuscated or encoded payload": 0.0011282395528131532,
+            "role-play or persona jailbreak": 0.001208828844815766,
+            "social engineering": 0.001616996256679221,
+            "system prompt or secret extraction": 0.0012316422578406,
+            "tool misuse or data exfiltration": 0.0012882644007817911
+          },
+          "category": "benign",
+          "evidence": [],
+          "injection": 0.0019413553983823606,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "severities": {
+            "critical": 0.0015641163664205007,
+            "high": 0.0017481040013747895,
+            "low": 0.003698054470174961,
+            "medium": 0.0017684699648554494,
+            "none": 0.9912212551971743
+          },
+          "severity": "none",
+          "severity_expected": 1.019,
+          "source": "user",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 22,
+            "total_ms": 23
+          },
+          "verdict": "benign"
+        },
+        "status": 200,
+        "step": 0
+      },
+      {
+        "endpoint": "decide",
+        "ms": 32,
+        "name": "gate",
+        "result": {
+          "answers": {
+            "door": {
+              "choice": "Messages",
+              "confidence": 0.9894,
+              "probabilities": {
+                "Camera": 0.0031,
+                "Messages": 0.9929,
+                "app": 0.0039
+              },
+              "type": "choice"
+            },
+            "kind": {
+              "choice": "person",
+              "confidence": 0.9418,
+              "probabilities": {
+                "browse": 0.0049,
+                "person": 0.9535,
+                "task": 0.0312,
+                "time_sensitive": 0.0057,
+                "unclear": 0.0047
+              },
+              "type": "choice"
+            }
+          },
+          "model": "clocked-1.0",
+          "usage": {
+            "input_tokens": 59,
+            "output_tokens": 8
+          }
+        },
+        "status": 200,
+        "step": 1
+      },
+      {
+        "endpoint": "extract",
+        "ms": 39,
+        "name": "task",
+        "result": {
+          "fields": {
+            "minutes": {
+              "confidence": 1,
+              "normalization_reason": "not_parseable_or_not_stated",
+              "normalized": null,
+              "value": null
+            },
+            "person": {
+              "confidence": 0.9999999996109128,
+              "end": 9,
+              "p_verify": 0.9999999996109128,
+              "start": 6,
+              "value": "Ada"
+            },
+            "target": {
+              "confidence": 1,
+              "value": null
+            }
+          },
+          "model": "clocked-1.0",
+          "timing": {
+            "forwards": {
+              "fields": [
+                3,
+                0
+              ]
+            },
+            "read_ms": 36,
+            "server_ms": 39,
+            "stages": {
+              "fields": {
+                "assemble": 0,
+                "branches": 0,
+                "doc": 0,
+                "generate": 24,
+                "locate": 0,
+                "reader": "recognition",
+                "verify": 11
+              }
+            },
+            "total_ms": 36
+          }
+        },
+        "status": 200,
+        "step": 2
+      }
+    ],
+    "stopped": null,
+    "timing": {
+      "model_ms": 65,
+      "total_ms": 96
+    }
+  }
+}
