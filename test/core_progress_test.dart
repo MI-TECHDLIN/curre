@@ -9,7 +9,7 @@ const _day = LocalDate(2026, 10, 24);
 
 final _schedule = SessionSchedule.fromSettings(Settings(), timeZone: _utc);
 
-/// The demo morning: two doors (YouTube, Spotify), session from 04:00,
+/// A morning plan with two doors (YouTube, Spotify), session from 04:00,
 /// plan till 07:00.
 final _morning = Plan(
   id: 'morning',

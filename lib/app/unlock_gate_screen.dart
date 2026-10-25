@@ -15,7 +15,6 @@ class UnlockGateScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.app,
-    this.demoMode = false,
     this.initialReason,
     this.initialResponse,
     this.autoJudge = false,
@@ -24,7 +23,6 @@ class UnlockGateScreen extends StatefulWidget {
 
   final CurreController controller;
   final LaunchableApp app;
-  final bool demoMode;
   final String? initialReason;
   final UnlockResponse? initialResponse;
   final bool autoJudge;
@@ -93,18 +91,10 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 CurreSpace.gutter,
                 0,
               ),
-              child: Column(
-                children: [
-                  if (widget.demoMode) ...[
-                    _DemoBanner(onExit: () => Navigator.of(context).pop()),
-                    const SizedBox(height: CurreSpace.s3),
-                  ],
-                  CurreTopBar(
-                    title: 'Why open ${widget.app.label} now?',
-                    subtitle: 'No app icon here · this is a deliberate choice',
-                    maxTitleLines: 3,
-                  ),
-                ],
+              child: CurreTopBar(
+                title: 'Why open ${widget.app.label} now?',
+                subtitle: 'No app icon here · this is a deliberate choice',
+                maxTitleLines: 3,
               ),
             ),
             Expanded(
@@ -698,45 +688,6 @@ class _NotJudgedChip extends StatelessWidget {
           vertical: CurreSpace.s2,
         ),
         child: Text(label, style: type.meta.copyWith(color: colors.ink2)),
-      ),
-    );
-  }
-}
-
-class _DemoBanner extends StatelessWidget {
-  const _DemoBanner({required this.onExit});
-
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: colors.marker,
-        shape: const StadiumBorder(),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          CurreSpace.s3,
-          CurreSpace.s2,
-          CurreSpace.s2,
-          CurreSpace.s2,
-        ),
-        child: Row(
-          children: [
-            Text('DEMO', style: type.meta.copyWith(color: colors.markInk)),
-            const SizedBox(width: CurreSpace.s2),
-            Expanded(
-              child: Text(
-                'Curre isn’t your Home yet',
-                style: type.caption.copyWith(color: colors.markInk),
-              ),
-            ),
-            TextButton(onPressed: onExit, child: const Text('Exit')),
-          ],
-        ),
       ),
     );
   }
