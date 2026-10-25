@@ -3,6 +3,8 @@ export 'curre_fonts.dart';
 export 'curre_theme.dart';
 export 'curre_tokens.dart';
 export 'curre_type.dart';
+export 'widgets/avatar.dart';
+export 'widgets/avatar_picker.dart';
 export 'widgets/curre_glyph.dart';
 export 'widgets/door_row.dart';
 export 'widgets/horizon_line.dart';

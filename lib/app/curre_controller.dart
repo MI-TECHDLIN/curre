@@ -275,11 +275,14 @@ class CurreController extends ChangeNotifier {
 
   Future<void> finishOnboarding({
     required String displayName,
+    required String? avatarId,
     required Set<String> essentials,
     required Set<String> candidates,
   }) async {
     settings = settings.copyWith(
       displayName: displayName,
+      avatarId: avatarId,
+      clearAvatarId: avatarId == null,
       essentials: essentials,
       candidates: candidates,
     );

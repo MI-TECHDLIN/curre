@@ -177,7 +177,9 @@ class Settings {
     this.unlockMinutes = 5,
     this.threshold = 0.7,
     String? displayName,
+    String? avatarId,
   }) : displayName = normalizeDisplayName(displayName),
+       avatarId = _normalizeOptionalText(avatarId),
        sessionStarts = Map.unmodifiable(
          sessionStarts ??
              const <SessionName, LocalTime>{
@@ -207,6 +209,8 @@ class Settings {
       threshold: _number(json['threshold'], 'threshold').toDouble(),
       // Absent in settings saved before names existed, which still load.
       displayName: _nullableString(json['displayName'], 'displayName'),
+      // Absent in settings saved before avatars existed, which still load.
+      avatarId: _nullableString(json['avatarId'], 'avatarId'),
     );
   }
 
@@ -221,6 +225,10 @@ class Settings {
   /// greeting stands alone.
   final String? displayName;
 
+  /// The stable ID of the chosen design-system avatar. A null or unknown ID
+  /// deliberately falls back to the user's initial in the UI.
+  final String? avatarId;
+
   Settings copyWith({
     Map<SessionName, LocalTime>? sessionStarts,
     Set<String>? essentials,
@@ -229,6 +237,8 @@ class Settings {
     double? threshold,
     String? displayName,
     bool clearDisplayName = false,
+    String? avatarId,
+    bool clearAvatarId = false,
   }) => Settings(
     sessionStarts: sessionStarts ?? this.sessionStarts,
     essentials: essentials ?? this.essentials,
@@ -236,6 +246,7 @@ class Settings {
     unlockMinutes: unlockMinutes ?? this.unlockMinutes,
     threshold: threshold ?? this.threshold,
     displayName: clearDisplayName ? null : displayName ?? this.displayName,
+    avatarId: clearAvatarId ? null : avatarId ?? this.avatarId,
   );
 
   /// Trims [name] and collapses inner runs of whitespace; a blank name is
@@ -244,6 +255,11 @@ class Settings {
     if (name == null) return null;
     final tidy = name.trim().replaceAll(RegExp(r'\s+'), ' ');
     return tidy.isEmpty ? null : tidy;
+  }
+
+  static String? _normalizeOptionalText(String? value) {
+    final tidy = value?.trim();
+    return tidy == null || tidy.isEmpty ? null : tidy;
   }
 
   void _validate() {
@@ -277,6 +293,7 @@ class Settings {
     'unlockMinutes': unlockMinutes,
     'threshold': threshold,
     if (displayName != null) 'displayName': displayName,
+    if (avatarId != null) 'avatarId': avatarId,
   };
 }
 

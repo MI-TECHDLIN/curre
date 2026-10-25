@@ -16,6 +16,7 @@ void main() {
         candidates: const <String>{'youtube', 'maps'},
         unlockMinutes: 7,
         threshold: 0.75,
+        avatarId: 'avatar-01',
       );
       final app = const AppEntry(
         packageName: 'com.example.app',
@@ -72,6 +73,10 @@ void main() {
       expect(attempt.kind!.wireValue, 'time_sensitive');
       expect(attempt.reason, 'reply Ada now');
       expect(attempt.highlights.single.text, 'Ada');
+      expect(
+        _roundTrip(settings.toJson(), Settings.fromJson)['avatarId'],
+        'avatar-01',
+      );
     });
 
     test('rejects unordered session starts and unknown enums', () {

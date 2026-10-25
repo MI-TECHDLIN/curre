@@ -20,12 +20,13 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const _steps = 7;
+  static const _steps = 8;
   final _nameController = TextEditingController();
   var _step = 0;
   var _working = false;
   bool? _homeReady;
   bool? _notificationsReady;
+  String? _avatarId;
   late final Set<String> _essentials;
   late final Set<String> _candidates;
 
@@ -35,6 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void initState() {
     super.initState();
     _nameController.text = controller.settings.displayName ?? '';
+    _avatarId = controller.settings.avatarId;
     _essentials = controller.settings.essentials.isEmpty
         ? controller.suggestedEssentials
         : controller.settings.essentials.toSet();
@@ -136,23 +138,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _body(BuildContext context) => switch (_step) {
     0 => _privacy(context),
     1 => _name(context),
-    2 => _homeRole(context),
-    3 => _notifications(context),
-    4 => _essentialsPicker(context),
-    5 => _candidatePicker(context),
+    2 => _avatarPicker(context),
+    3 => _homeRole(context),
+    4 => _notifications(context),
+    5 => _essentialsPicker(context),
+    6 => _candidatePicker(context),
     _ => _done(context),
   };
 
   String get _primaryLabel => switch (_step) {
     0 => 'That’s fair',
     1 => 'Use this name',
-    2 => _homeReady == true ? 'Curre is my Home' : 'Set Curre as Home',
-    3 =>
+    2 => 'Use this profile',
+    3 => _homeReady == true ? 'Curre is my Home' : 'Set Curre as Home',
+    4 =>
       _notificationsReady == true
           ? 'Notifications ready'
           : 'Allow notifications',
-    4 => 'Keep these in sight',
-    5 => 'Use these candidates',
+    5 => 'Keep these in sight',
+    6 => 'Use these candidates',
     _ => 'Start my first check-in',
   };
 
@@ -161,7 +165,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _canContinue => switch (_step) {
     1 => Settings.normalizeDisplayName(_nameController.text) != null,
-    5 => _candidates.length >= _minimumCandidates && _candidates.length <= 30,
+    6 => _candidates.length >= _minimumCandidates && _candidates.length <= 30,
     _ => true,
   };
 
@@ -319,6 +323,51 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           onChanged: (_) => setState(() {}),
         ),
+      ],
+    );
+  }
+
+  Widget _avatarPicker(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final displayName = Settings.normalizeDisplayName(_nameController.text);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _intro(
+          context,
+          glyph: CurreGlyphKind.profile,
+          eyebrow: 'Your profile',
+          headline: 'Choose the face that feels like you.',
+          body: 'Every option looks straight ahead and stays unnamed. You can also keep your initial and decide later.',
+        ),
+        const SizedBox(height: CurreSpace.s5),
+        if (_avatarId == null) ...[
+          Row(
+            children: [
+              Avatar(initial: displayName, size: 64),
+              const SizedBox(width: CurreSpace.s3),
+              Expanded(
+                child: Text(
+                  'Your initial is the fallback until you choose a face.',
+                  style: type.caption.copyWith(color: colors.ink2),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: CurreSpace.s4),
+        ],
+        AvatarPicker(
+          selectedAvatarId: _avatarId,
+          onSelected: (id) => setState(() => _avatarId = id),
+        ),
+        if (_avatarId != null) ...[
+          const SizedBox(height: CurreSpace.s3),
+          CurreSecondaryButton(
+            label: 'Use my initial instead',
+            onPressed: () => setState(() => _avatarId = null),
+          ),
+        ],
       ],
     );
   }
@@ -491,7 +540,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _continue() async {
-    if (_step == 2 && _homeReady != true) {
+    if (_step == 3 && _homeReady != true) {
       setState(() => _working = true);
       final ready = await controller.requestHomeRole();
       if (!mounted) return;
@@ -500,7 +549,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _homeReady = ready;
       });
       if (!ready) return;
-    } else if (_step == 3 && _notificationsReady != true) {
+    } else if (_step == 4 && _notificationsReady != true) {
       setState(() => _working = true);
       final ready = await controller.requestNotifications();
       if (!mounted) return;
@@ -518,6 +567,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() => _working = true);
     await controller.finishOnboarding(
       displayName: _nameController.text,
+      avatarId: _avatarId,
       essentials: _essentials,
       candidates: _candidates,
     );
