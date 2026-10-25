@@ -67,4 +67,41 @@ void main() {
       expect(store.loadSettings().displayName, 'Chidi');
     });
   });
+
+  group('Settings.avatarId', () {
+    test('defaults to no avatar and leaves it out of legacy JSON', () {
+      final settings = Settings();
+      expect(settings.avatarId, isNull);
+      expect(settings.toJson().containsKey('avatarId'), isFalse);
+      expect(_roundTrip(settings).avatarId, isNull);
+    });
+
+    test('round-trips through JSON and trims the stable ID', () {
+      final settings = Settings(displayName: 'Ada', avatarId: '  avatar-07  ');
+      expect(settings.avatarId, 'avatar-07');
+      expect(_roundTrip(settings).toJson(), settings.toJson());
+    });
+
+    test('settings saved before avatars existed still load', () {
+      final legacy = Settings(displayName: 'Ada').toJson()..remove('avatarId');
+      expect(Settings.fromJson(legacy).avatarId, isNull);
+    });
+
+    test('blank IDs become null and non-string IDs are rejected', () {
+      expect(Settings(avatarId: '  ').avatarId, isNull);
+      expect(
+        () => Settings.fromJson({...Settings().toJson(), 'avatarId': 7}),
+        throwsFormatException,
+      );
+    });
+
+    test('survives the local store', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final store = await CurreLocalStore.open();
+      await store.saveSettings(
+        Settings(displayName: 'Ada', avatarId: 'avatar-07'),
+      );
+      expect(store.loadSettings().avatarId, 'avatar-07');
+    });
+  });
 }

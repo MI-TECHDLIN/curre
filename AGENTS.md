@@ -13,7 +13,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   `design/design.dart`. The debug gallery (`lib/gallery/`) renders every
   widget and preview screen in light and dark. Change a Curre text style's
   weight with `.weight(w)`: `copyWith(fontWeight:)` leaves the variable
-  font's `wght` axis where it was.
+  font's `wght` axis where it was. Human profile art and its unnamed picker
+  live in `lib/design/widgets/avatar*.dart`; the selection persists as
+  `Settings.avatarId`.
 - Ask for icons through `CurreGlyph` (`lib/design/widgets/curre_glyph.dart`),
   not `SolarIconsBold` directly: solar_icons 0.2.0's Bold font drops some
   inner cut-outs (question mark, info dot, warning shield, clock hands), and
