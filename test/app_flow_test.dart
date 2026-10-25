@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:curre/app/checkin_screen.dart';
 import 'package:curre/app/curre_controller.dart';
-import 'package:curre/app/demo_screen.dart';
 import 'package:curre/app/hidden_apps_screen.dart';
 import 'package:curre/app/home_screen.dart';
 import 'package:curre/app/history_screen.dart';
@@ -35,7 +34,8 @@ void main() {
       await tester.pumpWidget(CurreApp(controller: controller));
 
       expect(find.text('Sent to Clocked (Rezolve.ai)'), findsOneWidget);
-      expect(find.text('Try the gate first'), findsOneWidget);
+      expect(find.text('Try the gate first'), findsNothing);
+      expect(find.text('Not yet · try the gate'), findsNothing);
       await tester.tap(find.text('That’s fair'));
       await tester.pumpAndSettle();
       expect(find.text('What should Curre call you?'), findsOneWidget);
@@ -423,7 +423,7 @@ void main() {
     },
   );
 
-  testWidgets('Curre settings exposes demo, telemetry, licences and history', (
+  testWidgets('Curre settings exposes telemetry, licences and history only', (
     tester,
   ) async {
     await phone(tester);
@@ -435,12 +435,12 @@ void main() {
       ),
     );
     expect(find.text('Curre settings'), findsOneWidget);
+    expect(find.text('Judge demo mode'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Judge demo mode'),
+      find.text('Under the hood'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Judge demo mode'), findsOneWidget);
     expect(find.text('Under the hood'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Clear history'),
@@ -518,6 +518,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.text('Clear history'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Clear history'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Clear history'));
@@ -534,28 +536,6 @@ void main() {
       ),
     );
     expect(find.text('A quiet start.'), findsOneWidget);
-  });
-
-  testWidgets('judge demo states the constraint and offers five real reasons', (
-    tester,
-  ) async {
-    await phone(tester);
-    final controller = _controller();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: curreTheme(Brightness.dark),
-        home: DemoScreen(controller: controller),
-      ),
-    );
-    expect(find.text('Judge demo'), findsOneWidget);
-    expect(
-      find.textContaining('only verified link doors work'),
-      findsOneWidget,
-    );
-    await tester.scrollUntilVisible(find.text('Task · open'), 300);
-    expect(find.text('Task · open'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Guard · flagged'), 300);
-    expect(find.text('Guard · flagged'), findsOneWidget);
   });
 
   for (final brightness in Brightness.values) {
@@ -620,7 +600,6 @@ void main() {
         await show(HiddenAppsScreen(controller: controller));
         await show(HistoryScreen(controller: controller));
         await show(SettingsScreen(controller: controller));
-        await show(DemoScreen(controller: controller));
         await show(ProfileSheet(controller: controller));
         await show(
           UnlockGateScreen(

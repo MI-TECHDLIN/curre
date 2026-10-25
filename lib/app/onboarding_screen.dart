@@ -8,7 +8,6 @@ import '../doors/door_models.dart';
 import '../doors/query_door_allowlist.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
-import 'demo_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key, required this.controller});
@@ -239,16 +238,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           style: type.caption.copyWith(color: colors.ink3),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: CurreSpace.s5),
-        CurreSecondaryButton(
-          label: 'Try the gate first',
-          glyph: CurreGlyphKind.door,
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => DemoScreen(controller: controller),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -387,19 +376,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (_homeReady != null) ...[
           const SizedBox(height: CurreSpace.s6),
           Text(
-            _homeReady! ? 'Curre is your default Home.' : 'Android has not made Curre your Home yet. You can try again or continue in demo mode.',
+            _homeReady! ? 'Curre is your default Home.' : 'Android has not made Curre your Home yet. Try again to continue setup.',
             style: type.body,
           ),
         ],
-        const SizedBox(height: CurreSpace.s5),
-        CurreSecondaryButton(
-          label: 'Not yet · try the gate',
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => DemoScreen(controller: controller),
-            ),
-          ),
-        ),
       ],
     );
   }

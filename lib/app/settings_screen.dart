@@ -4,7 +4,6 @@ import '../core/core.dart';
 import '../design/design.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
-import 'demo_screen.dart';
 import 'history_screen.dart';
 import 'under_hood.dart';
 
@@ -136,16 +135,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => HistoryScreen(controller: controller),
-                    ),
-                  ),
-                ),
-                _SettingsTile(
-                  glyph: CurreGlyphKind.door,
-                  title: 'Judge demo mode',
-                  subtitle: 'Real gate calls without changing your Home',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => DemoScreen(controller: controller),
                     ),
                   ),
                 ),
