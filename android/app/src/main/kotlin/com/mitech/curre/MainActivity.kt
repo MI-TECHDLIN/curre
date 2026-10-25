@@ -26,7 +26,15 @@ import java.io.ByteArrayOutputStream
 class MainActivity : FlutterActivity() {
     private lateinit var launcherApps: LauncherApps
     private var homeSurfaceActive = false
+    private var pendingHomeRoleResult: MethodChannel.Result? = null
     private var pendingSpeechResult: MethodChannel.Result? = null
+    private val homeRoleLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        val result = pendingHomeRoleResult ?: return@registerForActivityResult
+        pendingHomeRoleResult = null
+        result.success(isDefaultHome())
+    }
     private val speechRecognizerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { activityResult ->
@@ -61,7 +69,7 @@ class MainActivity : FlutterActivity() {
                 "listApps" -> result.success(listApps())
                 "getIcon" -> result.success(getIcon(call.arguments as String))
                 "launch" -> result.success(launchPackage(call.arguments as String))
-                "requestHomeRole" -> result.success(requestHomeRole())
+                "requestHomeRole" -> requestHomeRole(result)
                 "isDefaultHome" -> result.success(isDefaultHome())
                 "setHomeSurfaceActive" -> {
                     homeSurfaceActive = call.arguments as Boolean
@@ -159,20 +167,37 @@ class MainActivity : FlutterActivity() {
         return true
     }
 
-    private fun requestHomeRole(): Boolean {
+    private fun requestHomeRole(result: MethodChannel.Result) {
+        if (pendingHomeRoleResult != null) {
+            result.error("home_role_in_progress", "The Home picker is already open.", null)
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = getSystemService(RoleManager::class.java)
             if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME)) {
-                if (roleManager.isRoleHeld(RoleManager.ROLE_HOME)) return true
-                startActivityForResult(
-                    roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME),
-                    HOME_ROLE_REQUEST,
-                )
-                return true
+                if (roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
+                    result.success(true)
+                    return
+                }
+                pendingHomeRoleResult = result
+                try {
+                    homeRoleLauncher.launch(
+                        roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME),
+                    )
+                } catch (error: Exception) {
+                    pendingHomeRoleResult = null
+                    throw error
+                }
+                return
             }
         }
-        startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-        return true
+        pendingHomeRoleResult = result
+        try {
+            homeRoleLauncher.launch(Intent(Settings.ACTION_HOME_SETTINGS))
+        } catch (error: Exception) {
+            pendingHomeRoleResult = null
+            throw error
+        }
     }
 
     private fun isDefaultHome(): Boolean {
@@ -315,7 +340,6 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val CHANNEL_NAME = "com.mitech.curre/launcher"
-        private const val HOME_ROLE_REQUEST = 7011
         private const val SPEECH_RECOGNIZED = "recognized"
         private const val SPEECH_CANCELLED = "cancelled"
         private const val SPEECH_UNAVAILABLE = "unavailable"

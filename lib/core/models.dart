@@ -221,6 +221,23 @@ class Settings {
   /// greeting stands alone.
   final String? displayName;
 
+  Settings copyWith({
+    Map<SessionName, LocalTime>? sessionStarts,
+    Set<String>? essentials,
+    Set<String>? candidates,
+    int? unlockMinutes,
+    double? threshold,
+    String? displayName,
+    bool clearDisplayName = false,
+  }) => Settings(
+    sessionStarts: sessionStarts ?? this.sessionStarts,
+    essentials: essentials ?? this.essentials,
+    candidates: candidates ?? this.candidates,
+    unlockMinutes: unlockMinutes ?? this.unlockMinutes,
+    threshold: threshold ?? this.threshold,
+    displayName: clearDisplayName ? null : displayName ?? this.displayName,
+  );
+
   /// Trims [name] and collapses inner runs of whitespace; a blank name is
   /// no name, so the greeting never ends in a dangling comma.
   static String? normalizeDisplayName(String? name) {
@@ -421,7 +438,10 @@ class Attempt {
     required this.confidence,
     required this.overridden,
     this.kind,
-  }) : at = _asUtc(at) {
+    this.reason,
+    List<SourceSpan> highlights = const <SourceSpan>[],
+  }) : at = _asUtc(at),
+       highlights = List.unmodifiable(highlights) {
     if (confidence != null &&
         (!confidence!.isFinite || confidence! < 0 || confidence! > 1)) {
       throw RangeError.range(confidence!, 0, 1, 'confidence');
@@ -441,6 +461,12 @@ class Attempt {
     kind: json['kind'] == null
         ? null
         : ReasonKindWire.fromWireValue(_string(json['kind'], 'kind')),
+    reason: _nullableString(json['reason'], 'reason'),
+    highlights: json['highlights'] == null
+        ? const <SourceSpan>[]
+        : _list(json['highlights'], 'highlights')
+              .map((value) => SourceSpan.fromJson(_map(value, 'highlights[]')))
+              .toList(growable: false),
   );
 
   final DateTime at;
@@ -449,6 +475,8 @@ class Attempt {
   final double? confidence;
   final bool overridden;
   final ReasonKind? kind;
+  final String? reason;
+  final List<SourceSpan> highlights;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'at': at.toIso8601String(),
@@ -457,6 +485,11 @@ class Attempt {
     'confidence': confidence,
     'overridden': overridden,
     if (kind != null) 'kind': kind!.wireValue,
+    if (reason != null) 'reason': reason,
+    if (highlights.isNotEmpty)
+      'highlights': highlights
+          .map((span) => span.toJson())
+          .toList(growable: false),
   };
 }
 
