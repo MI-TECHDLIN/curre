@@ -54,6 +54,11 @@ enum CurreGlyphKind {
   close,
   back,
   go,
+  // Production launcher navigation.
+  phone,
+  messages,
+  androidSettings,
+  profile,
   // Outside the report's 31: the kept-day mark of the streak the captain
   // added (2026-10-24). Its counting rules come from a separate audit.
   streak,
@@ -94,10 +99,16 @@ IconData? curreGlyphIcon(CurreGlyphKind kind) => switch (kind) {
   CurreGlyphKind.close => SolarIconsBold.closeCircle,
   CurreGlyphKind.back => SolarIconsBold.arrowLeft,
   CurreGlyphKind.go => SolarIconsBold.arrowRight,
+  CurreGlyphKind.phone => SolarIconsBold.phone,
+  CurreGlyphKind.messages => SolarIconsBold.chatRoundLine,
+  CurreGlyphKind.androidSettings => SolarIconsBold.settings,
+  CurreGlyphKind.profile => SolarIconsBold.userCircle,
   CurreGlyphKind.streak => SolarIconsBold.sun,
   CurreGlyphKind.water => SolarIconsBold.water,
   CurreGlyphKind.cloudDay => SolarIconsBold.cloud,
-  CurreGlyphKind.kindUnclear || CurreGlyphKind.guardFlagged || CurreGlyphKind.info => null,
+  CurreGlyphKind.kindUnclear ||
+  CurreGlyphKind.guardFlagged ||
+  CurreGlyphKind.info => null,
 };
 
 /// One glyph at [size] (the report's 24 dp grid by default) in [color].
@@ -106,7 +117,13 @@ IconData? curreGlyphIcon(CurreGlyphKind kind) => switch (kind) {
 /// reaches TalkBack, as the report requires. A null label marks the glyph
 /// as purely decorative.
 class CurreGlyph extends StatelessWidget {
-  const CurreGlyph(this.kind, {super.key, this.size = 24, this.color, this.semanticLabel});
+  const CurreGlyph(
+    this.kind, {
+    super.key,
+    this.size = 24,
+    this.color,
+    this.semanticLabel,
+  });
 
   final CurreGlyphKind kind;
   final double size;
@@ -115,7 +132,8 @@ class CurreGlyph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolved = color ?? IconTheme.of(context).color ?? const Color(0xFF1E1A16);
+    final resolved =
+        color ?? IconTheme.of(context).color ?? const Color(0xFF1E1A16);
     final icon = curreGlyphIcon(kind);
     final Widget glyph = icon != null
         ? Icon(icon, size: size, color: resolved)
@@ -168,7 +186,10 @@ class _KnockoutGlyphPainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      baseText.paint(canvas, Offset((s - baseText.width) / 2, (s - baseText.height) / 2));
+      baseText.paint(
+        canvas,
+        Offset((s - baseText.width) / 2, (s - baseText.height) / 2),
+      );
       baseText.dispose();
       mark = '!';
       markScale = .50;
@@ -191,7 +212,10 @@ class _KnockoutGlyphPainter extends CustomPainter {
           fontSize: s * markScale,
           height: 1,
           fontWeight: FontWeight.w800,
-          fontVariations: const [FontVariation('wght', 800), FontVariation('SHRP', 0)],
+          fontVariations: const [
+            FontVariation('wght', 800),
+            FontVariation('SHRP', 0),
+          ],
           foreground: Paint()
             ..color = const Color(0xFF000000)
             ..blendMode = BlendMode.dstOut,
@@ -199,7 +223,10 @@ class _KnockoutGlyphPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    markText.paint(canvas, Offset((s - markText.width) / 2, (s - markText.height) / 2) + markNudge);
+    markText.paint(
+      canvas,
+      Offset((s - markText.width) / 2, (s - markText.height) / 2) + markNudge,
+    );
     markText.dispose();
 
     canvas.restore();

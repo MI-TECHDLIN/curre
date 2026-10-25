@@ -52,6 +52,10 @@ void main() {
         confidence: 0.41,
         overridden: true,
         kind: ReasonKind.timeSensitive,
+        reason: 'reply Ada now',
+        highlights: const <SourceSpan>[
+          SourceSpan(text: 'Ada', start: 6, end: 9),
+        ],
       );
 
       expect(
@@ -66,6 +70,8 @@ void main() {
       expect(grant.grantedAt.isUtc, isTrue);
       expect(attempt.at.isUtc, isTrue);
       expect(attempt.kind!.wireValue, 'time_sensitive');
+      expect(attempt.reason, 'reply Ada now');
+      expect(attempt.highlights.single.text, 'Ada');
     });
 
     test('rejects unordered session starts and unknown enums', () {

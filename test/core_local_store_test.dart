@@ -39,6 +39,16 @@ void main() {
     },
   );
 
+  test('onboarding completion is false by default and persists', () async {
+    final store = await CurreLocalStore.open();
+    expect(store.isOnboardingComplete, isFalse);
+
+    await store.setOnboardingComplete(true);
+
+    final reopened = await CurreLocalStore.open();
+    expect(reopened.isOnboardingComplete, isTrue);
+  });
+
   test('today follows the 04:00 Curre day across midnight', () async {
     final store = await CurreLocalStore.open();
     final oldDay = _plan(const LocalDate(2026, 1, 1));
@@ -115,6 +125,28 @@ void main() {
 
     await store.clearHistory();
     expect(await store.loadAttempts(now: now), isEmpty);
+  });
+
+  test('plan and grant history keep 30 days and clear independently', () async {
+    final store = await CurreLocalStore.open();
+    final now = DateTime.utc(2026, 1, 31, 12);
+    final plan = _plan(const LocalDate(2026, 1, 30));
+    final grant = _grant(
+      'youtube',
+      grantedAt: now.subtract(const Duration(hours: 1)),
+      expiresAt: now.subtract(const Duration(minutes: 50)),
+    );
+
+    await store.appendPlanHistory(plan, now: now);
+    await store.appendGrantHistory(grant, now: now);
+
+    expect(await store.loadPlanHistory(now: now), hasLength(1));
+    expect(await store.loadGrantHistory(now: now), hasLength(1));
+
+    await store.clearHistory();
+
+    expect(await store.loadPlanHistory(now: now), isEmpty);
+    expect(await store.loadGrantHistory(now: now), isEmpty);
   });
 
   test('opening the store prunes stale attempts immediately', () async {

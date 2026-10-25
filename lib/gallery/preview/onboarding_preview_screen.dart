@@ -57,7 +57,7 @@ class OnboardingPreviewScreen extends StatelessWidget {
             children: [
               PrimaryPill(label: 'Set up Curre', glyph: CurreGlyphKind.go),
               SizedBox(height: CurreSpace.s3),
-              SecondaryPill(label: 'Try the gate first · demo'),
+              SecondaryPill(label: 'Try the gate first'),
             ],
           ),
         ),

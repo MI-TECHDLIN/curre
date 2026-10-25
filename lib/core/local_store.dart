@@ -14,6 +14,9 @@ class CurreLocalStore {
   static const String _grantsKey = 'curre.grants.v1';
   static const String _attemptsKey = 'curre.attempts.v1';
   static const String _doorUsesKey = 'curre.doorUses.v1';
+  static const String _onboardingKey = 'curre.onboarding.v1';
+  static const String _planHistoryKey = 'curre.planHistory.v1';
+  static const String _grantHistoryKey = 'curre.grantHistory.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -21,10 +24,18 @@ class CurreLocalStore {
     final instant = now ?? DateTime.now();
     await store.loadAttempts(now: instant);
     await store.loadActiveGrants(now: instant);
+    await store.loadPlanHistory(now: instant);
+    await store.loadGrantHistory(now: instant);
     return store;
   }
 
   final SharedPreferences _preferences;
+
+  bool get isOnboardingComplete =>
+      _preferences.getBool(_onboardingKey) ?? false;
+
+  Future<void> setOnboardingComplete(bool complete) =>
+      _preferences.setBool(_onboardingKey, complete);
 
   Future<void> saveSettings(Settings settings) async {
     await _preferences.setString(_settingsKey, jsonEncode(settings.toJson()));
@@ -120,6 +131,50 @@ class CurreLocalStore {
     return current;
   }
 
+  Future<void> appendPlanHistory(Plan plan, {required DateTime now}) async {
+    final current = await loadPlanHistory(now: now);
+    final cutoff = now.toUtc().subtract(historyRetention);
+    final updated = <Plan>[
+      ...current.where((item) => item.id != plan.id),
+      if (!plan.endsAt.isBefore(cutoff)) plan,
+    ]..sort((a, b) => a.endsAt.compareTo(b.endsAt));
+    await _writePlanHistory(updated);
+  }
+
+  Future<List<Plan>> loadPlanHistory({required DateTime now}) async {
+    final all = _readList(_planHistoryKey, Plan.fromJson);
+    final cutoff = now.toUtc().subtract(historyRetention);
+    final current = all
+        .where((plan) => !plan.endsAt.isBefore(cutoff))
+        .toList(growable: false);
+    if (current.length != all.length) await _writePlanHistory(current);
+    return current;
+  }
+
+  Future<void> appendGrantHistory(Grant grant, {required DateTime now}) async {
+    final current = await loadGrantHistory(now: now);
+    final cutoff = now.toUtc().subtract(historyRetention);
+    final updated = <Grant>[
+      ...current.where(
+        (item) =>
+            item.packageName != grant.packageName ||
+            item.grantedAt != grant.grantedAt,
+      ),
+      if (!grant.grantedAt.isBefore(cutoff)) grant,
+    ]..sort((a, b) => a.grantedAt.compareTo(b.grantedAt));
+    await _writeGrantHistory(updated);
+  }
+
+  Future<List<Grant>> loadGrantHistory({required DateTime now}) async {
+    final all = _readList(_grantHistoryKey, Grant.fromJson);
+    final cutoff = now.toUtc().subtract(historyRetention);
+    final current = all
+        .where((grant) => !grant.grantedAt.isBefore(cutoff))
+        .toList(growable: false);
+    if (current.length != all.length) await _writeGrantHistory(current);
+    return current;
+  }
+
   Future<void> appendAttempt(Attempt attempt, {required DateTime now}) async {
     final attempts = await loadAttempts(now: now);
     final cutoff = now.toUtc().subtract(historyRetention);
@@ -145,7 +200,11 @@ class CurreLocalStore {
   /// Clears the 30-day attempt history without disrupting today's plan or an
   /// active unlock grant.
   Future<void> clearHistory() async {
-    await _preferences.remove(_attemptsKey);
+    await Future.wait(<Future<bool>>[
+      _preferences.remove(_attemptsKey),
+      _preferences.remove(_planHistoryKey),
+      _preferences.remove(_grantHistoryKey),
+    ]);
   }
 
   /// Curre's current local day, which begins at the morning session
@@ -167,6 +226,20 @@ class CurreLocalStore {
     await _preferences.setString(
       _attemptsKey,
       jsonEncode(attempts.map((attempt) => attempt.toJson()).toList()),
+    );
+  }
+
+  Future<void> _writePlanHistory(Iterable<Plan> plans) async {
+    await _preferences.setString(
+      _planHistoryKey,
+      jsonEncode(plans.map((plan) => plan.toJson()).toList()),
+    );
+  }
+
+  Future<void> _writeGrantHistory(Iterable<Grant> grants) async {
+    await _preferences.setString(
+      _grantHistoryKey,
+      jsonEncode(grants.map((grant) => grant.toJson()).toList()),
     );
   }
 
