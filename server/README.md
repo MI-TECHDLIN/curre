@@ -29,12 +29,10 @@ pytest
 ruff check .
 ```
 
-All routes are tested against a fake Clocked client (`tests/fakes.py`)
-built from the response shapes recorded in
-`data/curre-differentiator/report.md` section 4 and the clocked-sdk 0.7.0
-README -- no network calls, no credits spent. `tests/test_contract.py`
-additionally validates real route responses against the Pydantic
-request/response types.
+All tests run without network calls or credit spend. Most route cases use the
+fake Clocked client in `tests/fakes.py`; `tests/test_contract.py` also feeds
+one recorded real pipeline response per route from `tests/fixtures/` through
+the production parsers and validates the resulting Pydantic response types.
 
 ## Environment variables
 
@@ -61,13 +59,62 @@ text.
 
 ## Measuring credits and latency
 
-`scripts/measure.py` sends a handful of sample plan and unlock requests
-through the *real* pipeline and prints credit and latency percentiles.
-**Not run as part of this change** -- there is no Clocked key yet:
+Start the server with `CLOCKED_API_KEY` already present in its environment,
+then run the labeled real-call suite from a second terminal:
 
 ```sh
-CLOCKED_API_KEY=clk_live_... python scripts/measure.py --n 20
+APP_KEY=local-only uvicorn app.main:app --port 8000
+APP_KEY=local-only python scripts/measure.py \
+  --base-url http://127.0.0.1:8000 \
+  --output /tmp/curre-clocked-measurement.json
 ```
+
+The script sends 10 plan intentions and 25 unlock reasons, prints exact
+credits and p50/p95 client-observed HTTP latency, and re-scores the same
+unlock answers at thresholds 0.6, 0.7 and 0.8 without spending more credits.
+The optional JSON report contains only the authored samples, route responses
+and measurements; it never contains either key.
+
+## Measured with real Clocked calls
+
+Measured 2026-10-25 against `clocked-sdk` 0.7.0 and the local FastAPI server,
+sequentially, using the reproducible samples in `scripts/measure.py`.
+Latency is full client-observed HTTP round-trip time, not only model time.
+
+| Route | Samples | Credits/call, mean (range) | Total credits | p50 | p95 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `/v1/plan` | 10 | 5.30 (4-11) | 53 | 274 ms | 858 ms |
+| `/v1/unlock` | 25 | 4.76 (4-7) | 119 | 260 ms | 344 ms |
+
+Unlock outcome accuracy by authored sample category:
+
+| Threshold | Overall | Task | Person | Time-sensitive | Browse | Unclear | Honest urgent | Injection |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.6 | 84% | 100% | 75% | 75% | 75% | 100% | 50% | 100% |
+| **0.7** | **84%** | **100%** | **75%** | **75%** | **75%** | **100%** | **50%** | **100%** |
+| 0.8 | 76% | 100% | 50% | 50% | 75% | 100% | 50% | 100% |
+
+The default stays at **0.7**. It tied 0.6 overall, but one browse reason was
+misclassified as a task at 0.628 confidence: 0.6 would open it, while 0.7
+asks the user to specify. Raising the threshold to 0.8 rejected additional
+legitimate person and time-sensitive reasons. Guard flagged all 4 injection
+attempts and neither of the 2 honest urgent/pleading reasons, so its custom
+instructions did not need adjustment.
+
+The measurement suite used 172 credits. Capturing the two real contract
+fixtures used 9 more, and the initial key verification used 1, for an exact
+task total of **182 credits**. No rejected-key attempt was billed.
+
+### SDK response notes
+
+The real responses matched the production parser: Decide choices are under
+`result.answers.*.choice`, while Fill choices/multiselects and Extract fields
+are under `result.fields.*` with Fill selections in `value`. Two details are
+worth preserving in tests: a missing Extract value may be only
+`{"value": null, "confidence": 1}` (no `p_blank`), and an integer field that
+cannot be normalized returns `normalized: null` plus a
+`normalization_reason`. The parser intentionally keys missingness from
+`value`/`normalized`, not either diagnostic field.
 
 ## Deploy notes
 
