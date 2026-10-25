@@ -150,6 +150,7 @@ class _AvatarReviewPanelState extends State<AvatarReviewPanel> {
         const SizedBox(height: CurreSpace.s3),
         AvatarPicker(
           selectedAvatarId: _selected,
+          motion: AvatarMotion.idle,
           onSelected: (id) => setState(() => _selected = id),
         ),
       ],

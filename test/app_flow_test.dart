@@ -55,6 +55,13 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Use this name'));
     await tester.pumpAndSettle();
+    expect(find.byType(AvatarPicker), findsOneWidget);
+    await tester.tap(
+      find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Use this profile'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Set Curre as Home'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Allow notifications'));
@@ -70,6 +77,7 @@ void main() {
 
     expect(controller.onboardingComplete, isTrue);
     expect(controller.settings.displayName, 'Ada');
+    expect(controller.settings.avatarId, 'avatar-03');
     expect(find.byType(CheckinScreen), findsOneWidget);
     expect(find.text('Morning check-in'), findsOneWidget);
   });
@@ -81,14 +89,26 @@ void main() {
     await tester.pump();
 
     expect(find.text('Good morning, Chidi'), findsOneWidget);
+    final homeAvatar = tester.widget<Avatar>(find.byType(Avatar));
+    expect(homeAvatar.avatarId, isNull);
+    expect(homeAvatar.motion, AvatarMotion.reactOnce);
     for (final label in <String>['Phone', 'Messages', 'Settings', 'Curre']) {
       expect(find.text(label), findsOneWidget);
     }
     await tester.tap(find.text('C'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(AvatarPicker), findsOneWidget);
+    await tester.tap(find.bySemanticsLabel(RegExp('Avatar 1, light skin')));
+    await tester.pump();
+    expect(controller.settings.avatarId, 'avatar-01');
     expect(find.text('Proof days'), findsOneWidget);
     expect(find.text('Best run'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('History'),
+      260,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('History'));
     await tester.pumpAndSettle();
     expect(find.byType(HistoryScreen), findsOneWidget);

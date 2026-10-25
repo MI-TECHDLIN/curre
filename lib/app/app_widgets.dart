@@ -228,32 +228,32 @@ class RoundGlyphButton extends StatelessWidget {
   }
 }
 
-/// The single swap point for the avatar art being produced in parallel.
+/// The shared profile-button rendering used on Home and in the profile sheet.
 class ProfileAvatarButton extends StatelessWidget {
   const ProfileAvatarButton({
     super.key,
     required this.displayName,
+    this.avatarId,
+    this.motion = AvatarMotion.still,
     this.onPressed,
   });
 
   final String? displayName;
+  final String? avatarId;
+  final AvatarMotion motion;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
     final trimmed = displayName?.trim();
-    final initial = trimmed == null || trimmed.isEmpty
-        ? 'C'
-        : String.fromCharCode(trimmed.runes.first).toUpperCase();
+    final initial = trimmed == null || trimmed.isEmpty ? 'C' : trimmed;
     return Semantics(
       button: onPressed != null,
       label: onPressed == null ? 'Profile avatar' : 'Open profile',
       excludeSemantics: true,
       child: Material(
-        color: colors.raised,
-        shape: CircleBorder(side: BorderSide(color: colors.ember, width: 2)),
+        color: Colors.transparent,
+        shape: const CircleBorder(),
         child: InkWell(
           onTap: onPressed,
           customBorder: const CircleBorder(),
@@ -261,11 +261,11 @@ class ProfileAvatarButton extends StatelessWidget {
           child: SizedBox.square(
             dimension: 48,
             child: Center(
-              child: Text(
-                initial,
-                style: type.title
-                    .weight(720)
-                    .copyWith(color: colors.emberText, height: 1),
+              child: Avatar(
+                avatarId: avatarId,
+                initial: initial,
+                size: 40,
+                motion: motion,
               ),
             ),
           ),

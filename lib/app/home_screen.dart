@@ -174,6 +174,8 @@ class _HomeBody extends StatelessWidget {
                       const SizedBox(width: CurreSpace.s3),
                       ProfileAvatarButton(
                         displayName: name,
+                        avatarId: controller.settings.avatarId,
+                        motion: AvatarMotion.reactOnce,
                         onPressed: openProfile,
                       ),
                     ],
@@ -660,6 +662,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
   late final TextEditingController _name = TextEditingController(
     text: widget.controller.settings.displayName,
   );
+  late String? _avatarId = widget.controller.settings.avatarId;
   var _editing = false;
 
   @override
@@ -693,6 +696,8 @@ class _ProfileSheetState extends State<ProfileSheet> {
                   children: [
                     ProfileAvatarButton(
                       displayName: widget.controller.settings.displayName,
+                      avatarId: _avatarId,
+                      motion: AvatarMotion.reactOnce,
                     ),
                     const SizedBox(width: CurreSpace.s3),
                     Expanded(
@@ -708,6 +713,41 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     ),
                   ],
                 ),
+                const SizedBox(height: CurreSpace.s5),
+                Text('Choose your profile', style: type.label),
+                const SizedBox(height: CurreSpace.s1),
+                Text(
+                  'The faces stay unnamed. Pick the one that feels like you.',
+                  style: type.caption.copyWith(color: colors.ink2),
+                ),
+                const SizedBox(height: CurreSpace.s3),
+                AvatarPicker(
+                  selectedAvatarId: _avatarId,
+                  onSelected: (id) {
+                    setState(() => _avatarId = id);
+                    unawaited(
+                      widget.controller.updateSettings(
+                        widget.controller.settings.copyWith(avatarId: id),
+                      ),
+                    );
+                  },
+                ),
+                if (_avatarId != null) ...[
+                  const SizedBox(height: CurreSpace.s2),
+                  CurreSecondaryButton(
+                    label: 'Use my initial instead',
+                    onPressed: () {
+                      setState(() => _avatarId = null);
+                      unawaited(
+                        widget.controller.updateSettings(
+                          widget.controller.settings.copyWith(
+                            clearAvatarId: true,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
                 const SizedBox(height: CurreSpace.s5),
                 Row(
                   children: [

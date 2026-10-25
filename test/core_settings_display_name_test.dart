@@ -95,6 +95,13 @@ void main() {
       );
     });
 
+    test('copyWith changes and explicitly clears the selection', () {
+      final settings = Settings(avatarId: 'avatar-02');
+      expect(settings.copyWith().avatarId, 'avatar-02');
+      expect(settings.copyWith(avatarId: 'avatar-11').avatarId, 'avatar-11');
+      expect(settings.copyWith(clearAvatarId: true).avatarId, isNull);
+    });
+
     test('survives the local store', () async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final store = await CurreLocalStore.open();

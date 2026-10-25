@@ -18,6 +18,7 @@ class AvatarPicker extends StatelessWidget {
     this.options = AvatarCatalog.all,
     this.crossAxisCount,
     this.avatarSize = 72,
+    this.motion = AvatarMotion.still,
   });
 
   final String? selectedAvatarId;
@@ -25,6 +26,7 @@ class AvatarPicker extends StatelessWidget {
   final List<AvatarOption> options;
   final int? crossAxisCount;
   final double avatarSize;
+  final AvatarMotion motion;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class AvatarPicker extends StatelessWidget {
                 option: option,
                 selected: option.id == selectedAvatarId,
                 avatarSize: avatarSize,
+                motion: motion,
                 onTap: () => onSelected(option.id),
               );
             },
@@ -71,12 +74,14 @@ class _AvatarChoice extends StatelessWidget {
     required this.option,
     required this.selected,
     required this.avatarSize,
+    required this.motion,
     required this.onTap,
   });
 
   final AvatarOption option;
   final bool selected;
   final double avatarSize;
+  final AvatarMotion motion;
   final VoidCallback onTap;
 
   @override
@@ -109,7 +114,7 @@ class _AvatarChoice extends StatelessWidget {
                     child: Avatar(
                       avatarId: option.id,
                       size: avatarSize,
-                      motion: AvatarMotion.idle,
+                      motion: motion,
                     ),
                   ),
                 ),
