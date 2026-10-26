@@ -8,6 +8,9 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Voice typing records only while the voice sheet's mic is held or
+         tapped, and transcribes on the phone. Asked for at first mic use. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- Curre's notification channel never vibrates. Remove the plugin default. -->
     <uses-permission
         android:name="android.permission.VIBRATE"
@@ -16,7 +19,9 @@
         android:label="Curre"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher">
+        android:roundIcon="@mipmap/ic_launcher"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -106,9 +111,6 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
-        </intent>
-        <intent>
-            <action android:name="android.speech.action.RECOGNIZE_SPEECH"/>
         </intent>
     </queries>
 </manifest>

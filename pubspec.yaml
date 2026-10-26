@@ -38,6 +38,20 @@ dependencies:
   shared_preferences: ^2.5.3
   timezone: ^0.11.2
 
+  # Voice typing runs on the phone: Whisper tiny (OpenAI, MIT) through
+  # sherpa-onnx (Apache-2.0, with ONNX Runtime, MIT). The model is a
+  # one-time download, never bundled; see lib/platform/voice_model.dart.
+  # Held below 2.0.0, which was days old when this landed.
+  sherpa_onnx: ^1.13.8
+  # The mic stream (record, BSD-3-Clause) and its permission prompt
+  # (permission_handler, MIT). Audio stays in memory and on the phone.
+  record: ^7.1.2
+  permission_handler: ^13.0.2
+  # Where the downloaded model lives (BSD-3-Clause) and the SHA-256 check
+  # each file must pass before it is used (BSD-3-Clause).
+  path_provider: ^2.1.6
+  crypto: ^3.0.7
+
   # Icons: the Solar set in its Bold style, the captain's pick after the
   # icon-pack comparison (2026-10-24: "for the icon solar bold is fine").
   # CurreGlyph maps Curre's semantic glyphs onto it in one place. The
@@ -75,6 +89,8 @@ flutter:
     - assets/licenses/OFL-Newsreader.txt
     - assets/licenses/OFL-AtkinsonHyperlegibleMono.txt
     - assets/licenses/MIT-FluentEmoji.txt
+    - assets/licenses/MIT-Whisper.txt
+    - assets/licenses/MIT-ONNXRuntime.txt
 
   fonts:
     - family: Geologica

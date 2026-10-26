@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 10 and 11 backups. The voice files (lib/platform/voice_native.dart)
+     are a 104 MB download, far over Android's 25 MB backup quota, and a new
+     phone simply downloads them again. Everything else is backed up as
+     before. -->
+<full-backup-content>
+    <exclude domain="file" path="voice/"/>
+</full-backup-content>

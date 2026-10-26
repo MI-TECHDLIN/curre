@@ -20,6 +20,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'support/voice_fakes.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -1296,6 +1298,7 @@ CurreController _controller({
     launcher: launcher,
     homePlatform: _FakeHomePlatform(),
     api: api,
+    speech: fakeSpeech(),
     settings: Settings(
       displayName: 'Chidi',
       essentials: essentials,

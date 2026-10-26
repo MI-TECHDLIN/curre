@@ -1,6 +1,5 @@
 package com.mitech.curre
 
-import android.app.Activity
 import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.app.SearchManager
@@ -19,7 +18,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Process
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -34,7 +32,6 @@ class MainActivity : FlutterActivity() {
     private var pendingHomeRoleResult: MethodChannel.Result? = null
     private var pendingUsageAccessResult: MethodChannel.Result? = null
     private var pendingNotificationAccessResult: MethodChannel.Result? = null
-    private var pendingSpeechResult: MethodChannel.Result? = null
     private val homeRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
@@ -57,25 +54,6 @@ class MainActivity : FlutterActivity() {
         pendingNotificationAccessResult = null
         result.success(hasNotificationAccess())
     }
-    private val speechRecognizerLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { activityResult ->
-        val result = pendingSpeechResult ?: return@registerForActivityResult
-        pendingSpeechResult = null
-        val transcript = if (activityResult.resultCode == Activity.RESULT_OK) {
-            bestSpeechTranscript(activityResult.data)
-        } else {
-            null
-        }
-        result.success(
-            if (transcript == null) {
-                speechResult(SPEECH_CANCELLED)
-            } else {
-                speechResult(SPEECH_RECOGNIZED, transcript = transcript)
-            },
-        )
-    }
-
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherApps = getSystemService(LauncherApps::class.java)
@@ -123,7 +101,6 @@ class MainActivity : FlutterActivity() {
                     homeSurfaceActive = call.arguments as Boolean
                     result.success(null)
                 }
-                "startSpeechInput" -> startSpeechInput(call.arguments, result)
                 "hasShortcutHostPermission" ->
                     result.success(launcherApps.hasShortcutHostPermission())
                 "getStaticShortcuts" -> result.success(
@@ -450,55 +427,6 @@ class MainActivity : FlutterActivity() {
             roleManager.isRoleHeld(RoleManager.ROLE_HOME)
     }
 
-    private fun startSpeechInput(arguments: Any?, result: MethodChannel.Result) {
-        if (pendingSpeechResult != null) {
-            result.error("speech_in_progress", "Speech input is already open.", null)
-            return
-        }
-        val prompt = (arguments as? Map<*, *>)?.get("prompt") as? String
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-            )
-            .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        if (!prompt.isNullOrBlank()) {
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
-        }
-        if (intent.resolveActivity(packageManager) == null) {
-            result.success(
-                speechResult(
-                    SPEECH_UNAVAILABLE,
-                    message = "Speech input isn't available on this phone.",
-                ),
-            )
-            return
-        }
-
-        pendingSpeechResult = result
-        try {
-            speechRecognizerLauncher.launch(intent)
-        } catch (error: Exception) {
-            pendingSpeechResult = null
-            throw error
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun bestSpeechTranscript(data: Intent?): String? =
-        data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull { it.isNotBlank() }
-
-    private fun speechResult(
-        status: String,
-        transcript: String? = null,
-        message: String? = null,
-    ): Map<String, String?> = mapOf(
-        "status" to status,
-        "transcript" to transcript,
-        "message" to message,
-    )
-
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         if (!homeSurfaceActive) super.onBackPressed()
@@ -584,9 +512,6 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val CHANNEL_NAME = "com.mitech.curre/launcher"
-        private const val SPEECH_RECOGNIZED = "recognized"
-        private const val SPEECH_CANCELLED = "cancelled"
-        private const val SPEECH_UNAVAILABLE = "unavailable"
         private const val HOME_SETTINGS_OPENED = "home"
         private const val DEFAULT_APPS_OPENED = "defaultApps"
         private const val SETTINGS_OPENED = "settings"

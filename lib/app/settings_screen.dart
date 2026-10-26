@@ -9,6 +9,7 @@ import 'app_choice_screen.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'history_screen.dart';
+import 'voice_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.controller});
@@ -180,6 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onTap: _askForNudges,
                 ),
                 const SizedBox(height: CurreSpace.s6),
+                const _SectionTitle('Voice typing'),
+                const SizedBox(height: CurreSpace.s2),
+                VoiceSettingsCard(speech: controller.speech),
+                const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Your name'),
                 const SizedBox(height: CurreSpace.s2),
                 TextField(
@@ -227,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _SettingsTile(
                   glyph: CurreGlyphKind.info,
                   title: 'Licences',
-                  subtitle: 'The fonts, icons and illustrations Curre uses',
+                  subtitle: 'The fonts, icons, illustrations and voice typing Curre uses',
                   onTap: () => showLicensePage(
                     context: context,
                     applicationName: 'Curre',

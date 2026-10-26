@@ -6,6 +6,8 @@ import 'package:curre/core/core.dart';
 import 'package:curre/doors/door_models.dart';
 import 'package:curre/platform/platform.dart';
 
+import 'voice_fakes.dart';
+
 /// Test doubles for the Android side of Curre, shared by the onboarding,
 /// settings, copy and error tests.
 class FakeDoorPlatform implements DoorPlatform {
@@ -188,6 +190,7 @@ CurreController fakeController({
   FakeNotificationGateway? notifications,
   CurreApiClient? api,
   CurreLocalStore? store,
+  SpeechInputService? speech,
   DateTime? now,
 }) {
   final homePlatform = home ?? FakeHomePlatform();
@@ -203,6 +206,7 @@ CurreController fakeController({
         : GrantNotificationService(notifications),
     api: api,
     store: store,
+    speech: speech ?? fakeSpeech(),
     settings:
         settings ??
         Settings(
