@@ -75,9 +75,9 @@ class GrantNotificationService {
     final notice = GrantNotificationNotice(
       id: id,
       ongoingTitle: '$appLabel → $target',
-      ongoingBody: 'In sight until this timer ends',
+      ongoingBody: 'Back for now. It hides again when the time is up.',
       expiryTitle: '$appLabel is hidden again',
-      expiryBody: 'Your $minutes min for ${grant.reason.trim()} ended.',
+      expiryBody: 'Your $minutes min for ${grant.reason.trim()} are up.',
       expiresAt: grant.expiresAt,
       remaining: grant.expiresAt.difference(now),
       packageName: grant.packageName,
@@ -123,15 +123,16 @@ class FlutterGrantNotificationGateway
       <CurreNotificationType, _ChannelSpec>{
         CurreNotificationType.checkIn: _ChannelSpec(
           id: 'curre_checkins',
-          name: 'Check-ins',
-          description: 'Morning, afternoon and evening check-in reminders.',
+          name: 'Plan your day',
+          description:
+              'A gentle reminder to plan your morning, afternoon and evening.',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),
         CurreNotificationType.planEnding: _ChannelSpec(
           id: 'curre_plans',
           name: 'Plan reminders',
-          description: 'A quiet heads-up before the current plan ends.',
+          description: 'A quiet heads-up before your plan ends.',
           importance: Importance.low,
           priority: Priority.low,
         ),
@@ -145,7 +146,7 @@ class FlutterGrantNotificationGateway
         CurreNotificationType.proof: _ChannelSpec(
           id: 'curre_proof',
           name: 'Proof reminders',
-          description: 'Prompts to add a short proof note after a plan.',
+          description: 'After a plan, a reminder to note what you got done.',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),
@@ -399,7 +400,7 @@ class FlutterGrantNotificationGateway
         : SemanticAction.none,
     inputs: action == CurreNotificationAction.addProof
         ? const <AndroidNotificationActionInput>[
-            AndroidNotificationActionInput(label: 'Add a short proof note'),
+            AndroidNotificationActionInput(label: 'What did you get done?'),
           ]
         : const <AndroidNotificationActionInput>[],
   );

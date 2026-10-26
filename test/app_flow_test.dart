@@ -76,9 +76,9 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(const Key('home-checkin-card')), findsOneWidget);
-      expect(find.text('Start check-in'), findsOneWidget);
+      expect(find.text('Plan now'), findsOneWidget);
       expect(find.byKey(const Key('home-empty-state')), findsOneWidget);
-      expect(find.text('essentials only'), findsOneWidget);
+      expect(find.text('Nothing planned yet'), findsOneWidget);
       expect(find.byType(PeekMascot), findsOneWidget);
       var scene = tester.widget<SkyScene>(find.byType(SkyScene));
       expect(scene.live, isTrue);
@@ -91,7 +91,7 @@ void main() {
       for (final label in <String>['Phone', 'Messages', 'Settings', 'Curre']) {
         expect(find.text(label), findsOneWidget);
       }
-      expect(find.text('Hidden apps · 12'), findsOneWidget);
+      expect(find.text('12 hidden apps'), findsOneWidget);
     },
   );
 
@@ -161,7 +161,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Instagram is in sight'), findsOneWidget);
+    expect(find.text('Instagram is back for now'), findsOneWidget);
     expect(find.text('Ada'), findsWidgets);
     expect(find.text('1 ready'), findsOneWidget);
     expect(find.text('→ Ada'), findsOneWidget);
@@ -195,69 +195,70 @@ void main() {
     expect(find.text('Choose the apps yourself'), findsOneWidget);
   });
 
-  testWidgets('a planned check-in reveals the apps and returns the plan to Home', (
-    tester,
-  ) async {
-    await phone(tester);
-    var deploymentAwake = false;
-    final api = CurreApiClient(
-      baseUrl: Uri.parse('https://curre.test'),
-      appKey: 'test-key',
-      httpClient: MockClient((request) async {
-        if (request.method == 'GET') {
-          expect(request.url.path, '/healthz');
-          deploymentAwake = true;
-          return http.Response('{}', 200);
-        }
-        expect(request.url.path, '/v1/plan');
-        expect(deploymentAwake, isTrue);
-        return http.Response(
-          jsonEncode(<String, Object?>{
-            'apps': <Object?>[
-              <String, Object?>{
-                'id': 'com.google.android.youtube',
-                'query': <String, Object?>{
-                  'text': 'G chord',
-                  'start': 10,
-                  'end': 17,
+  testWidgets(
+    'a planned check-in reveals the apps and returns the plan to Home',
+    (tester) async {
+      await phone(tester);
+      var deploymentAwake = false;
+      final api = CurreApiClient(
+        baseUrl: Uri.parse('https://curre.test'),
+        appKey: 'test-key',
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            expect(request.url.path, '/healthz');
+            deploymentAwake = true;
+            return http.Response('{}', 200);
+          }
+          expect(request.url.path, '/v1/plan');
+          expect(deploymentAwake, isTrue);
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'apps': <Object?>[
+                <String, Object?>{
+                  'id': 'com.google.android.youtube',
+                  'query': <String, Object?>{
+                    'text': 'G chord',
+                    'start': 10,
+                    'end': 17,
+                  },
                 },
+              ],
+              'end_phrase': <String, Object?>{
+                'text': 'till 7',
+                'start': 29,
+                'end': 35,
               },
-            ],
-            'end_phrase': <String, Object?>{
-              'text': 'till 7',
-              'start': 29,
-              'end': 35,
-            },
-            'usage': <String, Object?>{'credits': 18, 'model_ms': 420},
-          }),
-          200,
-        );
-      }),
-    );
-    final controller = _controller(api: api);
-    await tester.pumpWidget(CurreApp(controller: controller));
-    await tester.pump();
-    await tester.tap(find.text('What’s this morning for?'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(find.byType(CheckinScreen), findsOneWidget);
-    await tester.enterText(
-      find.byKey(const Key('checkin-intention')),
-      'Learn the G chord on YouTube till 7',
-    );
-    await tester.pump();
-    await tester.tap(find.text('Set my morning'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+              'usage': <String, Object?>{'credits': 18, 'model_ms': 420},
+            }),
+            200,
+          );
+        }),
+      );
+      final controller = _controller(api: api);
+      await tester.pumpWidget(CurreApp(controller: controller));
+      await tester.pump();
+      await tester.tap(find.text('What’s this morning for?'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(CheckinScreen), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('checkin-intention')),
+        'Learn the G chord on YouTube till 7',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Set my morning'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Here’s your plan'), findsOneWidget);
-    expect(find.text('YouTube'), findsOneWidget);
-    expect(find.text('→ Search “G chord”'), findsOneWidget);
-    await tester.tap(find.text('Back to Home'));
-    await tester.pumpAndSettle();
-    expect(find.text('Your morning'), findsOneWidget);
-    expect(controller.lastPlanCall?.usage?.credits, 18);
-  });
+      expect(find.text('Here’s your plan'), findsOneWidget);
+      expect(find.text('YouTube'), findsOneWidget);
+      expect(find.text('→ Search “G chord”'), findsOneWidget);
+      await tester.tap(find.text('Back to Home'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your morning'), findsOneWidget);
+      expect(controller.lastPlanCall?.usage?.credits, 18);
+    },
+  );
 
   testWidgets(
     'check-in recovers when the first plan request is transiently unavailable',
@@ -598,7 +599,9 @@ void main() {
 
     expect(find.text('Hidden apps'), findsOneWidget);
     expect(
-      find.text('Apps you didn’t plan for wait here. Tap one to bring it back.'),
+      find.text(
+        'Apps you didn’t plan for wait here. Tap one to bring it back.',
+      ),
       findsOneWidget,
     );
     await tester.tap(find.text('Got it'));
@@ -654,10 +657,7 @@ void main() {
         ),
         'That reads like an instruction, not a reason',
       ),
-      (
-        const UnlockResponse.unavailable(),
-        'Couldn’t check your reason',
-      ),
+      (const UnlockResponse.unavailable(), 'Couldn’t check your reason'),
     ];
 
     for (final item in cases) {
@@ -910,10 +910,7 @@ void main() {
     expect(find.text('Not now'), findsOneWidget);
     expect(find.text('Just browsing'), findsOneWidget);
     expect(find.text('Waited 30 seconds'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Instagram came back'),
-      300,
-    );
+    await tester.scrollUntilVisible(find.text('Instagram came back'), 300);
     expect(find.text('Instagram came back'), findsOneWidget);
   });
 

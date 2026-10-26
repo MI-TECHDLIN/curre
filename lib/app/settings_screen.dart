@@ -176,8 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _SettingsTile(
                   glyph: CurreGlyphKind.notify,
                   title: 'Turn on quiet nudges',
-                  subtitle:
-                      'A silent note when time you asked for is up. No sound, no buzz.',
+                  subtitle: 'A silent note when time you asked for is up. No sound, no buzz.',
                   onTap: _askForNudges,
                 ),
                 const SizedBox(height: CurreSpace.s6),
@@ -208,8 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _SettingsTile(
                   glyph: CurreGlyphKind.history,
                   title: 'History',
-                  subtitle:
-                      'Your plans and the apps you brought back, from the last 30 days. Only on this phone.',
+                  subtitle: 'Your plans and the apps you brought back, from the last 30 days. Only on this phone.',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => HistoryScreen(controller: controller),
@@ -219,8 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _SettingsTile(
                   glyph: CurreGlyphKind.close,
                   title: 'Clear history',
-                  subtitle:
-                      'Delete past plans, reasons, notes and missed notifications from this phone',
+                  subtitle: 'Delete past plans, reasons, notes and missed notifications from this phone',
                   onTap: _confirmClearHistory,
                   destructive: true,
                 ),
@@ -322,9 +319,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) setState(() => _checkingNotificationAccess = false);
   }
 
-  Future<void> _setGentleInterceptEnabled(bool enabled) => _save(
-    controller.settings.copyWith(askWhyOnHiddenAppOpen: enabled),
-  );
+  Future<void> _setGentleInterceptEnabled(bool enabled) =>
+      _save(controller.settings.copyWith(askWhyOnHiddenAppOpen: enabled));
 
   Future<void> _setQuietNotificationsEnabled(bool enabled) => _save(
     controller.settings.copyWith(quietNotificationsFromHiddenApps: enabled),
@@ -368,9 +364,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     showCurreSnack(
       context,
-      allowed
-          ? 'Quiet nudges are on.'
-          : 'Nudges are off. To turn them on, allow notifications for Curre in your phone’s Settings.',
+      allowed ? 'Quiet nudges are on.' : 'Nudges are off. To turn them on, allow notifications for Curre in your phone’s Settings.',
     );
   }
 
@@ -381,10 +375,8 @@ class _SettingsScreenState extends State<SettingsScreen>
       HomeSettingsOpened.homeApps => null,
       HomeSettingsOpened.defaultApps =>
         'Tap “Home app”, then choose the one you want.',
-      HomeSettingsOpened.settings =>
-        'Your phone opened Settings. Search for “Home app” (or open Apps, then Default apps), then choose the one you want.',
-      HomeSettingsOpened.none =>
-        'Open your phone’s Settings app and search for “Home app”. Choose the one you want there.',
+      HomeSettingsOpened.settings => 'Your phone opened Settings. Search for “Home app” (or open Apps, then Default apps), then choose the one you want.',
+      HomeSettingsOpened.none => 'Open your phone’s Settings app and search for “Home app”. Choose the one you want there.',
     };
     if (help != null) showCurreSnack(context, help);
   }
@@ -553,39 +545,43 @@ class _AccessCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
-    return Container(
-      padding: const EdgeInsets.all(CurreSpace.s4),
-      decoration: BoxDecoration(
-        color: colors.raised,
+    // A Material, not a decorated box: the switch row paints its ink here.
+    return Material(
+      color: colors.raised,
+      shape: RoundedRectangleBorder(
         borderRadius: CurreShape.md,
-        border: Border.all(color: colors.hairline),
+        side: BorderSide(color: colors.hairline),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            title: Text(title, style: type.label),
-            subtitle: Text(
-              status,
-              style: type.caption.copyWith(
-                color: needsAccess ? colors.emberText : colors.ink2,
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(CurreSpace.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: Text(title, style: type.label),
+              subtitle: Text(
+                status,
+                style: type.caption.copyWith(
+                  color: needsAccess ? colors.emberText : colors.ink2,
+                ),
               ),
+              value: value,
+              onChanged: onChanged,
             ),
-            value: value,
-            onChanged: onChanged,
-          ),
-          const SizedBox(height: CurreSpace.s2),
-          Text(explanation, style: type.caption.copyWith(color: colors.ink3)),
-          if (needsAccess) ...[
-            const SizedBox(height: CurreSpace.s4),
-            CurrePrimaryButton(
-              label: allowLabel,
-              glyph: allowGlyph,
-              onPressed: onAllow,
-            ),
+            const SizedBox(height: CurreSpace.s2),
+            Text(explanation, style: type.caption.copyWith(color: colors.ink3)),
+            if (needsAccess) ...[
+              const SizedBox(height: CurreSpace.s4),
+              CurrePrimaryButton(
+                label: allowLabel,
+                glyph: allowGlyph,
+                onPressed: onAllow,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -636,9 +632,15 @@ class _StrictnessCard extends StatelessWidget {
             ),
             Row(
               children: [
-                Text('Gentle', style: type.caption.copyWith(color: colors.ink3)),
+                Text(
+                  'Gentle',
+                  style: type.caption.copyWith(color: colors.ink3),
+                ),
                 const Spacer(),
-                Text('Strict', style: type.caption.copyWith(color: colors.ink3)),
+                Text(
+                  'Strict',
+                  style: type.caption.copyWith(color: colors.ink3),
+                ),
               ],
             ),
             const SizedBox(height: CurreSpace.s2),

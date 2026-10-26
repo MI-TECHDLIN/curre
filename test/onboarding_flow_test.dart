@@ -260,9 +260,7 @@ void main() {
     expect(find.text('This one pulls me in'), findsOneWidget);
   });
 
-  testWidgets('a blank name asks for one instead of moving on', (
-    tester,
-  ) async {
+  testWidgets('a blank name asks for one instead of moving on', (tester) async {
     final controller = newUser();
     await pump(tester, controller);
     await walkTo(tester, 'What should Curre call you?');
@@ -287,50 +285,47 @@ void main() {
     await walkTo(tester, 'When does your morning start?');
     await tapText(tester, '07:00');
     expect(
-      find.text(
-        'Pick a time before 06:30. That’s when your afternoon starts.',
-      ),
+      find.text('Pick a time before 06:30. That’s when your afternoon starts.'),
       findsOneWidget,
     );
     expect(find.text('Mornings start at 05:00'), findsOneWidget);
   });
 
-  testWidgets(
-    'Home stays put until Android says Curre is the home screen',
-    (tester) async {
-      final home = FakeHomePlatform(isHome: false);
-      final homeSettings = FakeHomeSettings(HomeSettingsOpened.defaultApps);
-      final controller = newUser(
-        home: home,
-        platform: FakeDoorPlatform(home: home, grantHome: false),
-        homeSettings: homeSettings,
-      );
-      await pump(tester, controller);
-      await walkTo(tester, 'Make Curre your home screen.');
+  testWidgets('Home stays put until Android says Curre is the home screen', (
+    tester,
+  ) async {
+    final home = FakeHomePlatform(isHome: false);
+    final homeSettings = FakeHomeSettings(HomeSettingsOpened.defaultApps);
+    final controller = newUser(
+      home: home,
+      platform: FakeDoorPlatform(home: home, grantHome: false),
+      homeSettings: homeSettings,
+    );
+    await pump(tester, controller);
+    await walkTo(tester, 'Make Curre your home screen.');
 
-      await tapText(tester, 'Make Curre my home screen');
-      expect(find.text('Make Curre your home screen.'), findsOneWidget);
-      expect(
-        find.text(
-          'Curre isn’t your home screen yet. Try again, or open your phone’s home screen settings and choose Curre.',
-        ),
-        findsOneWidget,
-      );
+    await tapText(tester, 'Make Curre my home screen');
+    expect(find.text('Make Curre your home screen.'), findsOneWidget);
+    expect(
+      find.text(
+        'Curre isn’t your home screen yet. Try again, or open your phone’s home screen settings and choose Curre.',
+      ),
+      findsOneWidget,
+    );
 
-      await tapText(tester, 'Open home settings');
-      expect(homeSettings.calls, 1);
-      expect(
-        find.text('Tap “Home app”, choose Curre, then come back here.'),
-        findsOneWidget,
-      );
+    await tapText(tester, 'Open home settings');
+    expect(homeSettings.calls, 1);
+    expect(
+      find.text('Tap “Home app”, choose Curre, then come back here.'),
+      findsOneWidget,
+    );
 
-      home.isHome = true;
-      await resume(tester);
-      expect(find.text('Curre is your home screen now.'), findsOneWidget);
-      await tapText(tester, 'Continue');
-      expect(find.text('What if a hidden app sneaks back in?'), findsOneWidget);
-    },
-  );
+    home.isHome = true;
+    await resume(tester);
+    expect(find.text('Curre is your home screen now.'), findsOneWidget);
+    await tapText(tester, 'Continue');
+    expect(find.text('What if a hidden app sneaks back in?'), findsOneWidget);
+  });
 
   testWidgets(
     'the hidden-app steps say so when access stays off, and notice it later',

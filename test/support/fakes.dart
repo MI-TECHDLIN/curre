@@ -102,13 +102,21 @@ class FakeGentleIntercept extends DisabledGentleInterceptGateway {
     this.usage = false,
     this.notifications = false,
     this.grants = true,
+    this.missed = const <MissedWhileHiddenNotification>[],
   });
 
   bool usage;
   bool notifications;
   bool grants;
+
+  /// What Android kept quiet while those apps were hidden.
+  List<MissedWhileHiddenNotification> missed;
   var usageRequests = 0;
   var notificationRequests = 0;
+
+  @override
+  Future<List<MissedWhileHiddenNotification>> loadMissedNotifications() async =>
+      missed;
 
   @override
   Future<bool> hasUsageAccess() async => usage;

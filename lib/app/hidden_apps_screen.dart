@@ -312,8 +312,7 @@ class MissedWhileHiddenScreen extends StatelessWidget {
             ),
             child: CurreTopBar(
               title: 'Missed notifications',
-              subtitle:
-                  'Kept quiet while their apps were hidden. Only the app, title and time are saved, on this phone.',
+              subtitle: 'Kept quiet while their apps were hidden. Only the app, title and time are saved, on this phone.',
               maxTitleLines: 2,
             ),
           ),

@@ -9,6 +9,7 @@ import 'package:curre/app/unlock_gate_screen.dart';
 import 'package:curre/core/core.dart';
 import 'package:curre/design/design.dart';
 import 'package:curre/main.dart';
+import 'package:curre/platform/platform.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,10 +22,7 @@ import 'support/fakes.dart';
 bool _userFacing(String path) =>
     !path.startsWith('lib/core/') &&
     !path.startsWith('lib/gallery/') &&
-    path != 'lib/doors/door_lab_screen.dart' &&
-    // The wording of the timer notification belongs to the notifications
-    // work running alongside this one.
-    path != 'lib/platform/grant_notifications.dart';
+    path != 'lib/doors/door_lab_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -121,6 +119,8 @@ final c = Key('override-countdown');
         settings: Settings(),
         home: home,
         platform: FakeDoorPlatform(home: home),
+        // Android says no, so the "not on yet" words are read too.
+        gentleIntercept: FakeGentleIntercept(grants: false),
       );
       await tester.pumpWidget(CurreApp(controller: controller));
       await tester.pump();
@@ -173,7 +173,18 @@ final c = Key('override-countdown');
 
     testWidgets('Home, Hidden apps, settings and the profile', (tester) async {
       final semantics = tester.ensureSemantics();
-      final controller = fakeController();
+      final controller = fakeController(
+        gentleIntercept: FakeGentleIntercept(
+          missed: [
+            MissedWhileHiddenNotification(
+              packageName: 'com.instagram.android',
+              appLabel: 'Instagram',
+              title: 'Ada liked your photo',
+              at: DateTime(2026, 10, 26, 7, 40),
+            ),
+          ],
+        ),
+      );
       controller.grants = <Grant>[
         Grant(
           packageName: 'com.instagram.android',
@@ -190,9 +201,19 @@ final c = Key('override-countdown');
       await show(tester, HiddenAppsScreen(controller: controller));
       expect(
         visibleCopy(tester),
-        containsAll(<String>['Hidden apps', 'Bring back Chrome']),
+        containsAll(<String>[
+          'Hidden apps',
+          'Bring back Chrome',
+          'Missed notifications',
+          '1 notification from hidden apps',
+        ]),
       );
       expectPlainCopy(tester, where: 'Hidden apps');
+      await tester.tap(find.text('Missed notifications'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.text('Ada liked your photo'), findsOneWidget);
+      expectPlainCopy(tester, where: 'Missed notifications');
       await show(tester, SettingsScreen(controller: controller));
       for (var i = 0; i < 6; i++) {
         expectPlainCopy(tester, where: 'Curre settings');
@@ -226,10 +247,7 @@ final c = Key('override-countdown');
       final semantics = tester.ensureSemantics();
       final controller = fakeController();
       final app = controller.apps.firstWhere((app) => app.label == 'Instagram');
-      await show(
-        tester,
-        UnlockGateScreen(controller: controller, app: app),
-      );
+      await show(tester, UnlockGateScreen(controller: controller, app: app));
       expectPlainCopy(tester, where: 'Why now?');
       for (final response in <UnlockResponse>[
         const UnlockResponse(
@@ -398,10 +416,8 @@ List<String> stringLiterals(String source) {
     } else if (startsAt('/*', i)) {
       final end = source.indexOf('*/', i);
       i = end < 0 ? source.length : end + 2;
-    } else if (RegExp(r'(import|export|part|library)\b').matchAsPrefix(
-              source,
-              i,
-            ) !=
+    } else if (RegExp(r'(import|export|part|library)\b')
+                .matchAsPrefix(source, i) !=
             null &&
         (i == 0 || source[i - 1] == '\n')) {
       final end = source.indexOf(';', i);

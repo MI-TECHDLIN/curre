@@ -22,7 +22,7 @@ extension CurreNotificationActionWire on CurreNotificationAction {
   };
 
   String get label => switch (this) {
-    CurreNotificationAction.startCheckIn => 'Start check-in',
+    CurreNotificationAction.startCheckIn => 'Plan now',
     CurreNotificationAction.bringIntoSight => 'Bring back',
     CurreNotificationAction.addProof => 'Add proof',
     CurreNotificationAction.snooze => 'Snooze 10 min',
@@ -219,8 +219,8 @@ class LocalReminderService {
         CurreReminder(
           id: id,
           type: CurreNotificationType.checkIn,
-          title: '${_capitalise(session.name)} check-in',
-          body: 'One sentence brings only the apps you need into sight.',
+          title: 'Plan your ${session.name}',
+          body: 'One sentence, and Curre puts just the apps you need on Home.',
           scheduledAt: scheduled,
           destination: CurreNotificationDestination.checkIn,
           actions: const <CurreNotificationAction>[
@@ -272,7 +272,7 @@ class LocalReminderService {
             id: proofId,
             type: CurreNotificationType.proof,
             title: 'Add your proof',
-            body: 'A short note can mark what you finished.',
+            body: 'A short note about what you got done counts as proof.',
             scheduledAt: policy.nextAllowed(proposed),
             destination: CurreNotificationDestination.proof,
             actions: const <CurreNotificationAction>[
@@ -301,6 +301,3 @@ int _stableId(String value) {
   }
   return hash.remainder(190000);
 }
-
-String _capitalise(String value) =>
-    value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';

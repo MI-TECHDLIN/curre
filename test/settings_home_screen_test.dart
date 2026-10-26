@@ -47,6 +47,66 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  group('Hidden apps in settings', () {
+    Future<void> showAccess(WidgetTester tester, String title) async {
+      await tester.scrollUntilVisible(
+        find.text(title),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+    }
+
+    testWidgets('asks Android for each permission in plain words', (
+      tester,
+    ) async {
+      final access = FakeGentleIntercept();
+      final controller = fakeController(gentleIntercept: access);
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: curreTheme(Brightness.light),
+          home: SettingsScreen(controller: controller),
+        ),
+      );
+      await tester.pump();
+
+      await showAccess(tester, 'Ask “Why now?” when a hidden app opens');
+      expect(find.text('Needs your OK in Android first'), findsNWidgets(2));
+      await tapText(tester, 'Turn on Usage access');
+      expect(access.usageRequests, 1);
+      expect(controller.hasUsageAccess, isTrue);
+      expect(
+        find.text('Done. Curre will ask “Why now?” when a hidden app opens.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('On, even from recent apps, notifications and links'),
+        findsOneWidget,
+      );
+
+      access.grants = false;
+      await showAccess(tester, 'Keep hidden apps quiet');
+      await tapText(tester, 'Turn on notification access');
+      expect(access.notificationRequests, 1);
+      expect(
+        find.text('It’s still off. You can turn it on here any time.'),
+        findsOneWidget,
+      );
+      expect(find.text('Needs your OK in Android first'), findsOneWidget);
+
+      // The switch itself is saved like any other setting.
+      expect(controller.settings.quietNotificationsFromHiddenApps, isTrue);
+      await tester.pump(const Duration(seconds: 10)); // The note goes away.
+      await tester.ensureVisible(find.text('Keep hidden apps quiet'));
+      await tester.pump();
+      await tapText(tester, 'Keep hidden apps quiet');
+      expect(controller.settings.quietNotificationsFromHiddenApps, isFalse);
+    });
+  });
+
   group('Switch to another home screen', () {
     testWidgets('explains kindly and opens Android’s home screen choice', (
       tester,

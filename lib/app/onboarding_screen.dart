@@ -167,7 +167,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ...eligible.where((app) => app.packageName == package),
     ];
     final rest =
-        eligible.where((app) => !commonPullPackages.contains(app.packageName))
+        eligible
+            .where((app) => !commonPullPackages.contains(app.packageName))
             .toList()
           ..sort(_byLabel);
     return [...common, ...rest];
@@ -435,10 +436,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         if (!didPop) _back();
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: (palette.isDark
-                ? SystemUiOverlayStyle.light
-                : SystemUiOverlayStyle.dark)
-            .copyWith(statusBarColor: Colors.transparent),
+        value:
+            (palette.isDark
+                    ? SystemUiOverlayStyle.light
+                    : SystemUiOverlayStyle.dark)
+                .copyWith(statusBarColor: Colors.transparent),
         child: Scaffold(
           backgroundColor: colors.paper,
           body: Column(
@@ -714,7 +716,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   List<Widget> _faceSheet(BuildContext context) => [
-    const Text('It sits next to your greeting on Home. You can change it any time.'),
+    const Text(
+      'It sits next to your greeting on Home. You can change it any time.',
+    ),
     const SizedBox(height: CurreSpace.s4),
     AvatarPicker(
       selectedAvatarId: _avatarId,
@@ -736,7 +740,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       const SizedBox(height: CurreSpace.s4),
       LayoutBuilder(
         builder: (context, box) {
-          final columns = box.maxWidth < 300 ||
+          final columns =
+              box.maxWidth < 300 ||
                   MediaQuery.textScalerOf(context).scale(1) > 1.5
               ? 1
               : 2;
@@ -815,9 +820,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         Semantics(
           liveRegion: true,
           child: _StatusNote(
-            glyph: _homeReady!
-                ? CurreGlyphKind.check
-                : CurreGlyphKind.homeRole,
+            glyph: _homeReady! ? CurreGlyphKind.check : CurreGlyphKind.homeRole,
             color: _homeReady! ? colors.emberText : colors.ink2,
             text: _homeReady!
                 ? 'Curre is your home screen now.'
@@ -836,16 +839,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   static String _homeHelp(HomeSettingsOpened? opened) => switch (opened) {
-    null =>
-      'Curre isn’t your home screen yet. Try again, or open your phone’s home screen settings and choose Curre.',
+    null => 'Curre isn’t your home screen yet. Try again, or open your phone’s home screen settings and choose Curre.',
     HomeSettingsOpened.homeApps =>
       'Choose Curre in the list, then come back here.',
     HomeSettingsOpened.defaultApps =>
       'Tap “Home app”, choose Curre, then come back here.',
-    HomeSettingsOpened.settings =>
-      'In Settings, search for “Home app” (or open Apps, then Default apps), choose Curre, then come back here.',
-    HomeSettingsOpened.none =>
-      'Open your phone’s Settings app, search for “Home app”, choose Curre, then come back here.',
+    HomeSettingsOpened.settings => 'In Settings, search for “Home app” (or open Apps, then Default apps), choose Curre, then come back here.',
+    HomeSettingsOpened.none => 'Open your phone’s Settings app, search for “Home app”, choose Curre, then come back here.',
   };
 
   /// The apps the user said pull them in, else familiar examples: the
@@ -878,10 +878,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     ),
     ..._accessNotes(
       context,
-      android:
-          'Android calls this “Usage access”. When the list opens, find Curre, switch it on, then come back here.',
-      done:
-          'All set. Curre will ask “Why now?” when a hidden app sneaks back in.',
+      android: 'Android calls this “Usage access”. When the list opens, find Curre, switch it on, then come back here.',
+      done: 'All set. Curre will ask “Why now?” when a hidden app sneaks back in.',
     ),
   ];
 
@@ -901,8 +899,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     ),
     ..._accessNotes(
       context,
-      android:
-          'Android calls this “Notification access” and shows a strong warning. Curre uses it only to keep hidden apps quiet. Find Curre, switch it on, then come back here.',
+      android: 'Android calls this “Notification access” and shows a strong warning. Curre uses it only to keep hidden apps quiet. Find Curre, switch it on, then come back here.',
       done: 'All set. Hidden apps will stay quiet until you bring them back.',
     ),
   ];
@@ -927,9 +924,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: _StatusNote(
             glyph: on == true ? CurreGlyphKind.check : CurreGlyphKind.info,
             color: on == true ? colors.emberText : colors.ink2,
-            text: on == true
-                ? done
-                : 'It isn’t on yet. Try again, or skip for now and turn it on later in Curre settings.',
+            text: on == true ? done : 'It isn’t on yet. Try again, or skip for now and turn it on later in Curre settings.',
           ),
         ),
       ],
@@ -1200,7 +1195,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         final name = _displayName;
         return (
           _Action(
-            name == null || name.runes.length > 16 ? 'Continue' : 'Call me $name',
+            name == null || name.runes.length > 16
+                ? 'Continue'
+                : 'Call me $name',
             _submitName,
             CurreGlyphKind.go,
           ),
@@ -1228,7 +1225,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           return (_Action('Continue', _next, CurreGlyphKind.go), null);
         }
         return (
-          _Action('Make Curre my home screen', _askForHome, CurreGlyphKind.homeRole),
+          _Action(
+            'Make Curre my home screen',
+            _askForHome,
+            CurreGlyphKind.homeRole,
+          ),
           _homeReady == false
               ? _Action('Open home settings', _openHomeSettings)
               : null,
@@ -1250,7 +1251,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         final count = _apps.length;
         return (
           _Action(
-            count < _minimumApps ? 'Pick at least $_minimumApps' : 'Use these $count apps',
+            count < _minimumApps
+                ? 'Pick at least $_minimumApps'
+                : 'Use these $count apps',
             count < _minimumApps ? null : _next,
             count < _minimumApps ? null : CurreGlyphKind.go,
           ),
@@ -1323,16 +1326,17 @@ class _Stage extends StatelessWidget {
               ),
             ),
           Positioned.fill(
-            child: SceneGrain(dark: palette.grainDark, light: palette.grainLight),
+            child: SceneGrain(
+              dark: palette.grainDark,
+              light: palette.grainLight,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SizedBox(height: top + CurreSpace.s2),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: CurreSpace.s4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: CurreSpace.s4),
                 child: Row(
                   children: [
                     if (onBack != null)
@@ -1471,9 +1475,11 @@ class _StoryCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: type.label.weight(700).copyWith(
-                    color: highlight ? colors.emberText : colors.ink,
-                  ),
+                  style: type.label
+                      .weight(700)
+                      .copyWith(
+                        color: highlight ? colors.emberText : colors.ink,
+                      ),
                 ),
                 const SizedBox(height: 2),
                 Text(body, style: type.body.copyWith(color: colors.ink2)),
@@ -1778,7 +1784,11 @@ class _AlwaysOnHome extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CurreGlyph(CurreGlyphKind.essential, size: 20, color: colors.emberText),
+            CurreGlyph(
+              CurreGlyphKind.essential,
+              size: 20,
+              color: colors.emberText,
+            ),
             const SizedBox(width: CurreSpace.s3),
             Expanded(
               child: Text.rich(
@@ -1819,13 +1829,17 @@ class _ExampleChip extends StatelessWidget {
       excludeSemantics: true,
       child: Material(
         color: colors.raised,
-        shape: StadiumBorder(side: BorderSide(color: colors.hairline, width: 1.5)),
+        shape: StadiumBorder(
+          side: BorderSide(color: colors.hairline, width: 1.5),
+        ),
         child: InkWell(
           onTap: onTap,
           customBorder: const StadiumBorder(),
           splashFactory: NoSplash.splashFactory,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: CurreSpace.touchTarget),
+            constraints: const BoxConstraints(
+              minHeight: CurreSpace.touchTarget,
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: CurreSpace.s4,
@@ -1872,11 +1886,13 @@ class _QuietButton extends StatelessWidget {
               child: Text(
                 label,
                 textAlign: TextAlign.center,
-                style: type.label.weight(640).copyWith(
-                  color: onPressed == null ? colors.ink3 : colors.ink,
-                  decoration: TextDecoration.underline,
-                  decorationColor: colors.ink3,
-                ),
+                style: type.label
+                    .weight(640)
+                    .copyWith(
+                      color: onPressed == null ? colors.ink3 : colors.ink,
+                      decoration: TextDecoration.underline,
+                      decorationColor: colors.ink3,
+                    ),
               ),
             ),
           ),
