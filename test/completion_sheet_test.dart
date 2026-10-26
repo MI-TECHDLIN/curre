@@ -173,7 +173,7 @@ void main() {
       expect(find.text('Tuesday to Saturday'), findsOneWidget);
       expect(find.text('“$_caption”'), findsOneWidget);
       expect(
-        find.text('Supported by the door you opened and your note'),
+        find.text('Backed by the app you opened and your note'),
         findsOneWidget,
       );
       final week = tester.widget<WeekStrip>(find.byType(WeekStrip));
@@ -331,7 +331,7 @@ void main() {
 
       expect(find.text('Away from your phone'), findsOneWidget);
       expect(
-        find.text('Supported by your Start and your note'),
+        find.text('Backed by starting the task and your note'),
         findsOneWidget,
       );
     });

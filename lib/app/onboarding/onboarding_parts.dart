@@ -10,7 +10,18 @@ import '../curre_controller.dart';
 /// own sky, and the order follows a night turning into morning: the story
 /// starts late at night with a phone in hand and ends with the first plan
 /// of the day.
-enum StageTone { night, lilac, coral, peach, dawn, sky, sage, mint }
+enum StageTone {
+  night,
+  lilac,
+  coral,
+  peach,
+  dawn,
+  sky,
+  teal,
+  slate,
+  sage,
+  mint,
+}
 
 /// One stage's colours: its [sky], the [ink] set on it (text, lines,
 /// controls; AA or better on [sky]), a [deep] block for grounds and back
@@ -83,6 +94,14 @@ class StagePalette {
       StageTone.sky => StagePalette.fromSky(
         light ? const Color(0xFF96D0E6) : const Color(0xFF16506A),
         ink: light ? const Color(0xFF0C3442) : const Color(0xFFD2F0FA),
+      ),
+      StageTone.teal => StagePalette.fromSky(
+        light ? const Color(0xFFAEDCD3) : const Color(0xFF1B4640),
+        ink: light ? const Color(0xFF0F3A34) : const Color(0xFFCDEFE8),
+      ),
+      StageTone.slate => StagePalette.fromSky(
+        light ? const Color(0xFFCAD3E8) : const Color(0xFF283150),
+        ink: light ? const Color(0xFF1C2742) : const Color(0xFFDDE4F6),
       ),
       StageTone.sage => StagePalette.fromSky(
         light ? const Color(0xFFBFD8B2) : const Color(0xFF2B3A27),

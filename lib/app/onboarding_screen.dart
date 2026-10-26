@@ -17,8 +17,9 @@ import 'onboarding/onboarding_scenes.dart';
 /// First-run setup, told as one short story from the problem to the first
 /// plan (onboarding study, 2026-10-25): the pull of a feed, what stays
 /// private, the apps that pull you in, who you are, when your morning
-/// starts, Curre as the home screen, quiet nudges, the apps plans can use,
-/// and finally the first plan itself.
+/// starts, Curre as the home screen, catching apps that sneak back in,
+/// keeping hidden apps quiet, quiet nudges, the apps plans can use, and
+/// finally the first plan itself.
 ///
 /// Every step is a colour stage with an illustrated scene above a paper
 /// sheet of controls, and the stages run from night into morning. Answers
@@ -33,7 +34,20 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-enum _Step { story, privacy, pull, name, face, morning, home, nudges, apps, plan }
+enum _Step {
+  story,
+  privacy,
+  pull,
+  name,
+  face,
+  morning,
+  home,
+  sneak,
+  quiet,
+  nudges,
+  apps,
+  plan,
+}
 
 class _OnboardingScreenState extends State<OnboardingScreen>
     with WidgetsBindingObserver {
@@ -65,6 +79,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   String? _morningError;
   bool? _homeReady;
   HomeSettingsOpened? _homeSettings;
+
+  /// The intercept's Android permissions, by the step that asks for each:
+  /// absent until Curre knows, then whether it is on.
+  final _accessOn = <_Step, bool>{};
   var _working = false;
   String? _error;
   String _query = '';
@@ -101,15 +119,30 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Android's home screen choice happens outside Curre. Check the real
     // answer whenever the user comes back to this step.
-    if (state == AppLifecycleState.resumed && _step == _Step.home) {
-      unawaited(_recheckHome());
-    }
+    if (state != AppLifecycleState.resumed) return;
+    if (_step == _Step.home) unawaited(_recheckHome());
+    if (_isAccessStep(_step)) unawaited(_recheckAccess(_step));
   }
 
   Future<void> _recheckHome() async {
     final ready = await controller.isDefaultHome();
     if (!mounted || _step != _Step.home) return;
     if (ready || _homeReady != null) setState(() => _homeReady = ready);
+  }
+
+  static bool _isAccessStep(_Step step) =>
+      step == _Step.sneak || step == _Step.quiet;
+
+  Future<bool> _hasAccess(_Step step) => step == _Step.sneak
+      ? controller.refreshUsageAccess()
+      : controller.refreshNotificationAccess();
+
+  Future<void> _recheckAccess(_Step step) async {
+    final on = await _hasAccess(step);
+    if (!mounted || _step != step) return;
+    if (on || _accessOn.containsKey(step)) {
+      setState(() => _accessOn[step] = on);
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -200,6 +233,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (step == _Step.apps) _seedApps();
     });
     if (step == _Step.home) unawaited(_recheckHome());
+    if (_isAccessStep(step)) unawaited(_recheckAccess(step));
   }
 
   void _next() {
@@ -272,6 +306,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final opened = await controller.openHomeSettings();
     if (!mounted) return;
     setState(() => _homeSettings = opened);
+  }
+
+  /// Opens Android's screen for this step's permission; the answer comes
+  /// back when the user returns to Curre (false too when the screen
+  /// couldn't open).
+  Future<void> _askForAccess() async {
+    final step = _step;
+    setState(() => _working = true);
+    final on = await (step == _Step.sneak
+        ? controller.requestUsageAccess()
+        : controller.requestNotificationAccess());
+    if (!mounted) return;
+    setState(() {
+      _working = false;
+      _accessOn[step] = on;
+    });
   }
 
   Future<void> _allowNudges() async {
@@ -358,6 +408,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return StagePalette.of(StageTone.dawn, brightness);
       case _Step.home:
         return StagePalette.of(StageTone.sky, brightness);
+      case _Step.sneak:
+        return StagePalette.of(StageTone.teal, brightness);
+      case _Step.quiet:
+        return StagePalette.of(StageTone.slate, brightness);
       case _Step.nudges:
         return StagePalette.of(StageTone.sage, brightness);
       case _Step.apps:
@@ -476,6 +530,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _Step.face => 'About you',
     _Step.morning => 'Your day',
     _Step.home => 'Your home screen',
+    _Step.sneak => 'Hidden apps',
+    _Step.quiet => 'Hidden apps',
     _Step.nudges => 'Quiet nudges',
     _Step.apps => 'Your apps',
     _Step.plan => 'Your first plan',
@@ -489,6 +545,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _Step.face => 'Pick a face that feels like you.',
     _Step.morning => 'When does your morning start?',
     _Step.home => 'Make Curre your home screen.',
+    _Step.sneak => 'What if a hidden app sneaks back in?',
+    _Step.quiet => 'Keep hidden apps quiet?',
     _Step.nudges => 'Want a quiet nudge when time’s up?',
     _Step.apps => 'Which apps will your plans need?',
     _Step.plan => 'What’s this ${_planSession.label} for?',
@@ -518,6 +576,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       name: _displayName,
       avatarId: _avatarId,
     ),
+    _Step.sneak => SneakScene(
+      palette: palette,
+      controller: controller,
+      app: _sceneHiddenApps.first,
+    ),
+    _Step.quiet => QuietScene(
+      palette: palette,
+      controller: controller,
+      apps: _sceneHiddenApps,
+    ),
     _Step.nudges => NudgeScene(palette: palette),
     _Step.apps => AppsScene(palette: palette, controller: controller),
     _Step.plan => PlanScene(avatarId: _avatarId, name: _displayName),
@@ -531,6 +599,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _Step.face => _faceSheet(context),
     _Step.morning => _morningSheet(context),
     _Step.home => _homeSheet(context),
+    _Step.sneak => _sneakSheet(context),
+    _Step.quiet => _quietSheet(context),
     _Step.nudges => _nudgesSheet(context),
     _Step.apps => _appsSheet(context),
     _Step.plan => _planSheet(context),
@@ -777,6 +847,94 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     HomeSettingsOpened.none =>
       'Open your phone’s Settings app, search for “Home app”, choose Curre, then come back here.',
   };
+
+  /// The apps the user said pull them in, else familiar examples: the
+  /// hidden apps the sneak-back and quiet scenes show.
+  List<LaunchableApp> get _sceneHiddenApps {
+    final pulled = [
+      for (final app in _pullChoices)
+        if (_pull.contains(app.packageName)) app,
+    ];
+    if (pulled.isNotEmpty) return pulled;
+    return const [
+      LaunchableApp(packageName: 'com.instagram.android', label: 'Instagram'),
+      LaunchableApp(packageName: 'com.netflix.mediaclient', label: 'Netflix'),
+    ];
+  }
+
+  List<Widget> _sneakSheet(BuildContext context) => [
+    const Text(
+      'Some apps sneak back in through notifications, links or your recent apps. Let Curre ask “Why now?” when that happens.',
+    ),
+    const SizedBox(height: CurreSpace.s4),
+    const _PromiseCard(
+      prop: CurreProp.shield,
+      title: 'What Curre checks',
+      lines: [
+        'Only which app just opened',
+        'Never what’s on your screen or in your messages',
+        'You can switch it off any time in your phone’s Settings',
+      ],
+    ),
+    ..._accessNotes(
+      context,
+      android:
+          'Android calls this “Usage access”. When the list opens, find Curre, switch it on, then come back here.',
+      done:
+          'All set. Curre will ask “Why now?” when a hidden app sneaks back in.',
+    ),
+  ];
+
+  List<Widget> _quietSheet(BuildContext context) => [
+    const Text(
+      'Hidden apps can still buzz you. Let Curre keep them quiet until you bring them back.',
+    ),
+    const SizedBox(height: CurreSpace.s4),
+    const _PromiseCard(
+      prop: CurreProp.zzz,
+      title: 'What stays quiet',
+      lines: [
+        'Only notifications from hidden apps',
+        'The apps on your Home still reach you',
+        'You can switch it off any time in your phone’s Settings',
+      ],
+    ),
+    ..._accessNotes(
+      context,
+      android:
+          'Android calls this “Notification access” and shows a strong warning. Curre uses it only to keep hidden apps quiet. Find Curre, switch it on, then come back here.',
+      done: 'All set. Hidden apps will stay quiet until you bring them back.',
+    ),
+  ];
+
+  /// How to switch an intercept permission on in Android, and where it
+  /// stands once the user is back.
+  List<Widget> _accessNotes(
+    BuildContext context, {
+    required String android,
+    required String done,
+  }) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final on = _accessOn[_step];
+    return [
+      const SizedBox(height: CurreSpace.s3),
+      Text(android, style: type.caption.copyWith(color: colors.ink3)),
+      if (on != null) ...[
+        const SizedBox(height: CurreSpace.s3),
+        Semantics(
+          liveRegion: true,
+          child: _StatusNote(
+            glyph: on == true ? CurreGlyphKind.check : CurreGlyphKind.info,
+            color: on == true ? colors.emberText : colors.ink2,
+            text: on == true
+                ? done
+                : 'It isn’t on yet. Try again, or skip for now and turn it on later in Curre settings.',
+          ),
+        ),
+      ],
+    ];
+  }
 
   List<Widget> _nudgesSheet(BuildContext context) => const [
     Text(
@@ -1074,6 +1232,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _homeReady == false
               ? _Action('Open home settings', _openHomeSettings)
               : null,
+        );
+      case _Step.sneak || _Step.quiet:
+        if (_accessOn[_step] == true) {
+          return (_Action('Continue', _next, CurreGlyphKind.go), null);
+        }
+        return (
+          _Action('Allow', _askForAccess, CurreGlyphKind.go),
+          _Action('Skip for now', _next),
         );
       case _Step.nudges:
         return (

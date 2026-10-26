@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:curre/app/curre_controller.dart';
@@ -93,6 +94,56 @@ class FakeHomeSettings implements HomeSettingsGateway {
   }
 }
 
+/// Android's two hidden-app permissions. Asking opens Android's screen
+/// and answers once the user is back: [grants] is whether they switch the
+/// permission on there.
+class FakeGentleIntercept extends DisabledGentleInterceptGateway {
+  FakeGentleIntercept({
+    this.usage = false,
+    this.notifications = false,
+    this.grants = true,
+  });
+
+  bool usage;
+  bool notifications;
+  bool grants;
+  var usageRequests = 0;
+  var notificationRequests = 0;
+
+  @override
+  Future<bool> hasUsageAccess() async => usage;
+
+  @override
+  Future<bool> requestUsageAccess() async {
+    usageRequests++;
+    if (grants) usage = true;
+    return usage;
+  }
+
+  @override
+  Future<bool> hasNotificationAccess() async => notifications;
+
+  @override
+  Future<bool> requestNotificationAccess() async {
+    notificationRequests++;
+    if (grants) notifications = true;
+    return notifications;
+  }
+}
+
+/// A store whose saves fail, like a phone that is out of space.
+class FailingStore extends CurreLocalStore {
+  FailingStore(super.preferences);
+
+  var failSaves = true;
+
+  @override
+  Future<void> saveSettings(Settings settings) async {
+    if (failSaves) throw const FileSystemException('No space left');
+    return super.saveSettings(settings);
+  }
+}
+
 class FakeNotificationGateway implements GrantNotificationGateway {
   FakeNotificationGateway({this.allow = true});
 
@@ -125,6 +176,7 @@ CurreController fakeController({
   FakeDoorPlatform? platform,
   FakeHomePlatform? home,
   FakeHomeSettings? homeSettings,
+  FakeGentleIntercept? gentleIntercept,
   FakeNotificationGateway? notifications,
   CurreApiClient? api,
   CurreLocalStore? store,
@@ -137,6 +189,7 @@ CurreController fakeController({
     launcher: launcher,
     homePlatform: homePlatform,
     homeSettings: homeSettings ?? FakeHomeSettings(),
+    gentleIntercept: gentleIntercept ?? FakeGentleIntercept(),
     notifications: notifications == null
         ? null
         : GrantNotificationService(notifications),

@@ -9,7 +9,7 @@ import '../app_widgets.dart';
 import '../curre_controller.dart';
 import 'onboarding_parts.dart';
 
-/// The illustrations of onboarding's ten steps. Each one is a small scene
+/// The illustrations of onboarding's twelve steps. Each one is a small scene
 /// on a 390 × 250 design canvas ([SceneCanvas]) built from Curre's own
 /// pieces: Peek, the avatar people ([AvatarFigure]), the user's own apps,
 /// flat props ([CurrePropArt]) and sticker cards. The words on a step are
@@ -113,7 +113,7 @@ class StoryScene extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Scene(
       label:
-          'Late at night, a phone full of posts pulls a note that says “just check the bus time” into a tangle of yarn, while the sun sleeps below the horizon.',
+          'Late at night, a phone full of posts pulls a note that says “just check the bus time” into a tangle of yarn, while the sun is still asleep.',
       children: [
         _blob(palette, const Rect.fromLTWH(118, -4, 248, 226), seed: 5),
         for (final (x, y, s) in const [
@@ -1342,7 +1342,495 @@ class _MiniHome extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// 8 · A quiet nudge: one silent note when borrowed time is up.
+// 8 · Apps that sneak back in: one of the user's own pull apps slips out of
+// the recent apps list, a notification and a shared link point at it, and
+// a sticker asks "Why now?".
+
+class SneakScene extends StatelessWidget {
+  const SneakScene({
+    super.key,
+    required this.palette,
+    required this.controller,
+    required this.app,
+  });
+
+  final StagePalette palette;
+  final CurreController controller;
+
+  /// The app shown sneaking back: the first one the user said pulls them
+  /// in, or a familiar example.
+  final LaunchableApp app;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Scene(
+      label:
+          '${app.label} slips back in from a notification, a shared link and the recent apps list, and Curre asks: Why now?',
+      children: [
+        _blob(palette, const Rect.fromLTWH(34, 2, 320, 230), seed: 8),
+        Positioned.fill(
+          child: RiseIn(
+            order: 4,
+            distance: 0,
+            child: CustomPaint(painter: _SneakTrailPainter(color: palette.ink)),
+          ),
+        ),
+        _at(
+          138,
+          10,
+          order: 1,
+          angle: -.03,
+          child: const ScenePhone(
+            width: 128,
+            height: 232,
+            screenColor: Color(0xFF3B3F5E),
+            screen: _RecentAppsScreen(),
+          ),
+        ),
+        _at(
+          10,
+          34,
+          order: 2,
+          angle: -.06,
+          float: 2,
+          child: SceneCard(
+            radius: 14,
+            padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SceneAppTile(
+                  controller: controller,
+                  packageName: app.packageName,
+                  label: app.label,
+                  size: 26,
+                ),
+                const SizedBox(width: 7),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${app.label} · now',
+                      style: _sceneType(
+                        context,
+                        size: 8.5,
+                        weight: 520,
+                        color: const Color(0xFF6E6257),
+                      ),
+                    ),
+                    Text(
+                      '3 new posts',
+                      style: _sceneType(context, size: 11.5, weight: 720),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        _at(
+          4,
+          18,
+          order: 3,
+          angle: -.3,
+          child: const CurrePropArt(CurreProp.bell, size: 30),
+        ),
+        _at(
+          26,
+          150,
+          order: 3,
+          angle: .05,
+          float: 2.5,
+          phase: .3,
+          child: SceneCard(
+            radius: 30,
+            padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CurrePropArt(CurreProp.envelope, size: 24, outline: 0),
+                const SizedBox(width: 6),
+                Text(
+                  'a shared link',
+                  style: _sceneType(context, size: 11, mono: true),
+                ),
+              ],
+            ),
+          ),
+        ),
+        _at(
+          226,
+          104,
+          order: 5,
+          angle: .12,
+          float: 3,
+          phase: .5,
+          child: _PulledTile(
+            lines: palette.ink,
+            child: SceneAppTile(
+              controller: controller,
+              packageName: app.packageName,
+              label: app.label,
+              size: 56,
+            ),
+          ),
+        ),
+        _at(
+          238,
+          24,
+          order: 6,
+          angle: .06,
+          child: SceneCard(
+            color: _marker,
+            radius: 18,
+            padding: const EdgeInsets.fromLTRB(12, 9, 14, 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CurrePropArt(
+                  CurreProp.speechBalloon,
+                  size: 24,
+                  outline: 0,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Why now?',
+                  style: _sceneType(context, size: 16, weight: 760),
+                ),
+              ],
+            ),
+          ),
+        ),
+        _at(
+          342,
+          176,
+          order: 7,
+          float: 2,
+          phase: .2,
+          child: const CurrePropArt(CurreProp.sparkles, size: 32),
+        ),
+      ],
+    );
+  }
+}
+
+/// Dotted trails from the notification and the link to the phone.
+class _SneakTrailPainter extends CustomPainter {
+  const _SneakTrailPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paths = [
+      Path()
+        ..moveTo(130, 70)
+        ..cubicTo(146, 80, 150, 96, 160, 108),
+      Path()
+        ..moveTo(146, 166)
+        ..cubicTo(156, 160, 158, 150, 166, 140),
+    ];
+    final paint = Paint()..color = color.withValues(alpha: .7);
+    for (final path in paths) {
+      for (final metric in path.computeMetrics()) {
+        for (var d = 0.0; d < metric.length; d += 8) {
+          final tangent = metric.getTangentForOffset(d);
+          if (tangent != null) canvas.drawCircle(tangent.position, 1.7, paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SneakTrailPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+/// Android's recent apps on the phone: two cards, one leaving.
+class _RecentAppsScreen extends StatelessWidget {
+  const _RecentAppsScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget card(Color tint) => Container(
+      width: 74,
+      height: 128,
+      decoration: BoxDecoration(
+        color: _paper,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 34,
+            decoration: BoxDecoration(
+              color: tint,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final w in const [52.0, 40.0, 58.0, 30.0])
+            Container(
+              width: w,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD9D0C4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+        ],
+      ),
+    );
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.translate(
+          offset: const Offset(-14, 6),
+          child: Transform.rotate(angle: -.08, child: card(_cardGreen)),
+        ),
+        Transform.translate(
+          offset: const Offset(10, -2),
+          child: Transform.rotate(angle: .05, child: card(_cardBlue)),
+        ),
+        Positioned(
+          bottom: 14,
+          child: Container(
+            width: 30,
+            height: 3,
+            decoration: BoxDecoration(
+              color: _paper.withValues(alpha: .7),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 9 · Hidden apps kept quiet: their notifications wait, asleep, beside a
+// calm lock screen where only Home's apps get through, until the user
+// brings them back.
+
+class QuietScene extends StatelessWidget {
+  const QuietScene({
+    super.key,
+    required this.palette,
+    required this.controller,
+    required this.apps,
+  });
+
+  final StagePalette palette;
+  final CurreController controller;
+
+  /// Hidden apps whose notifications wait quietly; the first two show.
+  final List<LaunchableApp> apps;
+
+  @override
+  Widget build(BuildContext context) {
+    final waiting = apps.take(2).toList(growable: false);
+    return _Scene(
+      label:
+          'A calm lock screen where only a message gets through, while notifications from ${waiting.map((app) => app.label).join(' and ')} sleep quietly beside it until you bring them back.',
+      children: [
+        _blob(palette, const Rect.fromLTWH(24, 6, 330, 226), seed: 6),
+        _at(
+          18,
+          30,
+          order: 1,
+          angle: -.12,
+          float: 2,
+          child: const CurrePropArt(CurreProp.bell, size: 72),
+        ),
+        _at(
+          70,
+          20,
+          order: 2,
+          float: 2.5,
+          phase: .4,
+          child: const CurrePropArt(CurreProp.zzz, size: 34, outline: 1.5),
+        ),
+        _at(
+          6,
+          150,
+          order: 2,
+          angle: -.05,
+          child: SceneCard(
+            radius: 30,
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+            child: Text(
+              'shh… waiting',
+              style: _sceneType(context, size: 11.5, mono: true),
+            ),
+          ),
+        ),
+        _at(
+          122,
+          12,
+          order: 3,
+          child: ScenePhone(
+            width: 136,
+            height: 236,
+            screenColor: const Color(0xFF2B2E5C),
+            screen: _CalmLockScreen(controller: controller),
+          ),
+        ),
+        for (final (i, app) in waiting.indexed)
+          _at(
+            250 + i * 14.0,
+            64 + i * 56.0,
+            order: 4 + i,
+            angle: i.isEven ? .06 : -.04,
+            float: 2,
+            phase: .3 + i * .3,
+            child: Opacity(
+              opacity: .72,
+              child: SceneCard(
+                color: const Color(0xFFE9E4F0),
+                radius: 12,
+                shadow: const Offset(3, 4),
+                padding: const EdgeInsets.fromLTRB(7, 6, 10, 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SceneAppTile(
+                      controller: controller,
+                      packageName: app.packageName,
+                      label: app.label,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      app.label,
+                      style: _sceneType(context, size: 11, weight: 680),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        _at(
+          328,
+          30,
+          order: 6,
+          float: 2.5,
+          phase: .7,
+          child: const CurrePropArt(CurreProp.crescentMoon, size: 34),
+        ),
+        _at(
+          250,
+          190,
+          order: 7,
+          angle: -.04,
+          child: SceneCard(
+            color: _marker,
+            radius: 30,
+            padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CurreGlyph(CurreGlyphKind.rise, size: 15, color: sceneInk),
+                const SizedBox(width: 5),
+                Text(
+                  'Bring back',
+                  style: _sceneType(context, size: 12, weight: 720),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A lock screen with one message from an app that stays on Home.
+class _CalmLockScreen extends StatelessWidget {
+  const _CalmLockScreen({required this.controller});
+
+  final CurreController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(9, 26, 9, 8),
+      child: Column(
+        children: [
+          Text(
+            '07:12',
+            style: _sceneType(context, size: 30, weight: 360, color: _paper),
+          ),
+          Text(
+            'Monday',
+            style: _sceneType(
+              context,
+              size: 8.5,
+              weight: 520,
+              color: _paper.withValues(alpha: .8),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: _paper,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SceneAppTile(
+                  controller: controller,
+                  packageName: 'com.google.android.apps.messaging',
+                  label: 'Messages',
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ada · Messages',
+                        style: _sceneType(
+                          context,
+                          size: 6.8,
+                          weight: 560,
+                          color: const Color(0xFF6E6257),
+                        ),
+                      ),
+                      Text(
+                        'Rehearsal at 8?',
+                        style: _sceneType(context, size: 8.6, weight: 720),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          Container(
+            width: 30,
+            height: 3,
+            decoration: BoxDecoration(
+              color: _paper.withValues(alpha: .7),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10 · A quiet nudge: one silent note when borrowed time is up.
 
 class NudgeScene extends StatelessWidget {
   const NudgeScene({super.key, required this.palette});
@@ -1487,7 +1975,7 @@ class NudgeScene extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// 9 · The apps plans can use: each one a task heading for an open door.
+// 11 · The apps plans can use: each one a task heading for an open door.
 
 class AppsScene extends StatelessWidget {
   const AppsScene({
@@ -1616,7 +2104,7 @@ class _OpenDoorPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// 10 · The first plan: the sun is up, Peek is awake, and you wave hello.
+// 12 · The first plan: the sun is up, Peek is awake, and you wave hello.
 
 /// The finale's sky fills the whole stage, behind the question too, so
 /// Peek's morning light reaches across the screen. [stage] is the stage's
