@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "credits": 4,
+    "model_ms": 98.736128,
+    "recorded_at": "2026-10-26"
+  },
+  "route_request": {
+    "note": "I can now change cleanly from G to C four times.",
+    "task": "Learn the G chord on YouTube"
+  },
+  "response": {
+    "model": "clocked-1.0",
+    "steps": [
+      {
+        "endpoint": "injection",
+        "ms": 24,
+        "name": "guard",
+        "result": {
+          "categories": {
+            "benign": 0.9954232266552642,
+            "instruction override": 0.0008115567056961754,
+            "obfuscated or encoded payload": 0.0006720381996792162,
+            "role-play or persona jailbreak": 0.0006851402607342484,
+            "social engineering": 0.0009259039173147396,
+            "system prompt or secret extraction": 0.0007368692639431351,
+            "tool misuse or data exfiltration": 0.0007452649973683143
+          },
+          "category": "benign",
+          "evidence": [],
+          "injection": 0.001237578353196933,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "severities": {
+            "critical": 0.0012549317029774511,
+            "high": 0.001653650382609032,
+            "low": 0.0021399900211332384,
+            "medium": 0.001501067048505385,
+            "none": 0.9934503608447749
+          },
+          "severity": "none",
+          "severity_expected": 1.015,
+          "source": "user",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 24,
+            "total_ms": 24
+          },
+          "verdict": "benign"
+        },
+        "status": 200,
+        "step": 0
+      },
+      {
+        "endpoint": "decide",
+        "ms": 22,
+        "name": "proof",
+        "result": {
+          "answers": {
+            "proof": {
+              "choice": "specific_completion",
+              "confidence": 0.992,
+              "probabilities": {
+                "future": 0.0019,
+                "specific_completion": 0.994,
+                "unrelated": 0.0018,
+                "vague": 0.0024
+              },
+              "type": "choice"
+            }
+          },
+          "model": "clocked-1.0",
+          "usage": {
+            "input_tokens": 61,
+            "output_tokens": 4
+          }
+        },
+        "status": 200,
+        "step": 1
+      },
+      {
+        "endpoint": "extract",
+        "ms": 64,
+        "name": "caption",
+        "result": {
+          "fields": {
+            "learning": {
+              "confidence": 0.9999997626475297,
+              "end": 48,
+              "p_verify": 0.9999997626475297,
+              "start": 0,
+              "value": "I can now change cleanly from G to C four times."
+            },
+            "result": {
+              "confidence": 1,
+              "value": null
+            }
+          },
+          "model": "clocked-1.0",
+          "timing": {
+            "forwards": {
+              "fields": [
+                5,
+                0
+              ]
+            },
+            "read_ms": 61,
+            "server_ms": 64,
+            "stages": {
+              "fields": {
+                "assemble": 0,
+                "branches": 1,
+                "doc": 0,
+                "generate": 47,
+                "locate": 0,
+                "reader": "recognition",
+                "verify": 12
+              }
+            },
+            "total_ms": 61
+          }
+        },
+        "status": 200,
+        "step": 2
+      }
+    ],
+    "stopped": null,
+    "timing": {
+      "model_ms": 79,
+      "total_ms": 112
+    }
+  }
+}

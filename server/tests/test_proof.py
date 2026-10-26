@@ -1,7 +1,8 @@
 """`POST /v1/proof` against a fake Clocked client. Every fake reply starts
-from `fixtures/modeled_proof_pipeline.json`, which copies the envelope and
-step shapes of the recorded real responses, and changes only what a case
-needs."""
+from `fixtures/modeled_proof_pipeline.json`, a template that copies the
+envelope and step shapes of the recorded real responses, and changes only
+what a case needs. `fixtures/real_proof_pipeline.json` has the actual
+recorded response (see `tests/test_contract.py`)."""
 
 from __future__ import annotations
 
