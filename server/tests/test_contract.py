@@ -146,6 +146,28 @@ def test_recorded_real_unlock_pipeline_response_matches_contract(make_client):
     assert body.usage.credits == 4
 
 
+def test_recorded_real_proof_pipeline_response_matches_contract(make_client):
+    fixture = _recorded_fixture("proof")
+
+    async def handler(*, text, steps, **kwargs):
+        return _recorded_result(fixture)
+
+    client = make_client(handler)
+    resp = client.post("/v1/proof", json=fixture["route_request"])
+
+    assert resp.status_code == 200
+    body = ProofResponse.model_validate(resp.json())
+    assert body.outcome == "accepted"
+    assert body.kind == "specific_completion"
+    assert body.specific_completion == 0.994
+    assert body.result is None
+    note = fixture["route_request"]["note"]
+    assert body.learning is not None
+    assert note[body.learning.start : body.learning.end] == body.learning.text
+    assert body.usage is not None
+    assert body.usage.credits == 4
+
+
 def test_modeled_proof_pipeline_response_matches_contract(make_client):
     fixture = json.loads((FIXTURE_DIR / "modeled_proof_pipeline.json").read_text())
     assert fixture["metadata"]["recorded"] is False

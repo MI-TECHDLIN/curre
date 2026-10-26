@@ -6,6 +6,15 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   `android/app/src/main/kotlin/com/mitech/curre/MainActivity.kt`; its Dart
   adapter and pure door-order policy live in `lib/doors/`.
 - The permanent Android namespace and application ID are `com.mitech.curre`.
+- Release signing reads `android/key.properties` (gitignored; never commit a
+  keystore). Copy `android/key.properties.example` for the keytool command
+  and expected keys. `android/app/build.gradle.kts` fails the build with a
+  clear message if a release task runs without it; release never falls back
+  to the debug key. CI runs `flutter analyze`/`test`, an Android debug
+  build, and server `pytest`/`ruff` on PRs; it doesn't need signing since
+  it only builds `--debug`. The workflow lives at `docs/ci-workflow.yml`,
+  not `.github/workflows/`, because the crew's push credential lacks
+  `workflow` scope -- copy it over from an account that has it to enable CI.
 - Screen-facing notification, speech-input, Home-refresh and home-screen
   settings plumbing lives in `lib/platform/`; local reminders, their
   per-type/quiet-hours policy and the tap/action intents routed in

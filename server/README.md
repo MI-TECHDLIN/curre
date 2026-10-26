@@ -32,11 +32,13 @@ ruff check .
 
 All tests run without network calls or credit spend. Most route cases use the
 fake Clocked client in `tests/fakes.py`; `tests/test_contract.py` also feeds
-one recorded real pipeline response per route from `tests/fixtures/` through
-the production parsers and validates the resulting Pydantic response types.
-`/v1/proof` has not made a real call yet, so its fixture
-(`modeled_proof_pipeline.json`, marked `"recorded": false`) copies the
-envelope and step shapes of the recorded unlock response.
+one recorded real pipeline response per route -- `real_plan_pipeline.json`,
+`real_unlock_pipeline.json`, `real_proof_pipeline.json` (sample task/note
+only, no key) -- from `tests/fixtures/` through the production parsers and
+validates the resulting Pydantic response types. `modeled_proof_pipeline.json`
+(marked `"recorded": false`) is a separate template `tests/test_proof.py`
+reuses to build fake-client proof cases a single recorded response doesn't
+cover; it is not a claim that no real `/v1/proof` call has been made.
 
 ## Environment variables
 

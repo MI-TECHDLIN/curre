@@ -1,0 +1,55 @@
+# This workflow lives here, not at .github/workflows/ci.yml, because the
+# crew's push credential has no `workflow` OAuth scope and GitHub rejects
+# any push that creates or updates a file under .github/workflows/ with
+# that token. To enable CI: from a machine/account with `workflow` scope
+# (or through the GitHub web UI), copy this file to
+# .github/workflows/ci.yml and commit/push it from there; nothing else
+# needs to change.
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  flutter:
+    name: Flutter analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  android-debug-build:
+    name: Android debug build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter build apk --debug
+
+  server:
+    name: Server pytest & ruff
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+      - run: ruff check .

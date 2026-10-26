@@ -7,7 +7,7 @@
       "real_plan_pipeline.json"
     ],
     "recorded": false,
-    "why": "No real /v1/proof call has been made. The envelope, the guard step and the Decide and Extract result keys are copied from the recorded unlock response; only the labels, numbers and note differ."
+    "why": "A template shape for fake-client proof test cases (tests/test_proof.py), covering a result-span case the recorded real_proof_pipeline.json fixture does not. The envelope, guard step, and Decide/Extract result keys are copied from the recorded unlock response; only the labels, numbers and note differ. A real /v1/proof response is recorded separately in real_proof_pipeline.json."
   },
   "response": {
     "model": "clocked-1.0",

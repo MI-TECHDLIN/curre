@@ -1,0 +1,25 @@
+# Copy this file to android/key.properties and fill in your own values.
+# android/key.properties is gitignored -- never commit it or the keystore
+# file it points to.
+#
+# Create a keystore once, on Windows PowerShell or cmd.exe, using the
+# keytool that ships with your JDK (Android Studio bundles one; otherwise
+# install a JDK and make sure keytool is on PATH):
+#
+#   keytool -genkeypair -v -keystore curre-release.jks -storetype JKS ^
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias curre
+#
+# keytool will prompt for a keystore password, your name/org details, and a
+# key password (you can reuse the keystore password as the key password).
+# Keep curre-release.jks itself out of version control, back it up
+# somewhere safe, and never share its passwords -- losing it means you can
+# never publish an update under the same app signature again.
+#
+# storeFile below is resolved relative to android/app/, so either place the
+# .jks file there, or give an absolute path (e.g. C:\\keys\\curre-release.jks
+# on Windows, forward slashes work too).
+
+storeFile=curre-release.jks
+storePassword=REPLACE_WITH_YOUR_KEYSTORE_PASSWORD
+keyAlias=curre
+keyPassword=REPLACE_WITH_YOUR_KEY_PASSWORD
