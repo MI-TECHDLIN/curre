@@ -18,6 +18,7 @@ class UnlockGateScreen extends StatefulWidget {
     this.initialReason,
     this.initialResponse,
     this.autoJudge = false,
+    this.openedFromOutside = false,
     this.overrideDuration = overrideWait,
   });
 
@@ -26,6 +27,7 @@ class UnlockGateScreen extends StatefulWidget {
   final String? initialReason;
   final UnlockResponse? initialResponse;
   final bool autoJudge;
+  final bool openedFromOutside;
   final Duration overrideDuration;
 
   @override
@@ -92,7 +94,9 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 0,
               ),
               child: CurreTopBar(
-                title: 'Why open ${widget.app.label} now?',
+                title: widget.openedFromOutside
+                    ? 'You opened ${widget.app.label}. Why now?'
+                    : 'Why open ${widget.app.label} now?',
                 subtitle: 'No app icon here · this is a deliberate choice',
                 maxTitleLines: 3,
               ),

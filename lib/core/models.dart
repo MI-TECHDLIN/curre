@@ -176,6 +176,8 @@ class Settings {
     Set<String> candidates = const <String>{},
     this.unlockMinutes = 5,
     this.threshold = 0.7,
+    this.askWhyOnHiddenAppOpen = true,
+    this.quietNotificationsFromHiddenApps = true,
     String? displayName,
     String? avatarId,
   }) : displayName = normalizeDisplayName(displayName),
@@ -207,6 +209,18 @@ class Settings {
       candidates: _stringSet(json['candidates'], 'candidates'),
       unlockMinutes: _int(json['unlockMinutes'], 'unlockMinutes'),
       threshold: _number(json['threshold'], 'threshold').toDouble(),
+      // Settings saved before the gentle intercept existed opt in when the
+      // user grants Android Usage access.
+      askWhyOnHiddenAppOpen: json.containsKey('askWhyOnHiddenAppOpen')
+          ? _bool(json['askWhyOnHiddenAppOpen'], 'askWhyOnHiddenAppOpen')
+          : true,
+      quietNotificationsFromHiddenApps:
+          json.containsKey('quietNotificationsFromHiddenApps')
+          ? _bool(
+              json['quietNotificationsFromHiddenApps'],
+              'quietNotificationsFromHiddenApps',
+            )
+          : true,
       // Absent in settings saved before names existed, which still load.
       displayName: _nullableString(json['displayName'], 'displayName'),
       // Absent in settings saved before avatars existed, which still load.
@@ -219,6 +233,8 @@ class Settings {
   final Set<String> candidates;
   final int unlockMinutes;
   final double threshold;
+  final bool askWhyOnHiddenAppOpen;
+  final bool quietNotificationsFromHiddenApps;
 
   /// What the greeting calls the user ("Good morning, Chidi"), or null when
   /// they have not given a name. Onboarding will ask for it; until then the
@@ -235,6 +251,8 @@ class Settings {
     Set<String>? candidates,
     int? unlockMinutes,
     double? threshold,
+    bool? askWhyOnHiddenAppOpen,
+    bool? quietNotificationsFromHiddenApps,
     String? displayName,
     bool clearDisplayName = false,
     String? avatarId,
@@ -245,6 +263,10 @@ class Settings {
     candidates: candidates ?? this.candidates,
     unlockMinutes: unlockMinutes ?? this.unlockMinutes,
     threshold: threshold ?? this.threshold,
+    askWhyOnHiddenAppOpen: askWhyOnHiddenAppOpen ?? this.askWhyOnHiddenAppOpen,
+    quietNotificationsFromHiddenApps:
+        quietNotificationsFromHiddenApps ??
+        this.quietNotificationsFromHiddenApps,
     displayName: clearDisplayName ? null : displayName ?? this.displayName,
     avatarId: clearAvatarId ? null : avatarId ?? this.avatarId,
   );
@@ -292,6 +314,8 @@ class Settings {
     'candidates': candidates.toList()..sort(),
     'unlockMinutes': unlockMinutes,
     'threshold': threshold,
+    'askWhyOnHiddenAppOpen': askWhyOnHiddenAppOpen,
+    'quietNotificationsFromHiddenApps': quietNotificationsFromHiddenApps,
     if (displayName != null) 'displayName': displayName,
     if (avatarId != null) 'avatarId': avatarId,
   };

@@ -1,8 +1,11 @@
 package com.mitech.curre
 
 import android.app.Activity
+import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.app.SearchManager
 import android.app.role.RoleManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
@@ -25,8 +28,11 @@ import java.io.ByteArrayOutputStream
 
 class MainActivity : FlutterActivity() {
     private lateinit var launcherApps: LauncherApps
+    private lateinit var platformChannel: MethodChannel
     private var homeSurfaceActive = false
     private var pendingHomeRoleResult: MethodChannel.Result? = null
+    private var pendingUsageAccessResult: MethodChannel.Result? = null
+    private var pendingNotificationAccessResult: MethodChannel.Result? = null
     private var pendingSpeechResult: MethodChannel.Result? = null
     private val homeRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -34,6 +40,21 @@ class MainActivity : FlutterActivity() {
         val result = pendingHomeRoleResult ?: return@registerForActivityResult
         pendingHomeRoleResult = null
         result.success(isDefaultHome())
+    }
+    private val usageAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        val result = pendingUsageAccessResult ?: return@registerForActivityResult
+        pendingUsageAccessResult = null
+        result.success(hasUsageAccess())
+    }
+    private val notificationAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        val result = pendingNotificationAccessResult
+            ?: return@registerForActivityResult
+        pendingNotificationAccessResult = null
+        result.success(hasNotificationAccess())
     }
     private val speechRecognizerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -57,10 +78,14 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherApps = getSystemService(LauncherApps::class.java)
-        MethodChannel(
+        platformChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             CHANNEL_NAME,
-        ).setMethodCallHandler(::handleMethodCall)
+        )
+        platformChannel.setMethodCallHandler(::handleMethodCall)
+        interceptEvent(intent)?.let {
+            platformChannel.invokeMethod("hiddenAppOpened", it)
+        }
     }
 
     private fun handleMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -71,6 +96,27 @@ class MainActivity : FlutterActivity() {
                 "launch" -> result.success(launchPackage(call.arguments as String))
                 "requestHomeRole" -> requestHomeRole(result)
                 "isDefaultHome" -> result.success(isDefaultHome())
+                "hasUsageAccess" -> result.success(hasUsageAccess())
+                "requestUsageAccess" -> requestUsageAccess(result)
+                "hasNotificationAccess" -> result.success(hasNotificationAccess())
+                "requestNotificationAccess" -> requestNotificationAccess(result)
+                "configureGentleIntercept" -> {
+                    configureGentleIntercept(call.arguments)
+                    result.success(null)
+                }
+                "takePendingIntercept" ->
+                    result.success(GentleInterceptService.takePendingIntercept(this))
+                "configureQuietNotifications" -> {
+                    configureQuietNotifications(call.arguments)
+                    result.success(null)
+                }
+                "listMissedNotifications" -> result.success(
+                    QuietNotificationListenerService.listMissedNotifications(this),
+                )
+                "clearMissedNotifications" -> {
+                    QuietNotificationListenerService.clearMissedNotifications(this)
+                    result.success(null)
+                }
                 "setHomeSurfaceActive" -> {
                     homeSurfaceActive = call.arguments as Boolean
                     result.success(null)
@@ -117,6 +163,177 @@ class MainActivity : FlutterActivity() {
         } catch (error: Exception) {
             result.error("launcher_error", error.message, null)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (::platformChannel.isInitialized) {
+            interceptEvent(intent)?.let {
+                platformChannel.invokeMethod("hiddenAppOpened", it)
+            }
+        }
+    }
+
+    private fun interceptEvent(intent: Intent?): Map<String, Any>? {
+        val packageName = intent?.getStringExtra(
+            GentleInterceptService.EXTRA_INTERCEPT_PACKAGE,
+        ) ?: return null
+        val atMillis = intent.getLongExtra(
+            GentleInterceptService.EXTRA_INTERCEPT_AT_MILLIS,
+            System.currentTimeMillis(),
+        )
+        intent.removeExtra(GentleInterceptService.EXTRA_INTERCEPT_PACKAGE)
+        intent.removeExtra(GentleInterceptService.EXTRA_INTERCEPT_AT_MILLIS)
+        return mapOf("package" to packageName, "atMillis" to atMillis)
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(AppOpsManager::class.java)
+        val mode = appOps.unsafeCheckOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            Process.myUid(),
+            packageName,
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    private fun requestUsageAccess(result: MethodChannel.Result) {
+        if (pendingUsageAccessResult != null) {
+            result.error(
+                "usage_access_in_progress",
+                "The Usage access settings are already open.",
+                null,
+            )
+            return
+        }
+        if (hasUsageAccess()) {
+            result.success(true)
+            return
+        }
+        pendingUsageAccessResult = result
+        val appSettings = Intent(
+            Settings.ACTION_USAGE_ACCESS_SETTINGS,
+            Uri.parse("package:$packageName"),
+        )
+        try {
+            usageAccessLauncher.launch(appSettings)
+        } catch (_: Exception) {
+            try {
+                usageAccessLauncher.launch(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            } catch (error: Exception) {
+                pendingUsageAccessResult = null
+                throw error
+            }
+        }
+    }
+
+    private fun configureGentleIntercept(arguments: Any?) {
+        val map = arguments as? Map<*, *>
+            ?: throw IllegalArgumentException("Gentle intercept configuration is missing")
+        val monitoredPackages = (map["monitoredPackages"] as? List<*>)
+            .orEmpty()
+            .filterIsInstance<String>()
+            .toSet()
+        val alwaysAllowedPackages = (map["alwaysAllowedPackages"] as? List<*>)
+            .orEmpty()
+            .filterIsInstance<String>()
+            .toSet()
+        val allowedUntilMillis = (map["allowedUntilMillis"] as? Map<*, *>)
+            .orEmpty()
+            .mapNotNull { (key, value) ->
+                val packageName = key as? String ?: return@mapNotNull null
+                val millis = (value as? Number)?.toLong() ?: return@mapNotNull null
+                packageName to millis
+            }
+            .toMap()
+        GentleInterceptService.configure(
+            context = this,
+            enabled = map["enabled"] as? Boolean ?: false,
+            hasUsageAccess = hasUsageAccess(),
+            monitoredPackages = monitoredPackages,
+            alwaysAllowedPackages = alwaysAllowedPackages,
+            allowedUntilMillis = allowedUntilMillis,
+        )
+    }
+
+    private fun hasNotificationAccess(): Boolean {
+        val component = ComponentName(
+            this,
+            QuietNotificationListenerService::class.java,
+        )
+        return getSystemService(NotificationManager::class.java)
+            .isNotificationListenerAccessGranted(component)
+    }
+
+    private fun requestNotificationAccess(result: MethodChannel.Result) {
+        if (pendingNotificationAccessResult != null) {
+            result.error(
+                "notification_access_in_progress",
+                "The notification access settings are already open.",
+                null,
+            )
+            return
+        }
+        if (hasNotificationAccess()) {
+            result.success(true)
+            return
+        }
+        pendingNotificationAccessResult = result
+        val component = ComponentName(
+            this,
+            QuietNotificationListenerService::class.java,
+        )
+        val listenerSettings = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+                .putExtra(
+                    Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                    component.flattenToString(),
+                )
+        } else {
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+        }
+        try {
+            notificationAccessLauncher.launch(listenerSettings)
+        } catch (_: Exception) {
+            try {
+                notificationAccessLauncher.launch(
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
+                )
+            } catch (error: Exception) {
+                pendingNotificationAccessResult = null
+                throw error
+            }
+        }
+    }
+
+    private fun configureQuietNotifications(arguments: Any?) {
+        val map = arguments as? Map<*, *>
+            ?: throw IllegalArgumentException("Quiet notification configuration is missing")
+        val monitoredPackages = (map["monitoredPackages"] as? List<*>)
+            .orEmpty()
+            .filterIsInstance<String>()
+            .toSet()
+        val alwaysAllowedPackages = (map["alwaysAllowedPackages"] as? List<*>)
+            .orEmpty()
+            .filterIsInstance<String>()
+            .toSet()
+        val allowedUntilMillis = (map["allowedUntilMillis"] as? Map<*, *>)
+            .orEmpty()
+            .mapNotNull { (key, value) ->
+                val packageName = key as? String ?: return@mapNotNull null
+                val millis = (value as? Number)?.toLong() ?: return@mapNotNull null
+                packageName to millis
+            }
+            .toMap()
+        QuietNotificationListenerService.configure(
+            context = this,
+            enabled = map["enabled"] as? Boolean ?: false,
+            hasNotificationAccess = hasNotificationAccess(),
+            monitoredPackages = monitoredPackages,
+            alwaysAllowedPackages = alwaysAllowedPackages,
+            allowedUntilMillis = allowedUntilMillis,
+        )
     }
 
     private fun listApps(): List<Map<String, String>> {

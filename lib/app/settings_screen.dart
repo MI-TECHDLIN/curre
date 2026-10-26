@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../platform/platform.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'history_screen.dart';
@@ -21,8 +24,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     text: widget.controller.settings.displayName,
   );
   late double _threshold = widget.controller.settings.threshold;
+  bool _checkingUsageAccess = true;
+  bool _checkingNotificationAccess = true;
 
   CurreController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_refreshUsageAccess());
+    unawaited(_refreshNotificationAccess());
+  }
 
   @override
   void dispose() {
@@ -66,12 +78,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: CurreSpace.s6),
                 _SectionTitle('Decision threshold'),
                 const SizedBox(height: CurreSpace.s2),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.raised,
+                Material(
+                  color: colors.raised,
+                  shape: RoundedRectangleBorder(
                     borderRadius: CurreShape.md,
-                    border: Border.all(color: colors.hairline),
+                    side: BorderSide(color: colors.hairline),
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: Padding(
                     padding: const EdgeInsets.all(CurreSpace.s4),
                     child: Column(
@@ -103,6 +116,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'A concrete reason must meet this confidence to open immediately.',
                           style: type.caption.copyWith(color: colors.ink3),
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: CurreSpace.s6),
+                _SectionTitle('Hidden app openings'),
+                const SizedBox(height: CurreSpace.s2),
+                Material(
+                  color: colors.raised,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: CurreShape.md,
+                    side: BorderSide(color: colors.hairline),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(CurreSpace.s4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Ask why when hidden apps open',
+                            style: type.label,
+                          ),
+                          subtitle: Text(
+                            _checkingUsageAccess
+                                ? 'Checking Usage access…'
+                                : !controller.hasUsageAccess
+                                ? 'Usage access is missing'
+                                : controller.settings.askWhyOnHiddenAppOpen
+                                ? 'On for Recents, notification taps and links'
+                                : 'Off',
+                            style: type.caption.copyWith(
+                              color: controller.hasUsageAccess
+                                  ? colors.ink2
+                                  : colors.emberText,
+                            ),
+                          ),
+                          value: controller.settings.askWhyOnHiddenAppOpen,
+                          onChanged: _setGentleInterceptEnabled,
+                        ),
+                        const SizedBox(height: CurreSpace.s2),
+                        Text(
+                          usageAccessExplanation,
+                          style: type.caption.copyWith(color: colors.ink3),
+                        ),
+                        if (!_checkingUsageAccess &&
+                            !controller.hasUsageAccess) ...[
+                          const SizedBox(height: CurreSpace.s4),
+                          CurrePrimaryButton(
+                            label: 'Allow Usage access',
+                            glyph: CurreGlyphKind.outOfSight,
+                            onPressed: _requestUsageAccess,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: CurreSpace.s6),
+                _SectionTitle('Hidden app notifications'),
+                const SizedBox(height: CurreSpace.s2),
+                Material(
+                  color: colors.raised,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: CurreShape.md,
+                    side: BorderSide(color: colors.hairline),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(CurreSpace.s4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Quiet notifications from hidden apps',
+                            style: type.label,
+                          ),
+                          subtitle: Text(
+                            _checkingNotificationAccess
+                                ? 'Checking notification access…'
+                                : !controller.hasNotificationAccess
+                                ? 'Notification access is missing'
+                                : controller
+                                      .settings
+                                      .quietNotificationsFromHiddenApps
+                                ? 'Titles appear in Missed while hidden'
+                                : 'Off',
+                            style: type.caption.copyWith(
+                              color: controller.hasNotificationAccess
+                                  ? colors.ink2
+                                  : colors.emberText,
+                            ),
+                          ),
+                          value: controller
+                              .settings
+                              .quietNotificationsFromHiddenApps,
+                          onChanged: _setQuietNotificationsEnabled,
+                        ),
+                        const SizedBox(height: CurreSpace.s2),
+                        Text(
+                          notificationAccessExplanation,
+                          style: type.caption.copyWith(color: colors.ink3),
+                        ),
+                        if (!_checkingNotificationAccess &&
+                            !controller.hasNotificationAccess) ...[
+                          const SizedBox(height: CurreSpace.s4),
+                          CurrePrimaryButton(
+                            label: 'Allow notification access',
+                            glyph: CurreGlyphKind.notify,
+                            onPressed: _requestNotificationAccess,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -161,8 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SettingsTile(
                   glyph: CurreGlyphKind.history,
                   title: 'Clear history',
-                  subtitle:
-                      'Remove 30 days of check-ins, unlock choices and notes',
+                  subtitle: 'Remove check-ins, unlock choices, notes and missed notifications',
                   onTap: _confirmClearHistory,
                   destructive: true,
                 ),
@@ -200,13 +328,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _refreshUsageAccess() async {
+    await controller.refreshUsageAccess();
+    if (!mounted) return;
+    setState(() => _checkingUsageAccess = false);
+  }
+
+  Future<void> _setGentleInterceptEnabled(bool enabled) async {
+    await controller.updateSettings(
+      controller.settings.copyWith(askWhyOnHiddenAppOpen: enabled),
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _refreshNotificationAccess() async {
+    await controller.refreshNotificationAccess();
+    if (!mounted) return;
+    setState(() => _checkingNotificationAccess = false);
+  }
+
+  Future<void> _setQuietNotificationsEnabled(bool enabled) async {
+    await controller.updateSettings(
+      controller.settings.copyWith(quietNotificationsFromHiddenApps: enabled),
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _requestUsageAccess() async {
+    final granted = await controller.requestUsageAccess();
+    if (!mounted) return;
+    setState(() => _checkingUsageAccess = false);
+    showCurreSnack(
+      context,
+      granted
+          ? 'Curre can now notice hidden app openings.'
+          : 'Usage access is still off.',
+    );
+  }
+
+  Future<void> _requestNotificationAccess() async {
+    final granted = await controller.requestNotificationAccess();
+    if (!mounted) return;
+    setState(() => _checkingNotificationAccess = false);
+    showCurreSnack(
+      context,
+      granted
+          ? 'Curre can now quiet hidden app notifications.'
+          : 'Notification access is still off.',
+    );
+  }
+
   Future<void> _confirmClearHistory() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Clear local history?'),
         content: const Text(
-          'This removes saved check-ins, grants, unlock attempts and the notes you wrote after tasks. Your proof days, today’s live plan and active app timers stay in place.',
+          'This removes saved check-ins, grants, unlock attempts, missed notification titles and the notes you wrote after tasks. Your proof days, today’s live plan and active app timers stay in place.',
         ),
         actions: [
           TextButton(

@@ -8,6 +8,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - The permanent Android namespace and application ID are `com.mitech.curre`.
 - Screen-facing notification, speech-input and Home-refresh plumbing lives in
   `lib/platform/`.
+- Hidden-app foreground checks and notification quieting use the Android
+  services beside `MainActivity.kt`; their access adapters and pure policies
+  live in `lib/platform/gentle_intercept.dart` and `quiet_notifications.dart`.
 - Validate Flutter changes with `flutter analyze` and `flutter test`.
 - The design system (tokens, theme, widgets) lives in `lib/design/`; import
   `design/design.dart`. The debug gallery (`lib/gallery/`) renders every
