@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later: the same rule as backup_rules.xml. The voice
+     files stay out of backups and phone-to-phone transfers. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="voice/"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="voice/"/>
+    </device-transfer>
+</data-extraction-rules>

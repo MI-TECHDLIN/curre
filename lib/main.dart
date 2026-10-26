@@ -11,6 +11,7 @@ import 'app/history_screen.dart';
 import 'app/home_screen.dart';
 import 'app/onboarding_screen.dart';
 import 'app/unlock_gate_screen.dart';
+import 'app/voice_sheet.dart';
 import 'design/design.dart';
 import 'doors/door_lab_screen.dart';
 import 'gallery/gallery_screen.dart';
@@ -18,6 +19,7 @@ import 'platform/platform.dart';
 
 void main() {
   registerCurreLicenses();
+  registerVoiceLicenses();
   runApp(const CurreApp());
 }
 
@@ -192,6 +194,7 @@ class _CurreRootState extends State<_CurreRoot> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    controller.speech.presenter = _showVoiceSheet;
     _interceptCoordinator = GentleInterceptCoordinator(
       source: controller.gentleIntercept,
       snapshot: () => controller.gentleInterceptSnapshot,
@@ -242,9 +245,16 @@ class _CurreRootState extends State<_CurreRoot> with WidgetsBindingObserver {
     }
   }
 
+  /// Every mic button reaches the voice sheet through here.
+  Future<SpeechInputResult> _showVoiceSheet(String? prompt) =>
+      showVoiceSheet(context, speech: controller.speech, prompt: prompt);
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    if (controller.speech.presenter == _showVoiceSheet) {
+      controller.speech.presenter = null;
+    }
     unawaited(_interceptCoordinator.dispose());
     super.dispose();
   }

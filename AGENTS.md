@@ -10,6 +10,13 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   settings plumbing lives in `lib/platform/`; local reminders, their
   per-type/quiet-hours policy and the tap/action intents routed in
   `lib/main.dart` are in `local_notifications.dart`.
+- Voice typing is Whisper tiny run on the phone by `sherpa_onnx`, a
+  one-time download pinned by SHA-256: `SpeechInputService`
+  (`lib/platform/speech_input.dart`) opens the voice sheet
+  (`lib/app/voice_sheet.dart`, bound in `main.dart`); the model store, mic
+  and engine are `lib/platform/voice_*.dart`. Tests use
+  `test/support/voice_fakes.dart` (`fakeController` does), since the real
+  store needs path_provider.
 - Hidden-app foreground checks and notification quieting use the Android
   services beside `MainActivity.kt`; their access adapters and pure policies
   live in `lib/platform/gentle_intercept.dart` and `quiet_notifications.dart`.
