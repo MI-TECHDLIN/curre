@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('reason kinds are named in everyday words', () {
+    expect(kindLabels.values, ['A task', 'Someone’s waiting', 'Can’t wait', 'Just browsing', 'Not clear yet']);
+  });
+
   testWidgets('KindChip shows the label for every reason kind', (tester) async {
     for (final kind in ReasonKind.values) {
       await tester.pumpWidget(
@@ -53,7 +57,7 @@ void main() {
         home: const Scaffold(body: KindChip(kind: ReasonKind.person, confidence: 0.94)),
       ),
     );
-    expect(find.bySemanticsLabel('Person waiting, confidence 94 percent'), findsOneWidget);
+    expect(find.bySemanticsLabel('Someone’s waiting, confidence 94 percent'), findsOneWidget);
     handle.dispose();
   });
 }

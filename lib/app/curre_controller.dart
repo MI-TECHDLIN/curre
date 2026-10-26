@@ -48,6 +48,7 @@ class CurreController extends ChangeNotifier {
     this.store,
     this.homePlatform = const HomePlatformService(),
     this.gentleIntercept = const DisabledGentleInterceptGateway(),
+    this.homeSettings = const HomeSettingsService(),
     this.notifications,
     this.reminders,
     SpeechInputService? speech,
@@ -63,6 +64,7 @@ class CurreController extends ChangeNotifier {
     List<Grant> historyGrants = const <Grant>[],
     List<Attempt> historyAttempts = const <Attempt>[],
     this.onboardingComplete = false,
+    this.hiddenAppsTipDismissed = false,
     DateTime Function()? now,
   }) : speech = speech ?? SpeechInputService(),
        settings = settings ?? Settings(),
@@ -137,6 +139,7 @@ class CurreController extends ChangeNotifier {
       historyGrants: historyGrants,
       historyAttempts: historyAttempts,
       onboardingComplete: store?.isOnboardingComplete ?? false,
+      hiddenAppsTipDismissed: store?.isHiddenAppsTipDismissed ?? false,
     );
     await controller.initializeGentleIntercept();
     await controller._prepareReminders();
@@ -171,6 +174,7 @@ class CurreController extends ChangeNotifier {
   final CurreLocalStore? store;
   final HomePlatformGateway homePlatform;
   final GentleInterceptGateway gentleIntercept;
+  final HomeSettingsGateway homeSettings;
   final GrantNotificationService? notifications;
   final LocalReminderService? reminders;
   final SpeechInputService speech;
@@ -188,12 +192,16 @@ class CurreController extends ChangeNotifier {
   List<Grant> historyGrants;
   List<Attempt> historyAttempts;
   bool onboardingComplete;
+
+  /// Whether the Hidden apps explainer has been put away for good.
+  bool hiddenAppsTipDismissed;
   CallReceipt? lastPlanCall;
   CallReceipt? lastUnlockCall;
   CallReceipt? lastProofCall;
   bool _firstCheckinRequested = false;
   bool _hasUsageAccess = false;
   bool _hasNotificationAccess = false;
+  String? _firstIntention;
   bool _retryingProofs = false;
   DateTime? _lastPendingProofRetryAt;
   int _pendingProofRetryCursor = 0;
@@ -348,30 +356,61 @@ class CurreController extends ChangeNotifier {
     return requested;
   }
 
+  /// The plan sentence the user wrote at the end of onboarding, handed to
+  /// the first check-in exactly once.
+  String? takeFirstIntention() {
+    final intention = _firstIntention;
+    _firstIntention = null;
+    return intention;
+  }
+
+  /// Saves everything onboarding asked for in one step. With a
+  /// [firstIntention], Home opens the check-in and plans it straight away;
+  /// without one ("I'll plan later") Home simply opens.
   Future<void> finishOnboarding({
     required String displayName,
     required String? avatarId,
     required Set<String> essentials,
     required Set<String> candidates,
+    LocalTime? morningStart,
+    String? firstIntention,
   }) async {
-    settings = settings.copyWith(
+    final next = settings.copyWith(
       displayName: displayName,
       avatarId: avatarId,
       clearAvatarId: avatarId == null,
       essentials: essentials,
       candidates: candidates,
+      sessionStarts: morningStart == null
+          ? null
+          : <SessionName, LocalTime>{
+              ...settings.sessionStarts,
+              SessionName.morning: morningStart,
+            },
     );
-    _firstCheckinRequested = true;
-    onboardingComplete = true;
-    await store?.saveSettings(settings);
+    // Save first: if the phone can't store the answers, onboarding stays
+    // open with everything still filled in, ready to try again.
+    await store?.saveSettings(next);
     await store?.setOnboardingComplete(true);
+    settings = next;
+    final intention = firstIntention?.trim();
+    _firstIntention = intention == null || intention.isEmpty ? null : intention;
+    _firstCheckinRequested = _firstIntention != null;
+    onboardingComplete = true;
     await _syncGentleInterceptPolicy();
+    try {
+      await _scheduleSessionReminders();
+    } on Object {
+      // Reminders are optional; onboarding is already saved.
+    }
     notifyListeners();
   }
 
+  /// Saves [value] and then shows it; a failed save leaves the settings as
+  /// they were and throws, so the screen can say so.
   Future<void> updateSettings(Settings value) async {
-    settings = value;
     await store?.saveSettings(value);
+    settings = value;
     await _syncGentleInterceptPolicy();
     try {
       await _scheduleSessionReminders();
@@ -520,6 +559,16 @@ class CurreController extends ChangeNotifier {
     }
   }
 
+  Future<void> dismissHiddenAppsTip() async {
+    hiddenAppsTipDismissed = true;
+    notifyListeners();
+    try {
+      await store?.dismissHiddenAppsTip();
+    } on Object {
+      // Showing the tip once more next time is harmless.
+    }
+  }
+
   Future<void> updateDisplayName(String value) =>
       updateSettings(settings.copyWith(displayName: value));
 
@@ -545,6 +594,16 @@ class CurreController extends ChangeNotifier {
       return await homePlatform.isDefaultHome();
     } on Object {
       return false;
+    }
+  }
+
+  /// Takes the user to Android's home screen choice (see
+  /// [HomeSettingsService]); never throws.
+  Future<HomeSettingsOpened> openHomeSettings() async {
+    try {
+      return await homeSettings.openHomeSettings();
+    } on Object {
+      return HomeSettingsOpened.none;
     }
   }
 

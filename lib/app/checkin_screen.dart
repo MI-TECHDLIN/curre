@@ -26,6 +26,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
   String? _message;
   Plan? _plan;
 
+  /// Why the plan couldn't be made for the user (null when it wasn't
+  /// tried, or when it threw before saying).
+  PlanFallbackReason? _fallback;
+
   CurreController get controller => widget.controller;
 
   @override
@@ -35,6 +39,15 @@ class _CheckinScreenState extends State<CheckinScreen> {
     // planner when check-in opens as well as when the process starts, so the
     // user's typing time overlaps a sleeping deployment's cold start.
     unawaited(controller.warmUpPlanning());
+    // The sentence written on onboarding's last step is planned straight
+    // away, through this same screen.
+    final first = controller.takeFirstIntention();
+    if (first != null) {
+      _intention.text = first;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_submit());
+      });
+    }
   }
 
   @override
@@ -57,9 +70,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               0,
             ),
             child: CurreTopBar(
-              title:
-                  '${_titlePrefix(controller.currentSession.session)} check-in',
-              subtitle: 'Sent to Clocked · Fill + Extract',
+              title: 'Plan your ${controller.currentSession.session.label}',
             ),
           ),
           Expanded(
@@ -149,7 +160,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       ),
                       const SizedBox(height: CurreSpace.s2),
                       Text(
-                        'One sentence. Only what you name comes into sight.',
+                        'One sentence. Only what you name shows on Home.',
                         style: type.body.copyWith(
                           color: sky.fg.withValues(alpha: .86),
                         ),
@@ -175,7 +186,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               filled: true,
               fillColor: colors.raised,
               suffixIcon: IconButton(
-                tooltip: 'Speak your plan',
+                tooltip: 'Say your plan',
                 onPressed: _listen,
                 icon: CurreGlyph(CurreGlyphKind.speak, color: colors.emberText),
               ),
@@ -206,15 +217,15 @@ class _CheckinScreenState extends State<CheckinScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: CurreSpace.s8),
-          Text('Choosing the Task Doors', style: type.headline),
+          Text('Getting your apps ready…', style: type.headline),
           const SizedBox(height: CurreSpace.s3),
           Text(_intention.text, style: type.youLarge),
           const SizedBox(height: CurreSpace.s6),
           const HorizonLine(scanning: true, semanticLabel: 'Choosing apps'),
           const SizedBox(height: CurreSpace.s3),
           Text(
-            'Fill + Extract · ${candidates.length} candidates · gives up at 12 s',
-            style: type.meta,
+            'Looking through your ${candidates.length} apps',
+            style: type.caption.copyWith(color: colors.ink2),
           ),
           const SizedBox(height: CurreSpace.s5),
           Wrap(
@@ -260,13 +271,22 @@ class _CheckinScreenState extends State<CheckinScreen> {
             children: [
               OutcomeCard(
                 outcome: Outcome.unavailable,
-                headline: 'Choose the apps yourself',
-                body:
-                    'I couldn’t finish that automatically. Pick what you need '
-                    'and your plan will still work.',
+                headline: _fallbackHeadline(_fallback),
+                body: _fallbackBody(_fallback),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 48),
+                    child: CurreSecondaryButton(
+                      label: 'Try again',
+                      glyph: CurreGlyphKind.rise,
+                      onPressed: _submit,
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: CurreSpace.s4),
-              Text('Pick what this sentence needs', style: type.title),
+              const SizedBox(height: CurreSpace.s5),
+              Text('Choose the apps yourself', style: type.title),
               const SizedBox(height: CurreSpace.s2),
               Text(_intention.text, style: type.you),
               const SizedBox(height: CurreSpace.s3),
@@ -292,7 +312,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
         Padding(
           padding: const EdgeInsets.all(CurreSpace.gutter),
           child: CurrePrimaryButton(
-            label: 'Use this local plan',
+            label: 'Use these apps',
             glyph: CurreGlyphKind.check,
             onPressed: _manual.isEmpty ? null : _saveManual,
           ),
@@ -340,7 +360,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
           child: ListView(
             padding: const EdgeInsets.all(CurreSpace.gutter),
             children: [
-              Text('Here’s what comes into sight', style: type.headline),
+              Text('Here’s your plan', style: type.headline),
               const SizedBox(height: CurreSpace.s3),
               Hero(
                 tag: 'active-plan-${plan.id}',
@@ -367,7 +387,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               ),
               const SizedBox(height: CurreSpace.s3),
               Text(
-                'Ends ${formatClock(plan.endsAt)} · ${plan.source == PlanSource.clocked ? 'Clocked plan' : 'Local plan'}',
+                'On your Home until ${formatClock(plan.endsAt)}',
                 style: type.meta,
               ),
               const SizedBox(height: CurreSpace.s5),
@@ -399,7 +419,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               ),
               const SizedBox(height: CurreSpace.s2),
               CurreSecondaryButton(
-                label: 'Edit the plan',
+                label: 'Change the plan',
                 glyph: CurreGlyphKind.editSpecify,
                 onPressed: () => setState(() => _state = _CheckinState.compose),
               ),
@@ -434,15 +454,22 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _state = _CheckinState.thinking;
       _message = null;
     });
-    final result = await controller.buildPlan(_intention.text.trim());
+    PlanBuildResult result;
+    try {
+      result = await controller.buildPlan(_intention.text.trim());
+    } on Object {
+      // Whatever went wrong, the user can still choose the apps.
+      result = const PlanBuildResult.manual(null);
+    }
     if (!mounted) return;
     if (result.requiresManualChecklist) {
       setState(() {
-        _manual
-          ..clear()
-          ..addAll(
+        _fallback = result.fallbackReason;
+        if (_manual.isEmpty) {
+          _manual.addAll(
             controller.candidateApps.take(2).map((app) => app.packageName),
           );
+        }
         _state = _CheckinState.manual;
       });
     } else {
@@ -465,8 +492,18 @@ class _CheckinScreenState extends State<CheckinScreen> {
     });
   }
 
-  static String _titlePrefix(SessionName session) {
-    final label = session.label;
-    return '${label[0].toUpperCase()}${label.substring(1)}';
-  }
+  /// What went wrong, in words a person would use, then what to do.
+  static String _fallbackHeadline(PlanFallbackReason? reason) =>
+      switch (reason) {
+        PlanFallbackReason.network => 'Couldn’t connect just now',
+        PlanFallbackReason.timeout => 'That took too long',
+        PlanFallbackReason.invalidResponse => 'Curre couldn’t read that plan',
+        PlanFallbackReason.http || null => 'Curre couldn’t plan that just now',
+      };
+
+  static String _fallbackBody(PlanFallbackReason? reason) => switch (reason) {
+    PlanFallbackReason.network =>
+      'Check your internet and try again, or choose the apps yourself below.',
+    _ => 'Try again in a moment, or choose the apps yourself below.',
+  };
 }

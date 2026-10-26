@@ -7,11 +7,11 @@ import 'curre_glyph.dart';
 
 /// Word and glyph Curre shows for each [ReasonKind] (design report 3.7 / 4.6).
 const Map<ReasonKind, String> kindLabels = {
-  ReasonKind.task: 'Task',
-  ReasonKind.person: 'Person waiting',
-  ReasonKind.timeSensitive: 'Time-sensitive',
-  ReasonKind.browse: 'Browsing',
-  ReasonKind.unclear: 'Unclear',
+  ReasonKind.task: 'A task',
+  ReasonKind.person: 'Someone’s waiting',
+  ReasonKind.timeSensitive: 'Can’t wait',
+  ReasonKind.browse: 'Just browsing',
+  ReasonKind.unclear: 'Not clear yet',
 };
 
 const Map<ReasonKind, CurreGlyphKind> kindGlyphs = {

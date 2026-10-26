@@ -1,0 +1,166 @@
+import 'dart:typed_data';
+
+import 'package:curre/app/curre_controller.dart';
+import 'package:curre/core/core.dart';
+import 'package:curre/doors/door_models.dart';
+import 'package:curre/platform/platform.dart';
+
+/// Test doubles for the Android side of Curre, shared by the onboarding,
+/// settings, copy and error tests.
+class FakeDoorPlatform implements DoorPlatform {
+  FakeDoorPlatform({
+    List<LaunchableApp>? apps,
+    this.grantHome = true,
+    this.launchWorks = true,
+    this.home,
+  }) : apps = apps ?? CurreController.fallbackApps;
+
+  final List<LaunchableApp> apps;
+
+  /// Whether Android's home screen request ends with Curre as Home.
+  bool grantHome;
+  bool launchWorks;
+
+  /// Kept in step with a home role request, when given.
+  FakeHomePlatform? home;
+  var launches = 0;
+  var homeRequests = 0;
+
+  @override
+  Future<Uint8List?> getIcon(String packageName) async => null;
+
+  @override
+  Future<List<AppShortcut>> getConversationShortcuts(
+    String packageName,
+  ) async => <AppShortcut>[];
+
+  @override
+  Future<List<AppShortcut>> getStaticShortcuts(String packageName) async =>
+      <AppShortcut>[];
+
+  @override
+  Future<bool> hasShortcutHostPermission() async => false;
+
+  @override
+  Future<bool> launch(String packageName) async {
+    launches++;
+    return launchWorks;
+  }
+
+  @override
+  Future<bool> launchQueryDoor(String doorId, String query) async {
+    launches++;
+    return launchWorks;
+  }
+
+  @override
+  Future<List<LaunchableApp>> listApps() async => apps;
+
+  @override
+  Future<bool> requestHomeRole() async {
+    homeRequests++;
+    if (grantHome) home?.isHome = true;
+    return grantHome;
+  }
+
+  @override
+  Future<bool> startShortcut(String packageName, String shortcutId) async =>
+      false;
+}
+
+class FakeHomePlatform implements HomePlatformGateway {
+  FakeHomePlatform({this.isHome = true});
+
+  bool isHome;
+
+  @override
+  Future<bool> isDefaultHome() async => isHome;
+
+  @override
+  Future<void> setHomeSurfaceActive(bool active) async {}
+}
+
+class FakeHomeSettings implements HomeSettingsGateway {
+  FakeHomeSettings([this.opens = HomeSettingsOpened.homeApps]);
+
+  HomeSettingsOpened opens;
+  var calls = 0;
+
+  @override
+  Future<HomeSettingsOpened> openHomeSettings() async {
+    calls++;
+    return opens;
+  }
+}
+
+class FakeNotificationGateway implements GrantNotificationGateway {
+  FakeNotificationGateway({this.allow = true});
+
+  bool allow;
+  var requests = 0;
+
+  @override
+  Future<void> cancel(int id) async {}
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<bool> requestPermission() async {
+    requests++;
+    return allow;
+  }
+
+  @override
+  Future<void> scheduleExpiry(GrantNotificationNotice notice) async {}
+
+  @override
+  Future<void> showOngoing(GrantNotificationNotice notice) async {}
+}
+
+/// A controller over the fakes, at a fixed morning moment.
+CurreController fakeController({
+  bool onboardingComplete = true,
+  Settings? settings,
+  FakeDoorPlatform? platform,
+  FakeHomePlatform? home,
+  FakeHomeSettings? homeSettings,
+  FakeNotificationGateway? notifications,
+  CurreApiClient? api,
+  CurreLocalStore? store,
+  DateTime? now,
+}) {
+  final homePlatform = home ?? FakeHomePlatform();
+  final launcher = platform ?? FakeDoorPlatform();
+  launcher.home ??= homePlatform;
+  return CurreController(
+    launcher: launcher,
+    homePlatform: homePlatform,
+    homeSettings: homeSettings ?? FakeHomeSettings(),
+    notifications: notifications == null
+        ? null
+        : GrantNotificationService(notifications),
+    api: api,
+    store: store,
+    settings:
+        settings ??
+        Settings(
+          displayName: 'Chidi',
+          essentials: const {
+            'com.google.android.dialer',
+            'com.google.android.apps.messaging',
+            'com.android.settings',
+          },
+          candidates: const {
+            'com.google.android.youtube',
+            'com.spotify.music',
+            'com.google.android.apps.maps',
+            'com.instagram.android',
+            'com.whatsapp',
+          },
+        ),
+    apps: launcher.apps,
+    onboardingComplete: onboardingComplete,
+    now: () => now ?? DateTime(2026, 10, 26, 6, 40),
+  );
+}

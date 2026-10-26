@@ -286,6 +286,7 @@ class Avatar extends StatefulWidget {
     this.motion = AvatarMotion.still,
     this.expression = AvatarExpression.neutral,
     this.semanticLabel,
+    this.framed = true,
   }) : assert(size > 0);
 
   final String? avatarId;
@@ -301,6 +302,11 @@ class Avatar extends StatefulWidget {
   final AvatarMotion motion;
   final AvatarExpression expression;
   final String? semanticLabel;
+
+  /// Draws the round background and keeps the person inside it, as on the
+  /// profile button. Off, only the person is drawn (head, hair and neck),
+  /// so a scene can stand them on a body ([AvatarFigure]).
+  final bool framed;
 
   @override
   State<Avatar> createState() => _AvatarState();
@@ -494,6 +500,7 @@ class _AvatarState extends State<Avatar> with SingleTickerProviderStateMixin {
                     background:
                         (widget.background ?? resolved.background).color,
                     proofToday: widget.proofToday,
+                    framed: widget.framed,
                     ember:
                         Theme.of(context).extension<CurreColors>()?.ember ??
                         const Color(0xFFE85F2E),
@@ -589,6 +596,7 @@ class _AvatarPainter extends CustomPainter {
     required this.faceStyle,
     required this.background,
     required this.proofToday,
+    required this.framed,
     required this.ember,
     required this.eyeOpen,
     required this.headBob,
@@ -604,6 +612,7 @@ class _AvatarPainter extends CustomPainter {
   final AvatarFaceStyle faceStyle;
   final Color background;
   final bool proofToday;
+  final bool framed;
   final Color ember;
   final double eyeOpen;
   final double headBob;
@@ -637,10 +646,12 @@ class _AvatarPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
     final circle = Path()..addOval(const Rect.fromLTWH(1.5, 1.5, 97, 97));
-    canvas.clipPath(circle);
-    canvas.drawPath(circle, _fill(background));
+    if (framed) {
+      canvas.clipPath(circle);
+      canvas.drawPath(circle, _fill(background));
+    }
 
-    if (proofToday) {
+    if (framed && proofToday) {
       canvas.drawCircle(
         const Offset(50, 50),
         46.4,
@@ -1180,6 +1191,7 @@ class _AvatarPainter extends CustomPainter {
       faceStyle != oldDelegate.faceStyle ||
       background != oldDelegate.background ||
       proofToday != oldDelegate.proofToday ||
+      framed != oldDelegate.framed ||
       ember != oldDelegate.ember ||
       eyeOpen != oldDelegate.eyeOpen ||
       headBob != oldDelegate.headBob ||

@@ -94,11 +94,11 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 0,
               ),
               child: CurreTopBar(
-                title: widget.openedFromOutside
-                    ? 'You opened ${widget.app.label}. Why now?'
-                    : 'Why open ${widget.app.label} now?',
-                subtitle: 'No app icon here · this is a deliberate choice',
-                maxTitleLines: 3,
+                title: 'Why now?',
+                subtitle: widget.openedFromOutside
+                    ? 'You opened ${widget.app.label}. It\'s one of your hidden apps.'
+                    : '${widget.app.label} is in your hidden apps.',
+                maxTitleLines: 2,
               ),
             ),
             Expanded(
@@ -131,8 +131,16 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'What do you need ${widget.app.label} for right now?',
+                    style: type.title,
+                  ),
+                ),
+                const SizedBox(height: CurreSpace.s2),
                 Text(
-                  'Say what you’ll do and who or what it’s for, and how long if you know. Curre will open right there.',
+                  'Say what you’ll do, who it’s for, and for how long. Curre opens the app right where you need it.',
                   style: type.body.copyWith(color: colors.ink2),
                 ),
                 const SizedBox(height: CurreSpace.s4),
@@ -169,9 +177,9 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                     Expanded(
                       child: Text(
                         controller.activePlan == null
-                            ? 'Plan: none'
-                            : 'Plan: ${controller.activePlan!.intention}',
-                        style: type.meta,
+                            ? ''
+                            : 'Your plan: ${controller.activePlan!.intention}',
+                        style: type.caption.copyWith(color: colors.ink3),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -192,7 +200,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                     const SizedBox(height: CurreSpace.s2),
                   ],
                   Text(
-                    'Retry 1 of 1 · be specific about the task.',
+                    'One more try: say exactly what you’ll do.',
                     style: type.caption.copyWith(color: colors.emberText),
                   ),
                 ],
@@ -203,7 +211,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         Padding(
           padding: const EdgeInsets.all(CurreSpace.gutter),
           child: CurrePrimaryButton(
-            label: _retryCount == 0 ? 'Ask Curre' : 'Ask again',
+            label: _retryCount == 0 ? 'Bring it back' : 'Ask again',
             glyph: CurreGlyphKind.go,
             onPressed: length < 8 || length > 300 ? null : _judge,
           ),
@@ -213,6 +221,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   }
 
   Widget _thinking(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     return SingleChildScrollView(
       key: const ValueKey('thinking'),
@@ -228,23 +237,9 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             semanticLabel: 'Reading your reason',
           ),
           const SizedBox(height: CurreSpace.s4),
-          Text('Reading your reason · gives up at 8 s', style: type.meta),
-          const SizedBox(height: CurreSpace.s5),
-          const _PipelineStep(
-            glyph: CurreGlyphKind.privacy,
-            label: 'Guard · checks for steering',
-          ),
-          const _PipelineStep(
-            glyph: CurreGlyphKind.kindTask,
-            label: 'Decide · kind and door',
-          ),
-          const _PipelineStep(
-            glyph: CurreGlyphKind.editSpecify,
-            label: 'Extract · who, what, how long',
-          ),
-          const _PipelineStep(
-            glyph: CurreGlyphKind.door,
-            label: 'Find the door · on this phone',
+          Text(
+            'Reading your reason…',
+            style: type.body.copyWith(color: colors.ink2),
           ),
         ],
       ),
@@ -263,32 +258,20 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
           child: ListView(
             padding: const EdgeInsets.all(CurreSpace.gutter),
             children: [
-              if (response.kind != null)
+              if (response.kind != null) ...[
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: KindChip(
-                    kind: response.kind!,
-                    confidence: response.confidence,
-                    threshold: controller.settings.threshold,
-                  ),
-                )
-              else
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _NotJudgedChip(
-                    label: response.outcome == UnlockOutcome.flagged
-                        ? 'Not judged · Guard stopped'
-                        : 'Not judged · no answer',
-                  ),
+                  child: KindChip(kind: response.kind!),
                 ),
-              const SizedBox(height: CurreSpace.s3),
+                const SizedBox(height: CurreSpace.s3),
+              ],
               OutcomeCard(
                 outcome: outcome,
                 headline: _headline(response),
                 body: _body(response),
               ),
               const SizedBox(height: CurreSpace.s4),
-              Text('Why', style: type.label),
+              Text('Your reason', style: type.label),
               const SizedBox(height: CurreSpace.s2),
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -305,19 +288,11 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                   ),
                 ),
               ),
-              if (response.guard != null) ...[
+              if (response.guardQuoteText case final quote?) ...[
                 const SizedBox(height: CurreSpace.s3),
                 Text(
-                  'Guard · ${response.guard!.category}: “${response.guardQuoteText}”',
+                  'These words read like an instruction to Curre: “$quote”',
                   style: type.caption.copyWith(color: colors.emberText),
-                ),
-              ],
-              if (controller.lastUnlockCall case final receipt?) ...[
-                const SizedBox(height: CurreSpace.s3),
-                Text(
-                  '${receipt.endpoint} · ${receipt.elapsed.inMilliseconds} ms · '
-                  '${receipt.usage?.credits ?? '—'} credits',
-                  style: type.meta,
                 ),
               ],
             ],
@@ -359,7 +334,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             const SizedBox(height: CurreSpace.s2),
           ],
           CurreSecondaryButton(
-            label: 'Open after 60 s',
+            label: 'Open after a minute',
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
@@ -368,7 +343,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.later || UnlockOutcome.flagged => Column(
         children: [
           CurreSecondaryButton(
-            label: 'Open after 60 s',
+            label: 'Open after a minute',
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
@@ -401,26 +376,15 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             padding: const EdgeInsets.all(CurreSpace.gutter),
             child: Column(
               children: [
-                if (response.kind != null)
-                  KindChip(
-                    kind: response.kind!,
-                    confidence: response.confidence,
-                    threshold: controller.settings.threshold,
-                  )
-                else
-                  _NotJudgedChip(
-                    label: response.outcome == UnlockOutcome.unavailable
-                        ? 'No answer · local override'
-                        : 'Not judged',
-                  ),
-                const SizedBox(height: CurreSpace.s5),
+                if (response.kind != null) ...[
+                  KindChip(kind: response.kind!),
+                  const SizedBox(height: CurreSpace.s5),
+                ],
                 OutcomeCard(
                   outcome: response.outcome.designOutcome,
-                  headline: response.outcome == UnlockOutcome.unavailable
-                      ? 'No answer · opening anyway, in a minute'
-                      : '${widget.app.label} opens after the wait',
+                  headline: '${widget.app.label} opens in a minute',
                   body: response.outcome == UnlockOutcome.unavailable
-                      ? 'The gate did not reply. You may be offline.'
+                      ? 'Curre couldn’t check your reason, so it opens after a short wait instead.'
                       : 'You chose to wait, and that’s allowed.',
                 ),
                 const SizedBox(height: CurreSpace.s6),
@@ -440,7 +404,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 ),
                 const SizedBox(height: CurreSpace.s3),
                 Text(
-                  'Leaving this screen cancels the wait. A finished wait is logged as an override.',
+                  'Leave this screen to cancel. If you wait it out, it shows in your history.',
                   style: type.caption.copyWith(color: colors.ink3),
                   textAlign: TextAlign.center,
                 ),
@@ -526,22 +490,27 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
 
   String _headline(UnlockResponse response) => switch (response.outcome) {
     UnlockOutcome.open => 'Opens at ${_destination(response)}',
-    UnlockOutcome.later => 'Not now.',
+    UnlockOutcome.later => 'Not now',
     UnlockOutcome.specify => 'What exactly will you do?',
-    UnlockOutcome.flagged => 'This reason tried to steer the gate',
-    UnlockOutcome.unavailable => 'No answer · opening anyway, in a minute',
+    UnlockOutcome.flagged => 'That reads like an instruction, not a reason',
+    UnlockOutcome.unavailable => 'Couldn’t check your reason',
   };
 
-  String _body(UnlockResponse response) => switch (response.outcome) {
-    UnlockOutcome.open =>
-      '${grantMinutesFor(response, fallbackUnlockMinutes: controller.settings.unlockMinutes)} minutes · ${kindLabels[response.kind] ?? 'task'}',
-    UnlockOutcome.later => 'Sounds like browsing, so it can wait. There is no saved “later” list in core.',
-    UnlockOutcome.specify => 'One more try, or wait 60 seconds.',
-    UnlockOutcome.flagged =>
-      'Guard: ${response.guard?.category ?? 'instruction override'}',
-    UnlockOutcome.unavailable =>
-      'The gate did not reply in 8 seconds. You may be offline.',
-  };
+  String _body(UnlockResponse response) {
+    final app = widget.app.label;
+    return switch (response.outcome) {
+      UnlockOutcome.open =>
+        'You have ${grantMinutesFor(response, fallbackUnlockMinutes: controller.settings.unlockMinutes)} minutes.',
+      UnlockOutcome.later =>
+        'That sounds like browsing, so it can wait. If you still want $app now, it opens after a one-minute wait.',
+      UnlockOutcome.specify =>
+        'Say a bit more about what you’ll do, or open $app after a one-minute wait.',
+      UnlockOutcome.flagged =>
+        'Tell Curre what you’ll do in $app instead. Or open it after a one-minute wait.',
+      UnlockOutcome.unavailable =>
+        'No problem: $app opens after a one-minute wait. You can also try again now.',
+    };
+  }
 
   String _destination(UnlockResponse response) {
     if (response.kind == ReasonKind.person && response.person != null) {
@@ -560,10 +529,16 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   Future<void> _judge() async {
     FocusScope.of(context).unfocus();
     setState(() => _state = _GateState.thinking);
-    final response = await controller.judgeUnlock(
-      app: widget.app,
-      reason: _reason.text.trim(),
-    );
+    UnlockResponse response;
+    try {
+      response = await controller.judgeUnlock(
+        app: widget.app,
+        reason: _reason.text.trim(),
+      );
+    } on Object {
+      // Never strand the user: the one-minute wait still opens the app.
+      response = const UnlockResponse.unavailable();
+    }
     if (!mounted) return;
     setState(() {
       _response = response;
@@ -605,7 +580,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     if (!result.succeeded) {
       showCurreSnack(
         context,
-        'That door did not open. The grant is still active.',
+        '${widget.app.label} didn’t open there. Your time is still running, so try it from Home.',
       );
       return;
     }
@@ -645,54 +620,4 @@ extension on UnlockOutcome {
     UnlockOutcome.flagged => Outcome.flagged,
     UnlockOutcome.unavailable => Outcome.unavailable,
   };
-}
-
-class _PipelineStep extends StatelessWidget {
-  const _PipelineStep({required this.glyph, required this.label});
-
-  final CurreGlyphKind glyph;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: CurreSpace.s3),
-      child: Row(
-        children: [
-          CurreGlyph(glyph, size: 20, color: colors.ink2),
-          const SizedBox(width: CurreSpace.s3),
-          Expanded(
-            child: Text(label, style: type.body.copyWith(color: colors.ink2)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NotJudgedChip extends StatelessWidget {
-  const _NotJudgedChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    return DecoratedBox(
-      decoration: ShapeDecoration(
-        color: colors.raised,
-        shape: StadiumBorder(side: BorderSide(color: colors.hairline)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: CurreSpace.s3,
-          vertical: CurreSpace.s2,
-        ),
-        child: Text(label, style: type.meta.copyWith(color: colors.ink2)),
-      ),
-    );
-  }
 }

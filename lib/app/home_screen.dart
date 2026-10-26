@@ -273,7 +273,7 @@ class _HomeBody extends StatelessWidget {
                   ],
                   if (extraEssentials.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s5),
-                    Text('Always in sight', style: type.label),
+                    Text('Always on Home', style: type.label),
                     const SizedBox(height: CurreSpace.s2),
                     for (final app in extraEssentials) ...[
                       _EssentialDoor(controller: controller, app: app),
@@ -283,7 +283,7 @@ class _HomeBody extends StatelessWidget {
                   if (plan != null && plan.apps.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s3),
                     Text(
-                      'Long-press any door to open the app normally.',
+                      'Press and hold an app to open it the usual way.',
                       style: type.caption.copyWith(color: colors.ink3),
                       textAlign: TextAlign.center,
                     ),
@@ -768,7 +768,7 @@ class _GrantBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$appLabel is in sight',
+                        '$appLabel is back for now',
                         style: type.label.weight(680).copyWith(color: open.fg),
                       ),
                       Text(
@@ -820,7 +820,7 @@ class _EssentialDoor extends StatelessWidget {
     trailing: const CurreGlyph(
       CurreGlyphKind.essential,
       size: 19,
-      semanticLabel: 'Essential',
+      semanticLabel: 'Always on Home',
     ),
     onTap: () => controller.plainLaunch(app.packageName),
     onLongPress: () => controller.plainLaunch(app.packageName),
@@ -993,9 +993,12 @@ void _reportDoorResult(
   String? target,
 ) {
   if (result.kind == DoorLaunchKind.failed) {
-    showCurreSnack(context, 'That door did not open. Try a long-press.');
+    showCurreSnack(
+      context,
+      'That didn’t open. Press and hold the app to open it the usual way.',
+    );
   } else if (result.usedFallback && target != null) {
-    showCurreSnack(context, 'Copied: paste “$target” into search.');
+    showCurreSnack(context, 'Copied “$target”. Paste it into the search box.');
   }
 }
 
@@ -1053,7 +1056,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     const SizedBox(width: CurreSpace.s3),
                     Expanded(
                       child: Text(
-                        widget.controller.settings.displayName ?? 'Curre user',
+                        widget.controller.settings.displayName ?? 'You',
                         style: type.title,
                       ),
                     ),
@@ -1065,10 +1068,10 @@ class _ProfileSheetState extends State<ProfileSheet> {
                   ],
                 ),
                 const SizedBox(height: CurreSpace.s5),
-                Text('Choose your profile', style: type.label),
+                Text('Your face', style: type.label),
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'The faces stay unnamed. Pick the one that feels like you.',
+                  'Pick the one that feels like you.',
                   style: type.caption.copyWith(color: colors.ink2),
                 ),
                 const SizedBox(height: CurreSpace.s3),

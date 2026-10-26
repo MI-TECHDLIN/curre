@@ -38,12 +38,12 @@ void main() {
     expect(result.message, isNull);
   });
 
-  test('keeps the native unavailable message for the screen', () async {
+  test('gives the screen plain words when voice typing is missing', () async {
     final service = SpeechInputService(
       invoke: _FakeInvoker(<Object?, Object?>{
         'status': 'unavailable',
         'transcript': null,
-        'message': 'Install a speech recognizer to dictate your check-in.',
+        'message': 'android.content.ActivityNotFoundException: No Activity',
       }).call,
     );
 
@@ -51,21 +51,45 @@ void main() {
 
     expect(result.status, SpeechInputStatus.unavailable);
     expect(result.transcript, isNull);
-    expect(result.message, contains('speech recognizer'));
+    expect(
+      result.message,
+      "Voice typing isn't available on this phone. You can type instead.",
+    );
   });
 
   test('maps a platform failure to graceful unavailability', () async {
     final service = SpeechInputService(
       invoke: (method, arguments) => throw PlatformException(
-        code: 'speech_unavailable',
-        message: 'Speech input is unavailable.',
+        code: 'launcher_error',
+        message: 'java.lang.IllegalStateException: recognizer died',
       ),
     );
 
     final result = await service.listen();
 
     expect(result.status, SpeechInputStatus.unavailable);
-    expect(result.message, 'Speech input is unavailable.');
+    expect(result.message, isNot(contains('java')));
+    expect(
+      result.message,
+      "Voice typing isn't available on this phone. You can type instead.",
+    );
+  });
+
+  test('says when voice typing is already open', () async {
+    final service = SpeechInputService(
+      invoke: (method, arguments) => throw PlatformException(
+        code: 'speech_in_progress',
+        message: 'Speech input is already open.',
+      ),
+    );
+
+    final result = await service.listen();
+
+    expect(result.status, SpeechInputStatus.unavailable);
+    expect(
+      result.message,
+      'Voice typing is already open. Finish there, then try again.',
+    );
   });
 }
 

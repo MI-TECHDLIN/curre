@@ -32,6 +32,9 @@ dependencies:
     sdk: flutter
   flutter_local_notifications: ^22.3.2
   http: ^1.5.0
+  # Parses SVG path data for the onboarding props (CurrePropArt), which are
+  # drawn as vectors rather than shipped as images. MIT, by Dan Field.
+  path_parsing: ^1.1.0
   shared_preferences: ^2.5.3
   timezone: ^0.11.2
 
@@ -71,6 +74,7 @@ flutter:
     - assets/licenses/OFL-Geologica.txt
     - assets/licenses/OFL-Newsreader.txt
     - assets/licenses/OFL-AtkinsonHyperlegibleMono.txt
+    - assets/licenses/MIT-FluentEmoji.txt
 
   fonts:
     - family: Geologica

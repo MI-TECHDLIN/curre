@@ -11,9 +11,10 @@ import 'quiet_notifications.dart';
 /// Usage access is deliberately described without enforcement language: the
 /// feature adds a moment of friction but never kills or blocks another app.
 const usageAccessExplanation =
-    'Curre uses Android Usage access to notice when a hidden app comes to the '
-    'front, then asks why. It checks about once a second only while your '
-    'screen is on. Usage stays on this phone and is not saved or sent.';
+    'Some apps sneak back in through notifications, recent apps or links. '
+    'Android’s Usage access lets Curre notice when a hidden app opens and '
+    'ask why. It only looks while your screen is on, and nothing is saved '
+    'or leaves your phone.';
 
 const currePackageName = 'com.mitech.curre';
 
