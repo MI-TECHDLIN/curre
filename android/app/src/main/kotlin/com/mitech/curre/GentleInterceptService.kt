@@ -12,6 +12,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -35,6 +36,7 @@ class GentleInterceptService : Service() {
     private lateinit var workerThread: HandlerThread
     private lateinit var worker: Handler
     private lateinit var powerManager: PowerManager
+    private lateinit var preferences: SharedPreferences
     private var receiverRegistered = false
     @Volatile
     private var screenInteractive = false
@@ -48,6 +50,15 @@ class GentleInterceptService : Service() {
 
     @Volatile
     private var policy = InterceptPolicy.disabled()
+
+    // Curre may update hidden apps, plans and grants while it is in the
+    // background, where Android refuses a new foreground-service start, so
+    // the running service follows its saved policy directly.
+    private val policyListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+            policy = InterceptPolicy.load(this@GentleInterceptService)
+            schedulePolling(immediate = false)
+        }
 
     private val pollRunnable = object : Runnable {
         override fun run() {
@@ -67,6 +78,9 @@ class GentleInterceptService : Service() {
                 Intent.ACTION_SCREEN_OFF -> {
                     screenInteractive = false
                     worker.removeCallbacks(pollRunnable)
+                    // The app on top resumes after unlock; check it again in
+                    // case its grant or plan ended while the screen was off.
+                    worker.post { lastForegroundPackage = null }
                 }
             }
         }
@@ -82,6 +96,8 @@ class GentleInterceptService : Service() {
         worker = Handler(workerThread.looper)
         policy = InterceptPolicy.load(this)
         ignoredPackages = loadIgnoredPackages()
+        preferences = getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        preferences.registerOnSharedPreferenceChangeListener(policyListener)
         screenInteractive = powerManager.isInteractive
         registerScreenReceiver()
         if (screenInteractive && policy.enabled) schedulePolling(immediate = true)
@@ -102,6 +118,7 @@ class GentleInterceptService : Service() {
 
     override fun onDestroy() {
         worker.removeCallbacksAndMessages(null)
+        preferences.unregisterOnSharedPreferenceChangeListener(policyListener)
         if (receiverRegistered) unregisterReceiver(screenReceiver)
         workerThread.quitSafely()
         super.onDestroy()
@@ -123,9 +140,17 @@ class GentleInterceptService : Service() {
     }
 
     private fun schedulePolling(immediate: Boolean) {
-        worker.removeCallbacks(pollRunnable)
-        if (!screenInteractive || !policy.enabled) return
-        worker.postDelayed(pollRunnable, if (immediate) 0L else POLL_INTERVAL_MILLIS)
+        // Rescheduling on the worker keeps exactly one poll chain alive even
+        // when a screen or policy change lands while a poll is running.
+        worker.post {
+            worker.removeCallbacks(pollRunnable)
+            if (screenInteractive && policy.enabled) {
+                worker.postDelayed(
+                    pollRunnable,
+                    if (immediate) 0L else POLL_INTERVAL_MILLIS,
+                )
+            }
+        }
     }
 
     private fun pollForegroundApp() {
@@ -163,7 +188,7 @@ class GentleInterceptService : Service() {
         }
     }
 
-    private fun loadIgnoredPackages(): Set<String> = buildSet {
+    private fun loadIgnoredPackages(): Set<String> = buildSet<String> {
         add(packageName)
         add("android")
         add("com.android.systemui")
@@ -173,7 +198,7 @@ class GentleInterceptService : Service() {
         val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         @Suppress("DEPRECATION")
         for (resolved in packageManager.queryIntentActivities(homeIntent, 0)) {
-            resolved.activityInfo?.packageName?.let(::add)
+            resolved.activityInfo?.packageName?.let { add(it) }
         }
 
         val dialIntent = Intent(Intent.ACTION_DIAL).setData(
@@ -181,18 +206,18 @@ class GentleInterceptService : Service() {
         )
         @Suppress("DEPRECATION")
         for (resolved in packageManager.queryIntentActivities(dialIntent, 0)) {
-            resolved.activityInfo?.packageName?.let(::add)
+            resolved.activityInfo?.packageName?.let { add(it) }
         }
 
         Settings.Secure.getString(
             contentResolver,
             Settings.Secure.DEFAULT_INPUT_METHOD,
-        )?.substringBefore('/')?.takeIf { it.isNotBlank() }?.let(::add)
+        )?.substringBefore('/')?.takeIf { it.isNotBlank() }?.let { add(it) }
 
         getSystemService(TelecomManager::class.java)
             .defaultDialerPackage
             ?.takeIf { it.isNotBlank() }
-            ?.let(::add)
+            ?.let { add(it) }
     }
 
     private fun bringGateForward(packageName: String, now: Long) {
@@ -266,7 +291,6 @@ class GentleInterceptService : Service() {
             .setCategory(Notification.CATEGORY_SERVICE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setSilent(true)
             .build()
     }
 

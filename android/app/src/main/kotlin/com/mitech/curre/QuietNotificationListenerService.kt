@@ -31,15 +31,19 @@ class QuietNotificationListenerService : NotificationListenerService() {
             ?.take(MAX_TITLE_LENGTH)
             ?.takeIf { it.isNotEmpty() }
             ?: "Notification"
-        appendMissedNotification(
-            this,
-            MissedNotification(
-                packageName = posted.packageName,
-                appLabel = appLabel,
-                title = title,
-                atMillis = posted.postTime,
-            ),
-        )
+        // A group summary repeats its children, so it is quieted but not listed.
+        val isGroupSummary = (notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
+        if (!isGroupSummary) {
+            appendMissedNotification(
+                this,
+                MissedNotification(
+                    packageName = posted.packageName,
+                    appLabel = appLabel,
+                    title = title,
+                    atMillis = posted.postTime,
+                ),
+            )
+        }
         cancelNotification(posted.key)
     }
 
