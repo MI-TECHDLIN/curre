@@ -88,4 +88,67 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  test('between runs the label looks ahead instead of reading zero', () {
+    expect(ProofDaysLabel.text(0, runEnded: true), 'Next sunrise: one proof away');
+    expect(ProofDaysLabel.text(0), 'No proof days yet');
+    // A run in progress never reads as ended.
+    expect(ProofDaysLabel.text(3, runEnded: true), '3 proof days');
+  });
+
+  testWidgets('the week strip marks proof, waiting, cloud, quiet and today days', (tester) async {
+    final handle = tester.ensureSemantics();
+    const days = [
+      WeekDay('Sun', 18, DayState.quiet),
+      WeekDay('Mon', 19, DayState.proof),
+      WeekDay('Tue', 20, DayState.cloud),
+      WeekDay('Wed', 21, DayState.proof),
+      WeekDay('Thu', 22, DayState.pending),
+      WeekDay('Fri', 23, DayState.proof),
+      WeekDay('Sat', 24, DayState.today),
+    ];
+    for (final brightness in Brightness.values) {
+      for (final lit in [0.0, .5, 1.0]) {
+        await tester.pumpWidget(
+          _host(const SizedBox(width: 320, child: WeekStrip(days: days)), brightness: brightness),
+        );
+        await tester.pumpWidget(
+          _host(SizedBox(width: 320, child: WeekStrip(days: days, todayLit: lit)), brightness: brightness),
+        );
+        expect(tester.takeException(), isNull);
+      }
+    }
+    expect(find.byType(CloudDayMark), findsOneWidget);
+    expect(find.bySemanticsLabel('Mon 19, proof day'), findsOneWidget);
+    expect(find.bySemanticsLabel('Tue 20, cloud day'), findsOneWidget);
+    expect(find.bySemanticsLabel('Thu 22, note waiting to be checked'), findsOneWidget);
+    expect(find.bySemanticsLabel('Sat 24, today, proof day'), findsOneWidget);
+    await tester.pumpWidget(_host(const SizedBox(width: 320, child: WeekStrip(days: days))));
+    expect(find.bySemanticsLabel('Sat 24, today, still open'), findsOneWidget);
+    await tester.pumpWidget(
+      _host(
+        const SizedBox(
+          width: 320,
+          child: WeekStrip(days: [WeekDay('Sat', 24, DayState.pending, isToday: true)]),
+        ),
+      ),
+    );
+    expect(find.bySemanticsLabel('Sat 24, today, note waiting to be checked'), findsOneWidget);
+    handle.dispose();
+  });
+
+  testWidgets('the rolling count reads its number and holds when nothing changes', (tester) async {
+    final handle = tester.ensureSemantics();
+    const style = TextStyle(fontSize: 56);
+    await tester.pumpWidget(_host(const RollingCount(from: 1, to: 1, t: 0, style: style)));
+    expect(find.bySemanticsLabel('1 proof day'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    // It is still: the parent drives it.
+    expect(tester.hasRunningAnimations, isFalse);
+    await tester.pumpWidget(_host(const RollingCount(from: 4, to: 5, t: .2, style: style)));
+    expect(find.bySemanticsLabel('4 proof days'), findsOneWidget);
+    await tester.pumpWidget(_host(const RollingCount(from: 4, to: 5, t: .8, style: style)));
+    expect(find.bySemanticsLabel('5 proof days'), findsOneWidget);
+    handle.dispose();
+  });
 }

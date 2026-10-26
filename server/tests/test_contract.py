@@ -1,5 +1,6 @@
 """Checks route responses against the SDD contract types, including exact
-Clocked pipeline responses recorded from both real routes on 2026-10-25."""
+Clocked pipeline responses recorded from both real routes on 2026-10-25 and
+a proof response modeled on their shapes (no real proof call has been made)."""
 
 from __future__ import annotations
 
@@ -8,7 +9,7 @@ from pathlib import Path
 
 from clocked_sdk import Result
 
-from app.models import PlanResponse, UnlockResponse
+from app.models import PlanResponse, ProofResponse, UnlockResponse
 from tests.fakes import (
     decide_choice,
     extract_field,
@@ -141,5 +142,28 @@ def test_recorded_real_unlock_pipeline_response_matches_contract(make_client):
     assert body.person is not None
     assert body.person.model_dump() == {"text": "Ada", "start": 6, "end": 9}
     assert body.minutes == 5
+    assert body.usage is not None
+    assert body.usage.credits == 4
+
+
+def test_modeled_proof_pipeline_response_matches_contract(make_client):
+    fixture = json.loads((FIXTURE_DIR / "modeled_proof_pipeline.json").read_text())
+    assert fixture["metadata"]["recorded"] is False
+
+    async def handler(*, text, steps, **kwargs):
+        return _recorded_result(fixture)
+
+    client = make_client(handler)
+    resp = client.post("/v1/proof", json=fixture["route_request"])
+
+    assert resp.status_code == 200
+    body = ProofResponse.model_validate(resp.json())
+    assert body.outcome == "accepted"
+    assert body.kind == "specific_completion"
+    assert body.specific_completion == 0.9446
+    assert body.result is not None
+    note = fixture["route_request"]["note"]
+    assert note[body.result.start : body.result.end] == body.result.text
+    assert body.learning is None
     assert body.usage is not None
     assert body.usage.credits == 4

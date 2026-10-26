@@ -12,10 +12,18 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from app.clocked_pipeline import (
     PipelineUnavailable,
     run_plan_pipeline,
+    run_proof_pipeline,
     run_unlock_pipeline,
 )
 from app.config import Settings, get_settings
-from app.models import PlanRequest, PlanResponse, UnlockRequest, UnlockResponse
+from app.models import (
+    PlanRequest,
+    PlanResponse,
+    ProofRequest,
+    ProofResponse,
+    UnlockRequest,
+    UnlockResponse,
+)
 from app.rate_limit import RateLimiter, client_ip
 
 logger = logging.getLogger("curre.server")
@@ -28,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.clocked = AsyncClocked(api_key=settings.clocked_api_key or None)
     app.state.plan_limiter = RateLimiter(settings.plan_rate_limit_per_hour)
     app.state.unlock_limiter = RateLimiter(settings.unlock_rate_limit_per_hour)
+    app.state.proof_limiter = RateLimiter(settings.proof_rate_limit_per_hour)
     try:
         yield
     finally:
@@ -47,6 +56,10 @@ def get_plan_limiter(request: Request) -> RateLimiter:
 
 def get_unlock_limiter(request: Request) -> RateLimiter:
     return request.app.state.unlock_limiter
+
+
+def get_proof_limiter(request: Request) -> RateLimiter:
+    return request.app.state.proof_limiter
 
 
 def require_app_key(
@@ -112,4 +125,20 @@ async def unlock(
     latency_ms = (time.monotonic() - start) * 1000
     credits = response.usage.credits if response.usage else None
     _log_call("unlock", 200, latency_ms, credits)
+    return response
+
+
+@app.post("/v1/proof", response_model=ProofResponse, dependencies=[Depends(require_app_key)])
+async def proof(
+    req: ProofRequest,
+    request: Request,
+    clocked: AsyncClocked = Depends(get_clocked_client),
+    limiter: RateLimiter = Depends(get_proof_limiter),
+) -> ProofResponse:
+    limiter.check(client_ip(request))
+    start = time.monotonic()
+    response = await run_proof_pipeline(clocked, req.task, req.note)
+    latency_ms = (time.monotonic() - start) * 1000
+    credits = response.usage.credits if response.usage else None
+    _log_call("proof", 200, latency_ms, credits)
     return response

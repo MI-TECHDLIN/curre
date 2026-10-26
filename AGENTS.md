@@ -27,6 +27,12 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Phone-owned models, sessions, visibility, grants, the typed backend client
   and local persistence live in `lib/core/`; its client reads
   `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`.
+- Prooflight's evidence, Curre-day, streak and cloud-day rules live in
+  `lib/core/proof.dart` (pure: the summary is rebuilt from records, never
+  stored), the completion sheet and sunrise moment in
+  `lib/app/completion_sheet.dart`, and `/v1/proof` is the one-pipeline judge.
+  A note counts only with a `TaskTrace` recorded when its task started
+  (`openPlanDoor`, `startOfflineTask`); pending notes keep their plan's day.
 - The check-in card's water is core `DayProgress` (`lib/core/progress.dart`),
   which counts `DoorUse`s: a screen that opens a plan's app must call
   `CurreLocalStore.recordDoorUse`, or the water never rises. Motion (Peek,

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'grants.dart';
 import 'models.dart';
+import 'proof.dart';
 import 'sessions.dart';
 
 class CurreLocalStore {
@@ -17,6 +19,8 @@ class CurreLocalStore {
   static const String _onboardingKey = 'curre.onboarding.v1';
   static const String _planHistoryKey = 'curre.planHistory.v1';
   static const String _grantHistoryKey = 'curre.grantHistory.v1';
+  static const String _taskTracesKey = 'curre.taskTraces.v1';
+  static const String _proofRecordsKey = 'curre.proofRecords.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -26,6 +30,8 @@ class CurreLocalStore {
     await store.loadActiveGrants(now: instant);
     await store.loadPlanHistory(now: instant);
     await store.loadGrantHistory(now: instant);
+    store.loadTaskTraces(now: instant);
+    store.loadProofRecords(now: instant);
     return store;
   }
 
@@ -109,6 +115,63 @@ class CurreLocalStore {
     final current = all.where((use) => use.date == day).toList(growable: false);
     if (current.length != all.length) await _writeDoorUses(current);
     return current;
+  }
+
+  /// Records that a planned task started. A trace only matters until the
+  /// task's note is written, so traces follow the 30-day history.
+  Future<void> appendTaskTrace(TaskTrace trace, {required DateTime now}) async {
+    final current = loadTaskTraces(now: now);
+    await _writeTaskTraces(<TaskTrace>[
+      ...current.where((item) => item.id != trace.id),
+      trace,
+    ]);
+  }
+
+  List<TaskTrace> loadTaskTraces({required DateTime now}) {
+    final all = _readEach(_taskTracesKey, TaskTrace.fromJson);
+    final cutoff = now.toUtc().subtract(historyRetention);
+    final current = all.where((trace) => !trace.at.isBefore(cutoff)).toList()
+      ..sort((a, b) => a.at.compareTo(b.at));
+    if (current.length != all.length) unawaited(_writeTaskTraces(current));
+    return current;
+  }
+
+  /// Saves the one record a planned task keeps. Supported proof is never
+  /// replaced by weaker evidence (see [ProoflightRules.preferRecord]).
+  Future<void> upsertProofRecord(
+    ProofRecord record, {
+    required DateTime now,
+  }) async {
+    final current = loadProofRecords(now: now);
+    final previous = current.where((item) => item.id == record.id).firstOrNull;
+    await _writeProofRecords(<ProofRecord>[
+      ...current.where((item) => item.id != record.id),
+      ProoflightRules.preferRecord(previous, record),
+    ]);
+  }
+
+  /// Proof records are kept for good, because the best run and every proof
+  /// day outlive the 30-day history. Their words do not: past 30 days a
+  /// record keeps only what the streak needs. A note still waiting for its
+  /// answer keeps its words until it is judged.
+  List<ProofRecord> loadProofRecords({required DateTime now}) {
+    final cutoff = now.toUtc().subtract(historyRetention);
+    var compacted = false;
+    final records = <ProofRecord>[];
+    for (final record in _readEach(_proofRecordsKey, ProofRecord.fromJson)) {
+      final hasWords = record.note.isNotEmpty || record.taskText.isNotEmpty;
+      if (hasWords &&
+          !record.isPending &&
+          record.submittedAt.isBefore(cutoff)) {
+        records.add(record.withoutText());
+        compacted = true;
+      } else {
+        records.add(record);
+      }
+    }
+    records.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+    if (compacted) unawaited(_writeProofRecords(records));
+    return records;
   }
 
   Future<void> saveActiveGrants(
@@ -197,14 +260,20 @@ class CurreLocalStore {
     return current;
   }
 
-  /// Clears the 30-day attempt history without disrupting today's plan or an
-  /// active unlock grant.
+  /// Clears private history without disrupting today's plan or an active
+  /// unlock grant. Every word written after a task goes too; proof days
+  /// stay, as dates and levels only (see [ProoflightRules.forgetWords]).
   Future<void> clearHistory() async {
+    final proofDays = ProoflightRules.forgetWords(
+      _readEach(_proofRecordsKey, ProofRecord.fromJson),
+    );
     await Future.wait(<Future<bool>>[
       _preferences.remove(_attemptsKey),
       _preferences.remove(_planHistoryKey),
       _preferences.remove(_grantHistoryKey),
+      _preferences.remove(_taskTracesKey),
     ]);
+    await _writeProofRecords(proofDays);
   }
 
   /// Curre's current local day, which begins at the morning session
@@ -214,6 +283,22 @@ class CurreLocalStore {
         loadSettings(),
         timeZone: timeZone,
       ).current(now).localStartDate;
+
+  Future<void> _writeTaskTraces(List<TaskTrace> traces) async {
+    traces.sort((a, b) => a.at.compareTo(b.at));
+    await _preferences.setString(
+      _taskTracesKey,
+      jsonEncode(traces.map((trace) => trace.toJson()).toList()),
+    );
+  }
+
+  Future<void> _writeProofRecords(List<ProofRecord> records) async {
+    records.sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+    await _preferences.setString(
+      _proofRecordsKey,
+      jsonEncode(records.map((record) => record.toJson()).toList()),
+    );
+  }
 
   Future<void> _writeDoorUses(Iterable<DoorUse> uses) async {
     await _preferences.setString(
@@ -241,6 +326,37 @@ class CurreLocalStore {
       _grantHistoryKey,
       jsonEncode(grants.map((grant) => grant.toJson()).toList()),
     );
+  }
+
+  /// Like [_readList], but one unreadable entry is skipped instead of
+  /// clearing the rest: Prooflight's records hold a streak that took weeks
+  /// to earn.
+  List<T> _readEach<T>(
+    String key,
+    T Function(Map<String, Object?> json) decode,
+  ) {
+    final encoded = _preferences.getString(key);
+    if (encoded == null) return <T>[];
+    final Object? values;
+    try {
+      values = jsonDecode(encoded);
+    } on FormatException {
+      _preferences.remove(key);
+      return <T>[];
+    }
+    if (values is! List) {
+      _preferences.remove(key);
+      return <T>[];
+    }
+    final result = <T>[];
+    for (final value in values) {
+      try {
+        result.add(decode(_asObject(value)));
+      } on Object {
+        // Skipped; the next write leaves it out.
+      }
+    }
+    return result;
   }
 
   List<T> _readList<T>(

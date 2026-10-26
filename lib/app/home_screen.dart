@@ -9,6 +9,7 @@ import '../doors/door_router.dart';
 import '../platform/home_refresh.dart';
 import 'app_widgets.dart';
 import 'checkin_screen.dart';
+import 'completion_sheet.dart';
 import 'curre_controller.dart';
 import 'hidden_apps_screen.dart';
 import 'history_screen.dart';
@@ -116,6 +117,8 @@ class _HomeBody extends StatelessWidget {
     final name = controller.settings.displayName;
     final greeting = 'Good ${window.session.label}';
     final today = controller.now;
+    final proof = controller.proofSummary;
+    final offlineTasks = controller.offlineTasksOnHome;
     final fixedEssentialPackages = <String>{
       ?controller.phonePackage,
       ?controller.messagesPackage,
@@ -168,6 +171,12 @@ class _HomeBody extends StatelessWidget {
                               _date(today),
                               style: type.caption.copyWith(color: colors.ink3),
                             ),
+                            const SizedBox(height: CurreSpace.s2),
+                            ProofDaysLabel(
+                              days: proof.currentRun,
+                              raysToday: proof.raysToday,
+                              runEnded: proof.betweenRuns,
+                            ),
                           ],
                         ),
                       ),
@@ -215,7 +224,9 @@ class _HomeBody extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: CurreSpace.s3),
-                  if (plan == null && controller.activeGrants.isEmpty)
+                  if (plan == null &&
+                      controller.activeGrants.isEmpty &&
+                      offlineTasks.isEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: CurreSpace.s8,
@@ -236,6 +247,11 @@ class _HomeBody extends StatelessWidget {
                         link: index + 1,
                       ),
                     ],
+                  for (final (index, task) in offlineTasks.indexed) ...[
+                    if (index > 0 || (plan?.apps.isNotEmpty ?? false))
+                      const SizedBox(height: CurreSpace.s2),
+                    _OfflineTaskRow(controller: controller, task: task),
+                  ],
                   for (final grant in controller.activeGrants.where(
                     (grant) =>
                         plan?.packages.contains(grant.packageName) != true,
@@ -252,7 +268,7 @@ class _HomeBody extends StatelessWidget {
                       const SizedBox(height: CurreSpace.s2),
                     ],
                   ],
-                  if (plan != null) ...[
+                  if (plan != null && plan.apps.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s3),
                     Text(
                       'Long-press any door to open the app normally.',
@@ -594,11 +610,102 @@ class _PlanDoor extends StatelessWidget {
       ),
       link: link,
       onTap: () async {
+        final task = PlannedTask.forDoor(plan, app);
+        final ask = controller.asksAfterDoor(task);
         final result = await controller.openPlanDoor(plan, app);
         if (!context.mounted) return;
         _reportDoorResult(context, result, app.query?.text);
+        // Opened now, so it is waiting when the user comes back from the
+        // door: the one question, asked once per task.
+        if (result.succeeded && ask) {
+          await showCompletionSheet(
+            context,
+            controller: controller,
+            task: task,
+          );
+        }
       },
       onLongPress: () => controller.plainLaunch(app.packageName),
+    );
+  }
+}
+
+/// A task done away from the phone. Start leaves Curre's trace before the
+/// task, as a door does; Done asks the one question. The row stays after
+/// its plan ends until the task is closed, so a long task can still be.
+class _OfflineTaskRow extends StatelessWidget {
+  const _OfflineTaskRow({required this.controller, required this.task});
+
+  final CurreController controller;
+  final PlannedTask task;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final trace = controller.latestTraceFor(task);
+    final record = controller.proofFor(task);
+    final String destination;
+    final String? action;
+    if (trace == null) {
+      destination = 'Tap Start when you begin';
+      action = 'Start';
+    } else if (record == null) {
+      destination = 'Started ${formatClock(trace.at)} · tap when you’re done';
+      action = 'Done';
+    } else if (record.countsForProoflight) {
+      destination = 'Done, with proof';
+      action = null;
+    } else if (record.isPending) {
+      destination = 'Done · your note is waiting to be checked';
+      action = null;
+    } else {
+      destination = 'Done · tap to add a note';
+      action = null;
+    }
+    final proved = record?.countsForProoflight ?? false;
+    // A waiting note is checked on its own; supported proof is complete.
+    final closed = proved || (record?.isPending ?? false);
+    return DoorRow(
+      appName: 'Away from your phone',
+      destination: destination,
+      appIcon: Center(
+        child: CurreGlyph(
+          CurreGlyphKind.kindTask,
+          size: 26,
+          color: colors.ink2,
+        ),
+      ),
+      trailing: action != null
+          ? DecoratedBox(
+              decoration: ShapeDecoration(
+                color: colors.ink,
+                shape: CurreShape.pill,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: CurreSpace.s3,
+                  vertical: CurreSpace.s2,
+                ),
+                child: Text(
+                  action,
+                  style: type.label.copyWith(color: colors.paper),
+                ),
+              ),
+            )
+          : proved
+          ? CurreGlyph(CurreGlyphKind.check, size: 22, color: colors.emberText)
+          : null,
+      semanticLabel: ['Away from your phone', destination, ?action].join(', '),
+      onTap: trace == null
+          ? () => controller.startOfflineTask(task)
+          : closed
+          ? null
+          : () => showCompletionSheet(
+              context,
+              controller: controller,
+              task: task,
+            ),
     );
   }
 }
@@ -676,6 +783,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final proof = widget.controller.proofSummary;
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: DecoratedBox(
@@ -749,16 +857,34 @@ class _ProfileSheetState extends State<ProfileSheet> {
                   ),
                 ],
                 const SizedBox(height: CurreSpace.s5),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ProfileStat(label: 'Proof days', value: '0'),
-                    ),
-                    const SizedBox(width: CurreSpace.s3),
-                    Expanded(
-                      child: _ProfileStat(label: 'Best run', value: '0 days'),
-                    ),
-                  ],
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _ProfileStat(
+                          label: 'Proof days',
+                          value: '${proof.totalProofDays}',
+                        ),
+                      ),
+                      const SizedBox(width: CurreSpace.s3),
+                      Expanded(
+                        child: _ProfileStat(
+                          label: 'Best run',
+                          value: proof.bestRun == 1
+                              ? '1 day'
+                              : '${proof.bestRun} days',
+                        ),
+                      ),
+                      const SizedBox(width: CurreSpace.s3),
+                      Expanded(
+                        child: _ProfileStat(
+                          label: 'Cloud days',
+                          value: '${proof.cloudDays}',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s4),
                 CurreSecondaryButton(
@@ -792,12 +918,6 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     glyph: CurreGlyphKind.editSpecify,
                     onPressed: () => setState(() => _editing = true),
                   ),
-                const SizedBox(height: CurreSpace.s2),
-                Text(
-                  'Prooflight arrives after the core flow. Until then, proof days stay honestly at 0.',
-                  style: type.caption.copyWith(color: colors.ink3),
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           ),
@@ -828,7 +948,12 @@ class _ProfileStat extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: type.title),
+            // Shrinks rather than wraps, so three stats share one row.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(value, style: type.title, maxLines: 1),
+            ),
             Text(label, style: type.caption.copyWith(color: colors.ink3)),
           ],
         ),

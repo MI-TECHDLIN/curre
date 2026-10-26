@@ -55,6 +55,8 @@ class CurreController extends ChangeNotifier {
     List<Plan> plans = const <Plan>[],
     List<Grant> grants = const <Grant>[],
     List<DoorUse> doorUses = const <DoorUse>[],
+    List<TaskTrace> taskTraces = const <TaskTrace>[],
+    List<ProofRecord> proofRecords = const <ProofRecord>[],
     List<Plan> historyPlans = const <Plan>[],
     List<Grant> historyGrants = const <Grant>[],
     List<Attempt> historyAttempts = const <Attempt>[],
@@ -66,6 +68,8 @@ class CurreController extends ChangeNotifier {
        plans = List<Plan>.of(plans),
        grants = List<Grant>.of(grants),
        doorUses = List<DoorUse>.of(doorUses),
+       taskTraces = List<TaskTrace>.of(taskTraces),
+       proofRecords = List<ProofRecord>.of(proofRecords),
        historyPlans = List<Plan>.of(historyPlans),
        historyGrants = List<Grant>.of(historyGrants),
        historyAttempts = List<Attempt>.of(historyAttempts),
@@ -102,6 +106,8 @@ class CurreController extends ChangeNotifier {
     final plans = await store?.loadTodayPlans(now: now) ?? <Plan>[];
     final grants = await store?.loadActiveGrants(now: now) ?? <Grant>[];
     final uses = await store?.loadTodayDoorUses(now: now) ?? <DoorUse>[];
+    final traces = store?.loadTaskTraces(now: now) ?? <TaskTrace>[];
+    final proofs = store?.loadProofRecords(now: now) ?? <ProofRecord>[];
     final historyPlans = await store?.loadPlanHistory(now: now) ?? <Plan>[];
     final historyGrants = await store?.loadGrantHistory(now: now) ?? <Grant>[];
     final historyAttempts = await store?.loadAttempts(now: now) ?? <Attempt>[];
@@ -118,6 +124,8 @@ class CurreController extends ChangeNotifier {
       plans: plans,
       grants: grants,
       doorUses: uses,
+      taskTraces: traces,
+      proofRecords: proofs,
       historyPlans: historyPlans,
       historyGrants: historyGrants,
       historyAttempts: historyAttempts,
@@ -162,13 +170,22 @@ class CurreController extends ChangeNotifier {
   List<Plan> plans;
   List<Grant> grants;
   List<DoorUse> doorUses;
+  List<TaskTrace> taskTraces;
+  List<ProofRecord> proofRecords;
   List<Plan> historyPlans;
   List<Grant> historyGrants;
   List<Attempt> historyAttempts;
   bool onboardingComplete;
   CallReceipt? lastPlanCall;
   CallReceipt? lastUnlockCall;
+  CallReceipt? lastProofCall;
   bool _firstCheckinRequested = false;
+  bool _retryingProofs = false;
+  DateTime? _lastPendingProofRetryAt;
+  int _pendingProofRetryCursor = 0;
+
+  static const Duration pendingProofRetryInterval = Duration(minutes: 5);
+  static const int pendingProofRetryBatchSize = 2;
 
   final Map<String, Future<Uint8List?>> _icons = {};
   final Map<String, List<AppShortcut>> _staticShortcuts = {};
@@ -179,6 +196,11 @@ class CurreController extends ChangeNotifier {
 
   SessionWindow get currentSession =>
       SessionSchedule.fromSettings(settings).current(now);
+
+  ProofSummary get proofSummary => ProoflightRules.summarize(
+    records: proofRecords,
+    today: currentSession.localStartDate,
+  );
 
   Plan? get activePlan {
     final instant = now.toUtc();
@@ -308,6 +330,8 @@ class CurreController extends ChangeNotifier {
     historyPlans = <Plan>[];
     historyGrants = <Grant>[];
     historyAttempts = <Attempt>[];
+    taskTraces = <TaskTrace>[];
+    proofRecords = ProoflightRules.forgetWords(proofRecords);
     notifyListeners();
   }
 
@@ -349,10 +373,13 @@ class CurreController extends ChangeNotifier {
       plans = await store!.loadTodayPlans(now: instant);
       grants = await store!.loadActiveGrants(now: instant);
       doorUses = await store!.loadTodayDoorUses(now: instant);
+      taskTraces = store!.loadTaskTraces(now: instant);
+      proofRecords = store!.loadProofRecords(now: instant);
     } else {
       grants = activeGrants;
     }
     notifyListeners();
+    unawaited(retryPendingProofs());
   }
 
   Future<Uint8List?> iconFor(String packageName) =>
@@ -541,9 +568,222 @@ class CurreController extends ChangeNotifier {
       final use = DoorUse.forPlan(plan, app.packageName, now);
       doorUses = <DoorUse>[...doorUses, use];
       await store?.recordDoorUse(use, now: now);
+      await _recordTaskTrace(
+        TaskTrace.forTask(
+          PlannedTask.forDoor(plan, app),
+          kind: TaskTraceKind.door,
+          at: now,
+        ),
+      );
       notifyListeners();
     }
     return result;
+  }
+
+  /// The task's record, if it has one: supported, waiting, or done without
+  /// proof.
+  ProofRecord? proofFor(PlannedTask task) => proofRecords
+      .where((record) => record.id == ProoflightRules.recordId(task))
+      .lastOrNull;
+
+  TaskTrace? latestTraceFor(PlannedTask task) =>
+      taskTraces.where((trace) => trace.supports(task)).lastOrNull;
+
+  /// Whether returning from a door should ask what changed: only while the
+  /// task has no record. A supported, waiting or done task is not asked
+  /// again, so a door used often never nags.
+  bool asksAfterDoor(PlannedTask task) => proofFor(task) == null;
+
+  /// The tasks done away from the phone that Home offers: the active plan's
+  /// when it has no doors, and any started today whose plan has since
+  /// ended but which still waits for its Done.
+  List<PlannedTask> get offlineTasksOnHome {
+    final active = activePlan;
+    final today = currentSession.localStartDate;
+    return <PlannedTask>[
+      if (active != null && active.apps.isEmpty) PlannedTask.offline(active),
+      for (final plan in plans)
+        if (plan.id != active?.id &&
+            plan.date == today &&
+            plan.apps.isEmpty &&
+            latestTraceFor(PlannedTask.offline(plan)) != null &&
+            proofFor(PlannedTask.offline(plan)) == null)
+          PlannedTask.offline(plan),
+    ];
+  }
+
+  /// How the completion sheet names a task: the door it went through
+  /// ("YouTube → Search “G chord”"), or the time away from the phone.
+  String taskTitle(PlannedTask task) =>
+      titleFor(planId: task.planId, packageName: task.packageName);
+
+  /// [taskTitle] for a task known only by its plan and door, as a proof
+  /// record keeps it.
+  String titleFor({required String planId, String? packageName}) {
+    final package = packageName;
+    if (package == null) return 'Away from your phone';
+    final plan = <Plan>[
+      ...plans,
+      ...historyPlans,
+    ].where((plan) => plan.id == planId).firstOrNull;
+    final app = plan?.apps
+        .where((app) => app.packageName == package)
+        .firstOrNull;
+    final label = appFor(package)?.label ?? package;
+    if (plan == null || app == null) return label;
+    return '$label → ${destinationFor(app, plan)}';
+  }
+
+  Future<TaskTrace> startOfflineTask(PlannedTask task) async {
+    final trace = TaskTrace.forTask(
+      task,
+      kind: TaskTraceKind.offlineStart,
+      at: now,
+    );
+    await _recordTaskTrace(trace);
+    notifyListeners();
+    return trace;
+  }
+
+  Future<void> _recordTaskTrace(TaskTrace trace) async {
+    taskTraces = <TaskTrace>[...taskTraces, trace];
+    await store?.appendTaskTrace(trace, now: now);
+  }
+
+  /// Sends a completion note to be judged and saves its record against the
+  /// task's own Curre day. Without the backend the note waits as pending.
+  Future<ProofSubmission> submitProof({
+    required PlannedTask task,
+    required String note,
+  }) async {
+    final before = proofSummary;
+    final response = await _judgeProof(task.text, note);
+    final record = ProoflightRules.recordFromResponse(
+      task: task,
+      note: note,
+      submittedAt: now,
+      response: response,
+      trace: latestTraceFor(task),
+    );
+    await _upsertProof(record);
+    final after = proofSummary;
+    notifyListeners();
+    return ProofSubmission(
+      record: record,
+      before: before,
+      after: after,
+      kind: response.kind,
+    );
+  }
+
+  /// A check-off: kept and honest, but self-reported, so it never adds a
+  /// proof day. A note typed first stays on the phone and is not sent.
+  Future<ProofSubmission> markDone({
+    required PlannedTask task,
+    String note = '',
+  }) async {
+    final before = proofSummary;
+    final record = ProoflightRules.checkOff(
+      task: task,
+      at: now,
+      trace: latestTraceFor(task),
+      note: note,
+    );
+    await _upsertProof(record);
+    final after = proofSummary;
+    notifyListeners();
+    return ProofSubmission(record: record, before: before, after: after);
+  }
+
+  Future<ProofResponse> _judgeProof(String task, String note) async {
+    final client = api;
+    if (client == null) return const ProofResponse.pending();
+    final stopwatch = Stopwatch()..start();
+    final response = await client.proof(
+      ProofRequest(task: _clip(task, 500), note: _clip(note, 300)),
+    );
+    stopwatch.stop();
+    lastProofCall = CallReceipt(
+      endpoint: '/v1/proof',
+      elapsed: stopwatch.elapsed,
+      usage: response.usage,
+    );
+    return response;
+  }
+
+  static String _clip(String value, int maxRunes) =>
+      String.fromCharCodes(value.runes.take(maxRunes));
+
+  Future<void> _upsertProof(ProofRecord record) async {
+    final previous = proofRecords
+        .where((item) => item.id == record.id)
+        .firstOrNull;
+    final preferred = ProoflightRules.preferRecord(previous, record);
+    proofRecords = <ProofRecord>[
+      ...proofRecords.where((item) => item.id != record.id),
+      preferred,
+    ]..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
+    await store?.upsertProofRecord(preferred, now: now);
+  }
+
+  /// Sends notes that are still waiting again, without moving their day:
+  /// an accepted one is credited to its plan's own Curre day. Small
+  /// rotating batches stay below the proof route's per-IP limit even
+  /// though Home refreshes every minute.
+  Future<void> retryPendingProofs() async {
+    if (_retryingProofs || api == null) return;
+    final pending = proofRecords
+        .where(
+          (record) =>
+              record.isPending &&
+              record.note.isNotEmpty &&
+              record.taskText.isNotEmpty,
+        )
+        .toList(growable: false);
+    if (pending.isEmpty) {
+      _pendingProofRetryCursor = 0;
+      return;
+    }
+    final attemptedAt = now.toUtc();
+    final lastAttempt = _lastPendingProofRetryAt;
+    if (lastAttempt != null) {
+      final elapsed = attemptedAt.difference(lastAttempt);
+      if (!elapsed.isNegative && elapsed < pendingProofRetryInterval) return;
+    }
+    _lastPendingProofRetryAt = attemptedAt;
+    final start = _pendingProofRetryCursor % pending.length;
+    final count = pending.length < pendingProofRetryBatchSize
+        ? pending.length
+        : pendingProofRetryBatchSize;
+    final batch = <ProofRecord>[
+      for (var offset = 0; offset < count; offset++)
+        pending[(start + offset) % pending.length],
+    ];
+    _pendingProofRetryCursor = (start + count) % pending.length;
+    _retryingProofs = true;
+    var changed = false;
+    try {
+      for (final old in batch) {
+        final response = await _judgeProof(old.taskText, old.note);
+        if (response.outcome == ProofOutcome.pending) continue;
+        // The user may have written a newer note for the task meanwhile.
+        final current = proofRecords
+            .where((record) => record.id == old.id)
+            .firstOrNull;
+        if (current == null ||
+            !current.isPending ||
+            current.submittedAt != old.submittedAt) {
+          continue;
+        }
+        await _upsertProof(
+          ProoflightRules.recordFromPending(pending: old, response: response),
+        );
+        changed = true;
+      }
+    } finally {
+      _retryingProofs = false;
+    }
+    if (changed) notifyListeners();
   }
 
   Future<bool> plainLaunch(String packageName) async {

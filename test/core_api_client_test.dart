@@ -45,6 +45,7 @@ void main() {
     warmUpTimeout: warmUpTimeout,
     localTestingHeaders: localTestingHeaders,
     unlockTimeout: timeout,
+    proofTimeout: timeout,
   );
 
   test('plan sends the exact backend shape and parses spans', () async {
@@ -315,7 +316,66 @@ void main() {
     }
   });
 
-  test('production timeout defaults are 8 seconds and 12 seconds', () {
+  test('proof sends task and note and parses accepted spans', () async {
+    final transport = MockClient((request) async {
+      expect(request.url.toString(), 'https://api.example.test/root/v1/proof');
+      expect(jsonDecode(request.body), <String, Object?>{
+        'task': 'learn the G chord',
+        'note': 'I changed from G to C cleanly',
+      });
+      return _jsonResponse(<String, Object?>{
+        'outcome': 'accepted',
+        'specific_completion': .93,
+        'result': <String, Object?>{
+          'text': 'changed from G to C',
+          'start': 2,
+          'end': 21,
+        },
+        'learning': null,
+        'usage': <String, Object?>{'credits': 11, 'model_ms': 42},
+      });
+    });
+
+    final response = await client(transport).proof(
+      ProofRequest(
+        task: 'learn the G chord',
+        note: 'I changed from G to C cleanly',
+      ),
+    );
+
+    expect(response.outcome, ProofOutcome.accepted);
+    expect(response.specificCompletion, .93);
+    expect(response.result?.text, 'changed from G to C');
+    expect(response.usage?.credits, 11);
+  });
+
+  test(
+    'proof maps timeout, HTTP, transport, and malformed responses to pending',
+    () async {
+      final cases = <http.Client>[
+        MockClient((_) => Completer<http.Response>().future),
+        MockClient((_) async => http.Response('rate limited', 429)),
+        MockClient((_) async => throw http.ClientException('offline')),
+        MockClient((_) async => http.Response('not json', 200)),
+      ];
+
+      for (final transport in cases) {
+        final response =
+            await client(
+              transport,
+              timeout: const Duration(milliseconds: 5),
+            ).proof(
+              ProofRequest(
+                task: 'learn the G chord',
+                note: 'I changed cleanly',
+              ),
+            );
+        expect(response.outcome, ProofOutcome.pending);
+      }
+    },
+  );
+
+  test('production timeout defaults are 8, 12, and 8 seconds', () {
     final api = CurreApiClient(
       baseUrl: Uri.parse('https://api.example.test'),
       appKey: 'key',
@@ -325,6 +385,7 @@ void main() {
     expect(api.planTimeout, const Duration(seconds: 12));
     expect(api.planFirstAttemptTimeout, const Duration(seconds: 9));
     expect(api.warmUpTimeout, const Duration(seconds: 3));
+    expect(api.proofTimeout, const Duration(seconds: 8));
   });
 }
 

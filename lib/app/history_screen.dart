@@ -4,6 +4,7 @@ import '../core/core.dart';
 import '../design/design.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
+import 'prooflight_view.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key, required this.controller});
@@ -48,7 +49,7 @@ class _HistoryBody extends StatelessWidget {
               children: [
                 _DawnOverview(controller: controller),
                 const SizedBox(height: CurreSpace.s3),
-                const _ProofSlot(),
+                _ProofSlot(controller: controller),
                 const SizedBox(height: CurreSpace.s6),
                 Text('What happened', style: type.title),
                 const SizedBox(height: CurreSpace.s3),
@@ -194,36 +195,86 @@ class _SessionMark extends StatelessWidget {
   }
 }
 
+/// Prooflight's reserved slot: the run, what stays across runs, and the
+/// week's marks. Nothing here is red, and a run that ended is told as one
+/// that ended, never as a loss.
 class _ProofSlot extends StatelessWidget {
-  const _ProofSlot();
+  const _ProofSlot({required this.controller});
+
+  final CurreController controller;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final summary = controller.proofSummary;
+    final started = summary.totalProofDays > 0 || summary.cloudDays > 0;
+    final toCloud = ProoflightRules.provedDaysPerCloud - summary.towardCloud;
+    final cloudLine = summary.cloudInHand
+        ? 'You have a cloud day. $cloudDayLine'
+        : summary.currentRun > 0
+        ? toCloud == 1
+              ? '1 more proof day to your next cloud day.'
+              : '$toCloud more proof days to your next cloud day.'
+        : null;
     return DecoratedBox(
+      key: const Key('history-prooflight'),
       decoration: BoxDecoration(
-        color: colors.sunk,
+        color: colors.raised,
         borderRadius: CurreShape.md,
+        border: Border.all(color: colors.hairline),
       ),
       child: Padding(
         padding: const EdgeInsets.all(CurreSpace.s4),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CurreGlyph(CurreGlyphKind.streak, color: colors.ink3),
-            const SizedBox(width: CurreSpace.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Proof days · —', style: type.label),
-                  Text(
-                    'Reserved for Prooflight. No proof is counted here yet.',
-                    style: type.caption.copyWith(color: colors.ink3),
-                  ),
-                ],
-              ),
+            ProofDaysLabel(
+              days: summary.currentRun,
+              raysToday: summary.raysToday,
+              cloudDay: summary.cloudInHand,
+              runEnded: summary.betweenRuns,
             ),
+            if (started) ...[
+              const SizedBox(height: CurreSpace.s2),
+              // Each figure keeps its words together; lines break only
+              // between figures.
+              Text(
+                [
+                  '${proofDaysText(summary.totalProofDays)} in all',
+                  'Best run ${summary.bestRun}',
+                  summary.cloudDays == 1
+                      ? '1 cloud day'
+                      : '${summary.cloudDays} cloud days',
+                ].map((part) => part.replaceAll(' ', '\u00A0')).join(' · '),
+                style: type.meta,
+              ),
+            ],
+            const SizedBox(height: CurreSpace.s4),
+            WeekStrip(
+              days: proofWeek(summary),
+              session: controller.currentSession.session.designSession,
+              todayLit: summary.raysToday > 0 ? 1 : 0,
+            ),
+            if (!started && summary.pendingDates.isEmpty) ...[
+              const SizedBox(height: CurreSpace.s3),
+              Text(
+                'After a task, say what changed. A specific note adds a proof day.',
+                style: type.caption.copyWith(color: colors.ink2),
+              ),
+            ],
+            if (cloudLine != null) ...[
+              const SizedBox(height: CurreSpace.s3),
+              Text(cloudLine, style: type.caption.copyWith(color: colors.ink2)),
+            ],
+            if (summary.betweenRuns) ...[
+              const SizedBox(height: CurreSpace.s4),
+              RunEndedNote(
+                endedAt: summary.lastEndedRun!,
+                best: summary.bestRun,
+                total: summary.totalProofDays,
+              ),
+            ],
           ],
         ),
       ),
@@ -259,6 +310,10 @@ List<Widget> _groupedEntries(
       ),
       _GrantEntry(:final grant) => _GrantHistoryCard(
         grant: grant,
+        controller: controller,
+      ),
+      _ProofEntry(:final record) => _ProofHistoryCard(
+        record: record,
         controller: controller,
       ),
     });
@@ -467,6 +522,88 @@ class _GrantHistoryCard extends StatelessWidget {
   }
 }
 
+/// A task closed after it started: its evidence named honestly
+/// (supported, waiting to be checked, or done without proof) and the
+/// user's own words, with the part that counted marked.
+class _ProofHistoryCard extends StatelessWidget {
+  const _ProofHistoryCard({required this.record, required this.controller});
+
+  final ProofRecord record;
+  final CurreController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final (label, glyph) = record.countsForProoflight
+        ? ('Supported proof', CurreGlyphKind.check)
+        : record.isPending
+        ? ('Waiting to be checked', CurreGlyphKind.later)
+        : ('Marked done', CurreGlyphKind.kindTask);
+    final supported = record.countsForProoflight;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.raised,
+        borderRadius: CurreShape.md,
+        border: Border.all(color: colors.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(CurreSpace.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CurreGlyph(
+                  glyph,
+                  size: 20,
+                  color: supported ? colors.emberText : colors.ink3,
+                ),
+                const SizedBox(width: CurreSpace.s2),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: type.label.copyWith(
+                      color: supported ? colors.emberText : colors.ink2,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s2),
+            Text(
+              controller.titleFor(
+                planId: record.planId,
+                packageName: record.packageName,
+              ),
+              style: type.label,
+            ),
+            const SizedBox(height: CurreSpace.s1),
+            if (record.note.isEmpty)
+              Text('No note', style: type.caption.copyWith(color: colors.ink3))
+            else
+              SpanText(
+                record.note,
+                style: type.youSmall,
+                highlights: [
+                  for (final span in [?record.result, ?record.learning])
+                    SpanHighlight(
+                      span.start,
+                      span.end,
+                      style: type.youSmall.copyWith(
+                        backgroundColor: colors.marker,
+                        color: colors.markInk,
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _OutcomePill extends StatelessWidget {
   const _OutcomePill(this.outcome);
 
@@ -536,6 +673,11 @@ class _GrantEntry extends _HistoryEntry {
   final Grant grant;
 }
 
+class _ProofEntry extends _HistoryEntry {
+  const _ProofEntry(super.date, super.sortAt, this.record);
+  final ProofRecord record;
+}
+
 List<_HistoryEntry> _entries(CurreController controller) {
   final entries = <_HistoryEntry>[
     for (final plan in controller.historyPlans)
@@ -544,6 +686,14 @@ List<_HistoryEntry> _entries(CurreController controller) {
       _AttemptEntry(_localDate(attempt.at), attempt.at, attempt),
     for (final grant in controller.historyGrants)
       _GrantEntry(_localDate(grant.grantedAt), grant.grantedAt, grant),
+    // Proof records outlive the 30-day history without their words; only
+    // the ones that still have them are told here.
+    for (final record in controller.proofRecords)
+      if ((record.note.isNotEmpty || record.taskText.isNotEmpty) &&
+          !record.submittedAt.isBefore(
+            controller.now.toUtc().subtract(CurreLocalStore.historyRetention),
+          ))
+        _ProofEntry(record.date, record.submittedAt, record),
   ]..sort((a, b) => b.sortAt.compareTo(a.sortAt));
   return entries;
 }

@@ -69,12 +69,19 @@ class _UnderTheHoodSheet extends StatelessWidget {
               path: '/v1/unlock',
               detail: 'Guard → Decide kind and door → Extract who, what and minutes.',
             ),
+            const _Endpoint(
+              method: 'POST',
+              path: '/v1/proof',
+              detail: 'Guard → Decide specific completion at 0.75 → Extract result or learning.',
+            ),
             const SizedBox(height: CurreSpace.s5),
             Text('Last calls', style: type.label),
             const SizedBox(height: CurreSpace.s2),
             _Receipt(label: 'Plan', receipt: controller.lastPlanCall),
             const SizedBox(height: CurreSpace.s2),
             _Receipt(label: 'Unlock', receipt: controller.lastUnlockCall),
+            const SizedBox(height: CurreSpace.s2),
+            _Receipt(label: 'Proof', receipt: controller.lastProofCall),
             const SizedBox(height: CurreSpace.s5),
             Text('Door resolution · on this phone', style: type.label),
             const SizedBox(height: CurreSpace.s2),
@@ -95,7 +102,7 @@ class _UnderTheHoodSheet extends StatelessWidget {
                 child: Text(
                   controller.backendConfigured
                       ? 'Backend configured from CURRE_API_BASE_URL and CURRE_APP_KEY.'
-                      : 'Offline mode: add CURRE_API_BASE_URL and CURRE_APP_KEY with --dart-define. Check-ins use the local checklist and unlocks keep the 60-second override.',
+                      : 'Offline mode: add CURRE_API_BASE_URL and CURRE_APP_KEY with --dart-define. Check-ins use the local checklist, unlocks keep the 60-second override, and completion notes wait on their original day.',
                   style: type.caption.copyWith(
                     color: controller.backendConfigured
                         ? colors.markInk
