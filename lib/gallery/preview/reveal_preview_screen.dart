@@ -13,7 +13,11 @@ import 'staggered_reveal.dart';
 /// the line, everything else stays out of sight. Peek watches from the
 /// horizon. For the review only.
 class RevealPreviewScreen extends StatelessWidget {
-  const RevealPreviewScreen({super.key, this.plan = demoPlan, this.outOfSight = 23});
+  const RevealPreviewScreen({
+    super.key,
+    this.plan = demoPlan,
+    this.outOfSight = 23,
+  });
 
   final PlanSample plan;
   final int outOfSight;
@@ -24,7 +28,8 @@ class RevealPreviewScreen extends StatelessWidget {
     final t = Theme.of(context).extension<CurreType>()!;
     final sky = c.sky(Session.morning);
     // A long plan steps down one size so its doors stay in view.
-    final sentenceStyle = (plan.sentence.length > 110 ? t.you : t.youLarge).copyWith(color: sky.fg);
+    final sentenceStyle = (plan.sentence.length > 110 ? t.you : t.youLarge)
+        .copyWith(color: sky.fg);
 
     return ColoredBox(
       color: c.ground(Session.morning),
@@ -48,7 +53,10 @@ class RevealPreviewScreen extends StatelessWidget {
                           CurreSpace.s4,
                         ),
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: box.maxHeight - CurreSpace.s2 - CurreSpace.s4),
+                          constraints: BoxConstraints(
+                            minHeight:
+                                box.maxHeight - CurreSpace.s2 - CurreSpace.s4,
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +69,9 @@ class RevealPreviewScreen extends StatelessWidget {
                                       RoundGlyphButton(
                                         glyph: CurreGlyphKind.back,
                                         semanticLabel: 'Back to the question',
-                                        background: sky.fg.withValues(alpha: .1),
+                                        background: sky.fg.withValues(
+                                          alpha: .1,
+                                        ),
                                         foreground: sky.fg,
                                         outlined: false,
                                       ),
@@ -69,7 +79,9 @@ class RevealPreviewScreen extends StatelessWidget {
                                       const Flexible(
                                         child: Align(
                                           alignment: Alignment.centerRight,
-                                          child: MetaPill(text: 'Fill + Extract · 1.4 s'),
+                                          child: MetaPill(
+                                            text: 'Fill + Extract · 1.4 s',
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -77,29 +89,55 @@ class RevealPreviewScreen extends StatelessWidget {
                                   const SizedBox(height: CurreSpace.s5),
                                   Text(
                                     'Your morning',
-                                    style: t.caption.copyWith(color: sky.fg.withValues(alpha: .8)).weight(600),
+                                    style: t.caption
+                                        .copyWith(
+                                          color: sky.fg.withValues(alpha: .8),
+                                        )
+                                        .weight(600),
                                   ),
                                   const SizedBox(height: CurreSpace.s2),
                                   SpanText(
                                     plan.sentence,
                                     style: sentenceStyle,
                                     highlights: [
-                                      for (final (i, door) in plan.doors.indexed)
-                                        linkHighlight(context, plan.sentence, door.words, i + 1, sentenceStyle),
-                                      timeHighlight(context, plan.sentence, plan.endPhrase, sentenceStyle),
+                                      for (final (i, door)
+                                          in plan.doors.indexed)
+                                        linkHighlight(
+                                          context,
+                                          plan.sentence,
+                                          door.words,
+                                          i + 1,
+                                          sentenceStyle,
+                                        ),
+                                      timeHighlight(
+                                        context,
+                                        plan.sentence,
+                                        plan.endPhrase,
+                                        sentenceStyle,
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: CurreSpace.s3),
-                                  MetaPill(text: 'ends ${plan.endsAt}', glyph: CurreGlyphKind.sessionMorning),
+                                  MetaPill(
+                                    text: 'ends ${plan.endsAt}',
+                                    glyph: CurreGlyphKind.sessionMorning,
+                                  ),
                                 ],
                               ),
                               Padding(
-                                padding: const EdgeInsets.only(top: CurreSpace.s5),
+                                padding: const EdgeInsets.only(
+                                  top: CurreSpace.s5,
+                                ),
                                 child: Column(
                                   children: [
-                                    for (final (i, door) in plan.doors.indexed) ...[
-                                      if (i > 0) const SizedBox(height: CurreSpace.s2),
-                                      StaggeredReveal(index: i, child: _door(context, door, i + 1)),
+                                    for (final (i, door)
+                                        in plan.doors.indexed) ...[
+                                      if (i > 0)
+                                        const SizedBox(height: CurreSpace.s2),
+                                      StaggeredReveal(
+                                        index: i,
+                                        child: _door(context, door, i + 1),
+                                      ),
                                     ],
                                   ],
                                 ),
@@ -128,17 +166,26 @@ class RevealPreviewScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, CurreSpace.s2, CurreSpace.gutter, CurreSpace.s4),
+            padding: const EdgeInsets.fromLTRB(
+              CurreSpace.gutter,
+              CurreSpace.s2,
+              CurreSpace.gutter,
+              CurreSpace.s4,
+            ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CurreGlyph(CurreGlyphKind.outOfSight, size: 20, color: sky.fg),
+                    CurreGlyph(
+                      CurreGlyphKind.outOfSight,
+                      size: 20,
+                      color: sky.fg,
+                    ),
                     const SizedBox(width: CurreSpace.s2),
                     Flexible(
                       child: Text(
-                        'The other $outOfSight stay out of sight',
+                        'The other $outOfSight are in Hidden apps',
                         style: t.body.copyWith(color: sky.fg).weight(560),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -155,7 +202,10 @@ class RevealPreviewScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: CurreSpace.s3),
                     const Expanded(
-                      child: PrimaryPill(label: 'Set my morning', glyph: CurreGlyphKind.check),
+                      child: PrimaryPill(
+                        label: 'Set my morning',
+                        glyph: CurreGlyphKind.check,
+                      ),
                     ),
                   ],
                 ),
@@ -177,7 +227,11 @@ class RevealPreviewScreen extends StatelessWidget {
       appName: door.app,
       destination: destination,
       destinationHighlights: [
-        SpanHighlight(s, e, style: t.youSmall.copyWith(fontSize: 16, color: c.link(link).card.fg)),
+        SpanHighlight(
+          s,
+          e,
+          style: t.youSmall.copyWith(fontSize: 16, color: c.link(link).card.fg),
+        ),
       ],
       appIcon: AppIconStandIn(icon: door.icon),
       link: link,

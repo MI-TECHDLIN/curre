@@ -1,5 +1,6 @@
 import 'package:curre/core/core.dart';
 import 'package:curre/platform/grant_notifications.dart';
+import 'package:curre/platform/local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -28,8 +29,9 @@ void main() {
     expect(shown.ongoingBody, contains('timer'));
     expect(shown.expiresAt, grant.expiresAt);
     expect(shown.remaining, const Duration(minutes: 5));
+    expect(shown.packageName, grant.packageName);
     expect(scheduled.id, shown.id);
-    expect(scheduled.expiryTitle, 'Instagram is out of sight again');
+    expect(scheduled.expiryTitle, 'Instagram is hidden again');
     expect(scheduled.expiryBody, contains('reply Ada about rehearsal'));
   });
 
@@ -52,6 +54,27 @@ void main() {
     final service = GrantNotificationService(
       gateway,
       now: () => grant.expiresAt,
+    );
+
+    await service.startGrant(grant: grant, appLabel: 'Instagram');
+
+    expect(gateway.cancelled, hasLength(1));
+    expect(gateway.shown, isEmpty);
+    expect(gateway.scheduled, isEmpty);
+  });
+
+  test('the per-type policy hook can turn time-up notices off', () async {
+    final gateway = _FakeGrantNotificationGateway();
+    final service = GrantNotificationService(
+      gateway,
+      now: () => now,
+      policy: CurreNotificationPolicy(
+        enabled: const <CurreNotificationType>{
+          CurreNotificationType.checkIn,
+          CurreNotificationType.planEnding,
+          CurreNotificationType.proof,
+        },
+      ),
     );
 
     await service.startGrant(grant: grant, appLabel: 'Instagram');

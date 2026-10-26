@@ -28,12 +28,17 @@ Future<void> showCompletionSheet(
   BuildContext context, {
   required CurreController controller,
   required PlannedTask task,
+  String? initialNote,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
   backgroundColor: Colors.transparent,
-  builder: (_) => CompletionSheet(controller: controller, task: task),
+  builder: (_) => CompletionSheet(
+    controller: controller,
+    task: task,
+    initialNote: initialNote,
+  ),
 );
 
 /// The calm close-out after a task Curre saw start: one question, typed or
@@ -45,22 +50,33 @@ class CompletionSheet extends StatefulWidget {
     super.key,
     required this.controller,
     required this.task,
+    this.initialNote,
   });
 
   final CurreController controller;
   final PlannedTask task;
+  final String? initialNote;
 
   @override
   State<CompletionSheet> createState() => _CompletionSheetState();
 }
 
 class _CompletionSheetState extends State<CompletionSheet> {
-  final _note = TextEditingController();
+  late final TextEditingController _note;
   var _state = CompletionSheetState.compose;
   ProofSubmission? _submission;
   String? _message;
 
   CurreController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialNote?.trim() ?? '';
+    _note = TextEditingController(
+      text: String.fromCharCodes(initial.runes.take(completionNoteLimit)),
+    );
+  }
 
   @override
   void dispose() {

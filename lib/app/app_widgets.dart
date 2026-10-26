@@ -524,7 +524,7 @@ class HomeDock extends StatelessWidget {
             Semantics(
               button: true,
               label:
-                  '${controller.hiddenApps.length} apps out of sight. Open list.',
+                  'Hidden apps, ${controller.hiddenApps.length} apps. Open list.',
               excludeSemantics: true,
               child: InkWell(
                 onTap: onHidden,
@@ -540,7 +540,7 @@ class HomeDock extends StatelessWidget {
                             vertical: CurreSpace.s2,
                           ),
                           child: Text(
-                            '${controller.hiddenApps.length} out of sight',
+                            'Hidden apps · ${controller.hiddenApps.length}',
                             style: type.listItem
                                 .weight(520)
                                 .copyWith(fontSize: 15),

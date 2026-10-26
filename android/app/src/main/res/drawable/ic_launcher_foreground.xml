@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Peek's small master, enlarged to fill Android's 66dp adaptive safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M54,40 L54,25"
+        android:strokeColor="#FFE85F2E" android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path android:pathData="M40,43 L34,35"
+        android:strokeColor="#FFE85F2E" android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path android:pathData="M68,43 L74,35"
+        android:strokeColor="#FFE85F2E" android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path
+        android:fillColor="#FFE85F2E"
+        android:pathData="M28,73 C28,57 39.6,44 54,44 C68.4,44 80,57 80,73 Z" />
+    <path android:pathData="M44,55 L44,62"
+        android:strokeColor="#FF1E1A16" android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path android:pathData="M64,55 L64,62"
+        android:strokeColor="#FF1E1A16" android:strokeWidth="8"
+        android:strokeLineCap="round" />
+    <path android:pathData="M47,67 Q54,72 61,67"
+        android:strokeColor="#FF1E1A16" android:strokeWidth="3"
+        android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M30,73 L78,73"
+        android:strokeColor="#FF1E1A16" android:strokeWidth="4"
+        android:strokeLineCap="round" />
+</vector>

@@ -1,8 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as time_zone_data;
 import 'package:timezone/timezone.dart' as time_zone;
 
 import '../core/models.dart';
+import 'local_notifications.dart';
 
 class GrantNotificationNotice {
   const GrantNotificationNotice({
@@ -13,6 +18,7 @@ class GrantNotificationNotice {
     required this.expiryBody,
     required this.expiresAt,
     required this.remaining,
+    required this.packageName,
   });
 
   final int id;
@@ -22,6 +28,7 @@ class GrantNotificationNotice {
   final String expiryBody;
   final DateTime expiresAt;
   final Duration remaining;
+  final String packageName;
 }
 
 abstract interface class GrantNotificationGateway {
@@ -33,11 +40,16 @@ abstract interface class GrantNotificationGateway {
 }
 
 class GrantNotificationService {
-  GrantNotificationService(this._gateway, {DateTime Function()? now})
-    : _now = now ?? DateTime.now;
+  GrantNotificationService(
+    this._gateway, {
+    DateTime Function()? now,
+    CurreNotificationPolicy? policy,
+  }) : _now = now ?? DateTime.now,
+       policy = policy ?? CurreNotificationPolicy();
 
   final GrantNotificationGateway _gateway;
   final DateTime Function() _now;
+  final CurreNotificationPolicy policy;
 
   Future<bool> requestPermission() async {
     await _gateway.initialize();
@@ -53,7 +65,10 @@ class GrantNotificationService {
     await _gateway.cancel(id);
 
     final now = _now().toUtc();
-    if (!grant.isActiveAt(now)) return;
+    if (!grant.isActiveAt(now) ||
+        !policy.allows(CurreNotificationType.unlockTimeUp)) {
+      return;
+    }
 
     final target = _targetWords(grant);
     final minutes = grant.expiresAt.difference(grant.grantedAt).inMinutes;
@@ -61,10 +76,11 @@ class GrantNotificationService {
       id: id,
       ongoingTitle: '$appLabel → $target',
       ongoingBody: 'In sight until this timer ends',
-      expiryTitle: '$appLabel is out of sight again',
+      expiryTitle: '$appLabel is hidden again',
       expiryBody: 'Your $minutes min for ${grant.reason.trim()} ended.',
       expiresAt: grant.expiresAt,
       remaining: grant.expiresAt.difference(now),
+      packageName: grant.packageName,
     );
     await _gateway.showOngoing(notice);
     await _gateway.scheduleExpiry(notice);
@@ -90,26 +106,53 @@ int notificationIdForPackage(String packageName) {
   return hash == 0 ? 1 : hash;
 }
 
-class FlutterGrantNotificationGateway implements GrantNotificationGateway {
-  FlutterGrantNotificationGateway({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+class FlutterGrantNotificationGateway
+    implements GrantNotificationGateway, ReminderNotificationGateway {
+  FlutterGrantNotificationGateway({
+    FlutterLocalNotificationsPlugin? plugin,
+    void Function(CurreNotificationIntent intent)? onResponse,
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
+       _onResponse = onResponse ?? CurreNotificationInbox.instance.add;
 
-  static const String channelId = 'curre_grants';
-  static const String channelName = 'App time reminders';
+  static const String channelId = 'curre_time_up';
+  static const String channelName = 'App time';
   static const String channelDescription =
-      'Shows time left for an app and when it goes out of sight again.';
+      'Shows time left for an app and when it is hidden again.';
 
-  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
-    channelId,
-    channelName,
-    description: channelDescription,
-    importance: Importance.low,
-    playSound: false,
-    enableVibration: false,
-    showBadge: false,
-  );
+  static const Map<CurreNotificationType, _ChannelSpec> _channels =
+      <CurreNotificationType, _ChannelSpec>{
+        CurreNotificationType.checkIn: _ChannelSpec(
+          id: 'curre_checkins',
+          name: 'Check-ins',
+          description: 'Morning, afternoon and evening check-in reminders.',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        CurreNotificationType.planEnding: _ChannelSpec(
+          id: 'curre_plans',
+          name: 'Plan reminders',
+          description: 'A quiet heads-up before the current plan ends.',
+          importance: Importance.low,
+          priority: Priority.low,
+        ),
+        CurreNotificationType.unlockTimeUp: _ChannelSpec(
+          id: channelId,
+          name: channelName,
+          description: channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        CurreNotificationType.proof: _ChannelSpec(
+          id: 'curre_proof',
+          name: 'Proof reminders',
+          description: 'Prompts to add a short proof note after a plan.',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+      };
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final void Function(CurreNotificationIntent intent) _onResponse;
   bool _initialized = false;
 
   @override
@@ -120,9 +163,29 @@ class FlutterGrantNotificationGateway implements GrantNotificationGateway {
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_stat_curre'),
       ),
+      onDidReceiveNotificationResponse: (response) {
+        unawaited(_handleResponse(response));
+      },
     );
-    await _androidPlugin?.createNotificationChannel(_channel);
+    for (final channel in _channels.values) {
+      await _androidPlugin?.createNotificationChannel(
+        AndroidNotificationChannel(
+          channel.id,
+          channel.name,
+          description: channel.description,
+          importance: channel.importance,
+          playSound: false,
+          enableVibration: false,
+          showBadge: false,
+        ),
+      );
+    }
     _initialized = true;
+    final launch = await _plugin.getNotificationAppLaunchDetails();
+    final response = launch?.notificationResponse;
+    if (launch?.didNotificationLaunchApp == true && response != null) {
+      await _handleResponse(response);
+    }
   }
 
   @override
@@ -134,25 +197,27 @@ class FlutterGrantNotificationGateway implements GrantNotificationGateway {
     id: notice.id,
     title: notice.ongoingTitle,
     body: notice.ongoingBody,
-    notificationDetails: NotificationDetails(
-      android: AndroidNotificationDetails(
-        channelId,
-        channelName,
-        channelDescription: channelDescription,
-        importance: Importance.low,
-        priority: Priority.low,
-        playSound: false,
-        enableVibration: false,
-        silent: true,
-        ongoing: true,
-        autoCancel: false,
-        onlyAlertOnce: true,
-        showWhen: true,
-        when: notice.expiresAt.millisecondsSinceEpoch,
-        usesChronometer: true,
-        chronometerCountDown: true,
-        timeoutAfter: notice.remaining.inMilliseconds,
-      ),
+    notificationDetails: _details(
+      type: CurreNotificationType.unlockTimeUp,
+      title: notice.ongoingTitle,
+      body: notice.ongoingBody,
+      actions: const <CurreNotificationAction>[
+        CurreNotificationAction.bringIntoSight,
+      ],
+      ongoing: true,
+      autoCancel: false,
+      onlyAlertOnce: true,
+      when: notice.expiresAt.millisecondsSinceEpoch,
+      usesChronometer: true,
+      chronometerCountDown: true,
+      timeoutAfter: notice.remaining.inMilliseconds,
+    ),
+    payload: _payload(
+      type: CurreNotificationType.unlockTimeUp,
+      destination: CurreNotificationDestination.hiddenApps,
+      title: notice.ongoingTitle,
+      body: notice.ongoingBody,
+      reference: notice.packageName,
     ),
   );
 
@@ -166,23 +231,46 @@ class FlutterGrantNotificationGateway implements GrantNotificationGateway {
           notice.expiresAt,
           time_zone.UTC,
         ),
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            channelId,
-            channelName,
-            channelDescription: channelDescription,
-            importance: Importance.low,
-            priority: Priority.low,
-            playSound: false,
-            enableVibration: false,
-            silent: true,
-            ongoing: false,
-            autoCancel: true,
-            showWhen: true,
-          ),
+        notificationDetails: _details(
+          type: CurreNotificationType.unlockTimeUp,
+          title: notice.expiryTitle,
+          body: notice.expiryBody,
+          actions: const <CurreNotificationAction>[
+            CurreNotificationAction.bringIntoSight,
+          ],
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: _payload(
+          type: CurreNotificationType.unlockTimeUp,
+          destination: CurreNotificationDestination.hiddenApps,
+          title: notice.expiryTitle,
+          body: notice.expiryBody,
+          reference: notice.packageName,
+        ),
       );
+
+  @override
+  Future<void> scheduleReminder(CurreReminder reminder) =>
+      _plugin.zonedSchedule(
+        id: reminder.id,
+        title: reminder.title,
+        body: reminder.body,
+        scheduledDate: time_zone.TZDateTime.from(
+          reminder.scheduledAt.toUtc(),
+          time_zone.UTC,
+        ),
+        notificationDetails: _details(
+          type: reminder.type,
+          title: reminder.title,
+          body: reminder.body,
+          actions: reminder.actions,
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: reminder.payload,
+      );
+
+  @override
+  Future<void> cancelReminder(int id) => _plugin.cancel(id: id);
 
   @override
   Future<void> cancel(int id) => _plugin.cancel(id: id);
@@ -191,4 +279,159 @@ class FlutterGrantNotificationGateway implements GrantNotificationGateway {
       .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin
       >();
+
+  Future<void> _handleResponse(NotificationResponse response) async {
+    final action = CurreNotificationActionWire.tryParse(response.actionId);
+    if (action == CurreNotificationAction.snooze) {
+      final snoozed = _snoozedReminder(response.payload);
+      if (snoozed != null) await scheduleReminder(snoozed);
+      return;
+    }
+    final intent = CurreNotificationIntent.fromPayload(
+      response.payload,
+      actionId: response.actionId,
+      note: response.input,
+    );
+    if (intent != null) _onResponse(intent);
+  }
+
+  CurreReminder? _snoozedReminder(String? payload) {
+    if (payload == null) return null;
+    try {
+      final json = jsonDecode(payload);
+      if (json is! Map<String, Object?> || json['version'] != 1) return null;
+      final type = CurreNotificationType.values.byName(json['type']! as String);
+      final destination = CurreNotificationDestination.values.byName(
+        json['destination']! as String,
+      );
+      final at = DateTime.now().add(const Duration(minutes: 10));
+      return CurreReminder(
+        id: 800000 + at.millisecondsSinceEpoch.remainder(100000),
+        type: type,
+        title: json['title']! as String,
+        body: json['body']! as String,
+        scheduledAt: at,
+        destination: destination,
+        actions: _defaultActions(type),
+        reference: json['reference'] as String?,
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  static List<CurreNotificationAction> _defaultActions(
+    CurreNotificationType type,
+  ) => switch (type) {
+    CurreNotificationType.checkIn ||
+    CurreNotificationType.planEnding => const <CurreNotificationAction>[
+      CurreNotificationAction.startCheckIn,
+      CurreNotificationAction.snooze,
+    ],
+    CurreNotificationType.unlockTimeUp => const <CurreNotificationAction>[
+      CurreNotificationAction.bringIntoSight,
+    ],
+    CurreNotificationType.proof => const <CurreNotificationAction>[
+      CurreNotificationAction.addProof,
+      CurreNotificationAction.snooze,
+    ],
+  };
+
+  static NotificationDetails _details({
+    required CurreNotificationType type,
+    required String title,
+    required String body,
+    required List<CurreNotificationAction> actions,
+    bool ongoing = false,
+    bool autoCancel = true,
+    bool onlyAlertOnce = false,
+    int? when,
+    bool usesChronometer = false,
+    bool chronometerCountDown = false,
+    int? timeoutAfter,
+  }) {
+    final channel = _channels[type]!;
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        channel.id,
+        channel.name,
+        channelDescription: channel.description,
+        icon: 'ic_stat_curre',
+        importance: channel.importance,
+        priority: channel.priority,
+        playSound: false,
+        enableVibration: false,
+        silent: true,
+        ongoing: ongoing,
+        autoCancel: autoCancel,
+        onlyAlertOnce: onlyAlertOnce,
+        showWhen: true,
+        when: when,
+        usesChronometer: usesChronometer,
+        chronometerCountDown: chronometerCountDown,
+        timeoutAfter: timeoutAfter,
+        color: const Color(0xFFE85F2E),
+        category: AndroidNotificationCategory.reminder,
+        groupKey: 'curre_${type.name}',
+        groupAlertBehavior: GroupAlertBehavior.children,
+        styleInformation: BigPictureStyleInformation(
+          const DrawableResourceAndroidBitmap('curre_notification_art'),
+          contentTitle: title,
+          summaryText: body,
+          hideExpandedLargeIcon: true,
+          showBigPictureWhenCollapsed: true,
+        ),
+        actions: actions.map(_androidAction).toList(growable: false),
+      ),
+    );
+  }
+
+  static AndroidNotificationAction _androidAction(
+    CurreNotificationAction action,
+  ) => AndroidNotificationAction(
+    action.wireValue,
+    action.label,
+    showsUserInterface: true,
+    contextual: action == CurreNotificationAction.bringIntoSight,
+    allowGeneratedReplies: action == CurreNotificationAction.addProof,
+    semanticAction: action == CurreNotificationAction.addProof
+        ? SemanticAction.reply
+        : SemanticAction.none,
+    inputs: action == CurreNotificationAction.addProof
+        ? const <AndroidNotificationActionInput>[
+            AndroidNotificationActionInput(label: 'Add a short proof note'),
+          ]
+        : const <AndroidNotificationActionInput>[],
+  );
+
+  static String _payload({
+    required CurreNotificationType type,
+    required CurreNotificationDestination destination,
+    required String title,
+    required String body,
+    String? reference,
+  }) => jsonEncode(<String, Object?>{
+    'version': 1,
+    'type': type.name,
+    'destination': destination.name,
+    'title': title,
+    'body': body,
+    'reference': ?reference,
+  });
+}
+
+class _ChannelSpec {
+  const _ChannelSpec({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.importance,
+    required this.priority,
+  });
+
+  final String id;
+  final String name;
+  final String description;
+  final Importance importance;
+  final Priority priority;
 }

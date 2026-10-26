@@ -12,7 +12,11 @@ import 'parts.dart';
 /// card says where the tap lands, and the one action names that place.
 /// For the review only.
 class GatePreviewScreen extends StatelessWidget {
-  const GatePreviewScreen({super.key, this.app = 'Instagram', this.reason = 'reply Ada about rehearsal'});
+  const GatePreviewScreen({
+    super.key,
+    this.app = 'Instagram',
+    this.reason = 'reply Ada about rehearsal',
+  });
 
   final String app;
   final String reason;
@@ -31,7 +35,12 @@ class GatePreviewScreen extends StatelessWidget {
           const StatusBar(time: '05:40'),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, CurreSpace.s2, CurreSpace.gutter, CurreSpace.s4),
+              padding: const EdgeInsets.fromLTRB(
+                CurreSpace.gutter,
+                CurreSpace.s2,
+                CurreSpace.gutter,
+                CurreSpace.s4,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -40,7 +49,12 @@ class GatePreviewScreen extends StatelessWidget {
                   Text('Why open $app now?', style: t.headline),
                   const SizedBox(height: CurreSpace.s4),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(CurreSpace.s4, CurreSpace.s3, CurreSpace.s4, CurreSpace.s4),
+                    padding: const EdgeInsets.fromLTRB(
+                      CurreSpace.s4,
+                      CurreSpace.s3,
+                      CurreSpace.s4,
+                      CurreSpace.s4,
+                    ),
                     decoration: BoxDecoration(
                       color: c.raised,
                       borderRadius: CurreShape.md,
@@ -59,12 +73,18 @@ class GatePreviewScreen extends StatelessWidget {
                             SpanHighlight(
                               rs,
                               re,
-                              style: style.copyWith(backgroundColor: c.marker, color: c.markInk),
+                              style: style.copyWith(
+                                backgroundColor: c.marker,
+                                color: c.markInk,
+                              ),
                             ),
                           ],
                         ),
                         const SizedBox(height: CurreSpace.s2),
-                        Text('Ada\u00A0→ matched a chat on this phone', style: t.caption.copyWith(color: c.ink3)),
+                        Text(
+                          'Ada\u00A0→ matched a chat on this phone',
+                          style: t.caption.copyWith(color: c.ink3),
+                        ),
                       ],
                     ),
                   ),
@@ -84,10 +104,18 @@ class GatePreviewScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, 0, CurreSpace.gutter, CurreSpace.s2),
+            padding: const EdgeInsets.fromLTRB(
+              CurreSpace.gutter,
+              0,
+              CurreSpace.gutter,
+              CurreSpace.s2,
+            ),
             child: Column(
               children: [
-                PrimaryPill(label: 'Open $app\u00A0→\u00A0Messages', glyph: CurreGlyphKind.door),
+                PrimaryPill(
+                  label: 'Open $app\u00A0→\u00A0Messages',
+                  glyph: CurreGlyphKind.door,
+                ),
                 const SizedBox(height: CurreSpace.s2),
                 Text(
                   '5 minutes · long-press opens $app normally',
@@ -114,11 +142,14 @@ class _GateTopBar extends StatelessWidget {
     final t = Theme.of(context).extension<CurreType>()!;
     return Row(
       children: [
-        const RoundGlyphButton(glyph: CurreGlyphKind.back, semanticLabel: 'Back to the list'),
+        const RoundGlyphButton(
+          glyph: CurreGlyphKind.back,
+          semanticLabel: 'Back to the list',
+        ),
         const SizedBox(width: CurreSpace.s3),
         CurreGlyph(CurreGlyphKind.outOfSight, size: 20, color: c.ink2),
         const SizedBox(width: CurreSpace.s2),
-        Text('Out of sight', style: t.label.copyWith(color: c.ink2)),
+        Text('Hidden apps', style: t.label.copyWith(color: c.ink2)),
       ],
     );
   }
@@ -148,7 +179,12 @@ class WaitPreviewScreen extends StatelessWidget {
           const StatusBar(time: '05:44'),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, CurreSpace.s2, CurreSpace.gutter, CurreSpace.s4),
+              padding: const EdgeInsets.fromLTRB(
+                CurreSpace.gutter,
+                CurreSpace.s2,
+                CurreSpace.gutter,
+                CurreSpace.s4,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -191,11 +227,18 @@ class WaitPreviewScreen extends StatelessWidget {
                         const SizedBox(height: CurreSpace.s1),
                         Text(reason, style: t.you),
                         const SizedBox(height: CurreSpace.s3),
-                        const KindChip(kind: ReasonKind.browse, confidence: .81),
+                        const KindChip(
+                          kind: ReasonKind.browse,
+                          confidence: .81,
+                        ),
                         const SizedBox(height: CurreSpace.s3),
                         Text(
                           'Sounds like browsing, so it can wait for a browsing time. You chose to wait, and that’s allowed.',
-                          style: t.body.copyWith(color: c.ink2, fontSize: 15, height: 22 / 15),
+                          style: t.body.copyWith(
+                            color: c.ink2,
+                            fontSize: 15,
+                            height: 22 / 15,
+                          ),
                         ),
                       ],
                     ),
@@ -205,7 +248,12 @@ class WaitPreviewScreen extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(CurreSpace.gutter, 0, CurreSpace.gutter, CurreSpace.s2),
+            padding: const EdgeInsets.fromLTRB(
+              CurreSpace.gutter,
+              0,
+              CurreSpace.gutter,
+              CurreSpace.s2,
+            ),
             child: Column(
               children: [
                 Text(

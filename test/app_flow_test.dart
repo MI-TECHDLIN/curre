@@ -118,6 +118,111 @@ void main() {
     expect(find.byType(HistoryScreen), findsOneWidget);
   });
 
+  testWidgets(
+    'Home empty state settles, then keeps launcher entry points still',
+    (tester) async {
+      await phone(tester);
+      final controller = _controller();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: curreTheme(Brightness.light),
+          home: HomeScreen(controller: controller),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('home-checkin-card')), findsOneWidget);
+      expect(find.text('Start check-in'), findsOneWidget);
+      expect(find.byKey(const Key('home-empty-state')), findsOneWidget);
+      expect(find.text('essentials only'), findsOneWidget);
+      expect(find.byType(PeekMascot), findsOneWidget);
+      var scene = tester.widget<SkyScene>(find.byType(SkyScene));
+      expect(scene.live, isTrue);
+      expect(scene.water, 0);
+      expect(scene.animate, isTrue);
+      expect(scene.sun, SkySun.peek);
+      await tester.pump(RisingWater.sloshLength);
+      scene = tester.widget<SkyScene>(find.byType(SkyScene));
+      expect(scene.animate, isFalse);
+      for (final label in <String>['Phone', 'Messages', 'Settings', 'Curre']) {
+        expect(find.text(label), findsOneWidget);
+      }
+      expect(find.text('Hidden apps · 12'), findsOneWidget);
+    },
+  );
+
+  testWidgets('Home plan state gives the task one bold illustrated card', (
+    tester,
+  ) async {
+    await phone(tester);
+    final controller = _controller();
+    controller.plans = <Plan>[
+      Plan(
+        id: 'home-plan',
+        session: SessionName.morning,
+        date: const LocalDate(2026, 10, 24),
+        intention: 'Learn the G chord on YouTube',
+        apps: const <PlannedApp>[
+          PlannedApp(packageName: 'com.google.android.youtube'),
+        ],
+        endsAt: DateTime.utc(2026, 10, 24, 9),
+        source: PlanSource.clocked,
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.dark),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('home-plan-card')), findsOneWidget);
+    expect(find.byKey(const Key('home-checkin-card')), findsNothing);
+    expect(find.text('1 task ready'), findsOneWidget);
+    expect(find.text('1 ready'), findsOneWidget);
+    expect(find.text('YouTube'), findsOneWidget);
+    expect(find.byType(PeekMascot), findsOneWidget);
+    var scene = tester.widget<SkyScene>(find.byType(SkyScene));
+    expect(scene.live, isTrue);
+    expect(scene.water, closeTo(.15, .001));
+    expect(scene.animate, isTrue);
+    expect(scene.sun, SkySun.peek);
+    await tester.pump(RisingWater.sloshLength);
+    scene = tester.widget<SkyScene>(find.byType(SkyScene));
+    expect(scene.animate, isFalse);
+  });
+
+  testWidgets('Home grant state keeps the unlock banner and door visible', (
+    tester,
+  ) async {
+    await phone(tester);
+    final controller = _controller();
+    controller.grants = <Grant>[
+      Grant(
+        packageName: 'com.instagram.android',
+        reason: 'reply to Ada',
+        task: 'Ada',
+        grantedAt: DateTime.utc(2026, 10, 24, 5, 25),
+        expiresAt: DateTime.utc(2026, 10, 24, 5, 40),
+        source: GrantSource.clocked,
+        kind: ReasonKind.person,
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Instagram is in sight'), findsOneWidget);
+    expect(find.text('Ada'), findsWidgets);
+    expect(find.text('1 ready'), findsOneWidget);
+    expect(find.text('→ Ada'), findsOneWidget);
+  });
+
   testWidgets('Home opens check-in and offline planning becomes a checklist', (
     tester,
   ) async {
@@ -415,6 +520,7 @@ void main() {
       find.text('Long-press any door to open the app normally.'),
       findsNothing,
     );
+    await tester.ensureVisible(find.text('Start'));
     await tester.tap(find.text('Start'));
     await tester.pump();
     expect(controller.taskTraces.single.kind, TaskTraceKind.offlineStart);
@@ -427,6 +533,7 @@ void main() {
     expect(controller.activePlan, isNull);
     expect(find.text('Away from your phone'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Done'));
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text(completionQuestion), findsOneWidget);
@@ -545,7 +652,13 @@ void main() {
       ),
     );
 
-    expect(find.text('Out of sight'), findsOneWidget);
+    expect(find.text('Hidden apps'), findsOneWidget);
+    expect(
+      find.text(
+        'Apps you didn\'t plan for wait here. Tap one to bring it back.',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Chrome'), findsOneWidget);
     await tester.tap(find.text('Chrome'));
     await tester.pumpAndSettle();

@@ -6,7 +6,9 @@ import 'package:curre/app/curre_controller.dart';
 import 'package:curre/core/core.dart';
 import 'package:curre/design/design.dart';
 import 'package:curre/doors/door_models.dart';
+import 'package:curre/main.dart';
 import 'package:curre/platform/home_refresh.dart';
+import 'package:curre/platform/local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -336,6 +338,38 @@ void main() {
   });
 
   group('the sheet with Curre behind it', () {
+    testWidgets('a proof reminder opens its task with the reply filled in', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final controller = _controller();
+      final task = await _openDoor(controller);
+      await tester.pumpWidget(
+        CurreApp(controller: controller, themeMode: ThemeMode.light),
+      );
+      await tester.pump();
+
+      CurreNotificationInbox.instance.add(
+        CurreNotificationIntent(
+          type: CurreNotificationType.proof,
+          destination: CurreNotificationDestination.proof,
+          action: CurreNotificationAction.addProof,
+          reference: task.planId,
+          note: _note,
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CompletionSheet), findsOneWidget);
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('completion-note')),
+      );
+      expect(field.controller!.text, _note);
+      expect(controller.proofTaskForPlan(task.planId)?.id, task.id);
+    });
+
     testWidgets('vague, then one detail, then today’s sun', (tester) async {
       final replies = <Map<String, Object?>>[
         <String, Object?>{'outcome': 'vague', 'kind': 'vague'},
