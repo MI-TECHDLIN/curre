@@ -71,7 +71,7 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionHeading('Unlock gate, opens for a person'),
           PhoneFramePair(builder: (context) => const GatePreviewScreen()),
           const _SectionGap(),
-          const _SectionHeading('Unlock gate, the 60-second wait'),
+          const _SectionHeading('Unlock gate, the 30-second wait'),
           PhoneFramePair(builder: (context) => const WaitPreviewScreen()),
           const _SectionGap(),
           const _SectionHeading('Onboarding, step 1 of 6'),
@@ -837,7 +837,7 @@ class _OutcomeCards extends StatelessWidget {
             OutcomeCard(
               outcome: Outcome.specify,
               headline: 'What exactly will you do?',
-              body: 'One more try, or wait 60 s.',
+              body: 'One more try, or wait 30 s.',
             ),
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
@@ -848,7 +848,7 @@ class _OutcomeCards extends StatelessWidget {
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
               outcome: Outcome.unavailable,
-              headline: 'No answer. Opening anyway, in a minute',
+              headline: 'No answer. Opening anyway, in 30 seconds',
               body: 'The gate didn’t reply in 8 s. You may be offline.',
             ),
           ],
@@ -902,7 +902,7 @@ class _RisingDiscDemo extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: CurreSpace.s4),
                   // Shortened to 6 s here so the gallery shows the rise;
-                  // the real wait is 60 s (CurreMotion.countdown), linear.
+                  // the real wait is 30 s (CurreMotion.countdown), linear.
                   child: LayoutBuilder(
                     builder: (context, box) => RisingDisc(
                       duration: const Duration(seconds: 6),
@@ -916,7 +916,7 @@ class _RisingDiscDemo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: CurreSpace.s2),
-            Text('6 s here; the real wait is 60 s, linear', style: t.meta),
+            Text('6 s here; the real wait is 30 s, linear', style: t.meta),
           ],
         );
       },

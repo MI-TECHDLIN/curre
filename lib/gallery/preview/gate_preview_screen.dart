@@ -155,7 +155,7 @@ class _GateTopBar extends StatelessWidget {
   }
 }
 
-/// The 60-second wait (design report 4.6, "Open after 60 s"), after a
+/// The 30-second wait (design report 4.6, now "Open after 30 seconds"), after a
 /// browsing reason was told "not now". The learning plan's big numeral,
 /// mono so it never jitters, and the sun rising linearly over the session's
 /// horizon: time is the only thing that moves, and it is never eased. Still
@@ -191,7 +191,7 @@ class WaitPreviewScreen extends StatelessWidget {
                   const _GateTopBar(),
                   const SizedBox(height: CurreSpace.s5),
                   Text('$app opens in', style: t.title),
-                  countdownText('0:47', t.figureXL),
+                  countdownText('0:17', t.figureXL),
                   const SizedBox(height: CurreSpace.s3),
                   ClipRRect(
                     borderRadius: CurreShape.lg,
@@ -205,8 +205,8 @@ class WaitPreviewScreen extends StatelessWidget {
                             width: box.maxWidth,
                             lineColor: sky.fg,
                             groundColor: c.ground(Session.morning),
-                            initialProgress: 13 / 60,
-                            semanticLabel: '$app opens in 47 seconds',
+                            initialProgress: 13 / 30,
+                            semanticLabel: '$app opens in 17 seconds',
                           ),
                         ),
                       ),

@@ -209,10 +209,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Bring it back'));
     await tester.pump();
-    await waitFor(tester, find.text('Instagram opens in a minute'));
+    await waitFor(tester, find.text('Instagram opens in 30 seconds'));
 
     // The user is never stuck: the wait starts on its own, with a retry.
-    expect(find.text('Instagram opens in a minute'), findsOneWidget);
+    expect(find.text('Instagram opens in 30 seconds'), findsOneWidget);
     expect(
       find.text(
         'Curre couldn’t check your reason, so it opens after a short wait instead.',

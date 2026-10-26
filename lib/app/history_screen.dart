@@ -423,7 +423,7 @@ class _AttemptHistoryCard extends StatelessWidget {
                 if (attempt.kind != null) KindChip(kind: attempt.kind!),
                 if (attempt.overridden)
                   _PlainPill(
-                    label: 'Waited a minute',
+                    label: 'Waited $overrideWaitWords',
                     foreground: colors.emberText,
                     background: colors.marker,
                   ),
@@ -503,7 +503,7 @@ class _GrantHistoryCard extends StatelessWidget {
             if (grant.source == GrantSource.override) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
-                'Opened after a one-minute wait',
+                'Opened after waiting $overrideWaitWords',
                 style: type.caption.copyWith(color: open.fg),
               ),
             ],

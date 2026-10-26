@@ -334,7 +334,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             const SizedBox(height: CurreSpace.s2),
           ],
           CurreSecondaryButton(
-            label: 'Open after a minute',
+            label: 'Open after $overrideWaitWords',
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
@@ -343,7 +343,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.later || UnlockOutcome.flagged => Column(
         children: [
           CurreSecondaryButton(
-            label: 'Open after a minute',
+            label: 'Open after $overrideWaitWords',
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
@@ -382,7 +382,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 ],
                 OutcomeCard(
                   outcome: response.outcome.designOutcome,
-                  headline: '${widget.app.label} opens in a minute',
+                  headline: '${widget.app.label} opens in $overrideWaitWords',
                   body: response.outcome == UnlockOutcome.unavailable
                       ? 'Curre couldn’t check your reason, so it opens after a short wait instead.'
                       : 'You chose to wait, and that’s allowed.',
@@ -502,13 +502,13 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.open =>
         'You have ${grantMinutesFor(response, fallbackUnlockMinutes: controller.settings.unlockMinutes)} minutes.',
       UnlockOutcome.later =>
-        'That sounds like browsing, so it can wait. If you still want $app now, it opens after a one-minute wait.',
+        'That sounds like browsing, so it can wait. If you still want $app now, it opens after you wait $overrideWaitWords.',
       UnlockOutcome.specify =>
-        'Say a bit more about what you’ll do, or open $app after a one-minute wait.',
+        'Say a bit more about what you’ll do, or wait $overrideWaitWords to open $app.',
       UnlockOutcome.flagged =>
-        'Tell Curre what you’ll do in $app instead. Or open it after a one-minute wait.',
+        'Tell Curre what you’ll do in $app instead. Or wait $overrideWaitWords to open it.',
       UnlockOutcome.unavailable =>
-        'No problem: $app opens after a one-minute wait. You can also try again now.',
+        'No problem: $app opens after you wait $overrideWaitWords. You can also try again now.',
     };
   }
 
@@ -536,7 +536,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         reason: _reason.text.trim(),
       );
     } on Object {
-      // Never strand the user: the one-minute wait still opens the app.
+      // Never strand the user: the override wait still opens the app.
       response = const UnlockResponse.unavailable();
     }
     if (!mounted) return;

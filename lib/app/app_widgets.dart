@@ -570,6 +570,9 @@ class HomeDock extends StatelessWidget {
   }
 }
 
+/// The "Why now?" wait in words: "30 seconds".
+String get overrideWaitWords => '${overrideWait.inSeconds} seconds';
+
 /// "1 hidden app", "12 hidden apps".
 String hiddenAppsLabel(int count) =>
     count == 1 ? '1 hidden app' : '$count hidden apps';

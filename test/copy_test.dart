@@ -269,7 +269,7 @@ final c = Key('override-countdown');
           ),
         );
         expectPlainCopy(tester, where: 'Why now? (${response.outcome.name})');
-        final wait = find.text('Open after a minute');
+        final wait = find.text('Open after 30 seconds');
         if (wait.evaluate().isNotEmpty) {
           await tester.ensureVisible(wait);
           await tester.tap(wait);

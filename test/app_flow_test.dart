@@ -713,7 +713,7 @@ void main() {
     );
     await tester.tap(find.text('Open gate'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open after a minute'));
+    await tester.tap(find.text('Open after 30 seconds'));
     await tester.pump(const Duration(milliseconds: 200));
     await tester.binding.handlePopRoute();
     await tester.pump(const Duration(seconds: 2));
@@ -807,7 +807,7 @@ void main() {
       );
       await tester.tap(find.text('Open gate'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Open after a minute'));
+      await tester.tap(find.text('Open after 30 seconds'));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
@@ -909,7 +909,7 @@ void main() {
     );
     expect(find.text('Not now'), findsOneWidget);
     expect(find.text('Just browsing'), findsOneWidget);
-    expect(find.text('Waited a minute'), findsOneWidget);
+    expect(find.text('Waited 30 seconds'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Instagram came back'),
       300,

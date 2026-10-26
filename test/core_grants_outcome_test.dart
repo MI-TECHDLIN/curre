@@ -132,7 +132,7 @@ void main() {
       },
     );
 
-    test('all four non-open states offer the 60-second override', () {
+    test('all four non-open states offer the 30-second override', () {
       for (final outcome in <UnlockOutcome>[
         UnlockOutcome.later,
         UnlockOutcome.specify,
@@ -142,7 +142,7 @@ void main() {
         final action = mapUnlockOutcome(UnlockResponse(outcome: outcome));
         expect(action.opensImmediately, isFalse, reason: outcome.name);
         expect(action.offersOverride, isTrue, reason: outcome.name);
-        expect(action.overrideDuration, const Duration(seconds: 60));
+        expect(action.overrideDuration, const Duration(seconds: 30));
         expect(
           action.startsOverrideImmediately,
           outcome == UnlockOutcome.unavailable,
