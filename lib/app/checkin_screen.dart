@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/core.dart';
@@ -25,6 +27,15 @@ class _CheckinScreenState extends State<CheckinScreen> {
   Plan? _plan;
 
   CurreController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // A launcher process can stay alive across several sessions. Wake the
+    // planner when check-in opens as well as when the process starts, so the
+    // user's typing time overlaps a sleeping deployment's cold start.
+    unawaited(controller.warmUpPlanning());
+  }
 
   @override
   void dispose() {
@@ -250,7 +261,9 @@ class _CheckinScreenState extends State<CheckinScreen> {
               OutcomeCard(
                 outcome: Outcome.unavailable,
                 headline: 'Choose the apps yourself',
-                body: 'Clocked did not answer. Your plan can still work locally, without Task Doors.',
+                body:
+                    'I couldn’t finish that automatically. Pick what you need '
+                    'and your plan will still work.',
               ),
               const SizedBox(height: CurreSpace.s4),
               Text('Pick what this sentence needs', style: type.title),

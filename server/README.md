@@ -57,6 +57,25 @@ from `Result.credits` / `Result.model_ms` on the pipeline call. Logs carry
 route, status, latency and credits only -- never the intention or reason
 text.
 
+The app starts a non-blocking `GET /healthz` when it boots and whenever a
+check-in opens, so a sleeping deployment can wake while the user types. A plan
+call gets one automatic retry inside its existing 12-second total budget: the
+first attempt is capped at 9 seconds, the retry waits 250 ms and receives the
+remaining time. Both attempts carry the same UUID `Idempotency-Key`, which
+this route forwards to Clocked so a retry cannot create a second billed
+pipeline run. Timeouts, transport failures, retryable HTTP statuses and a
+200 response containing HTML or invalid JSON can trigger that retry. Build
+with `--dart-define=CURRE_API_DEBUG=true` to log only attempt number,
+status/error type, response content type, elapsed time and returned app count;
+request text, response bodies and keys are never logged.
+
+For a debug or profile build that points at a local tunnel requiring an extra
+request header, set `CURRE_API_LOCAL_HEADER_NAME` and
+`CURRE_API_LOCAL_HEADER_VALUE` with `--dart-define`. For example, a local
+ngrok setup may use `ngrok-skip-browser-warning` and `true`. These optional
+values are ignored by release builds; production should use the deployed
+backend directly.
+
 ## Measuring credits and latency
 
 Start the server with `CLOCKED_API_KEY` already present in its environment,
