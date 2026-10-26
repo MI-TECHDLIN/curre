@@ -1,10 +1,11 @@
 # Curre backend
 
-FastAPI service implementing `POST /v1/plan` and `POST /v1/unlock` per the
-Curre SDD, over one `clocked-sdk` (0.7.0) `AsyncClocked.pipeline(...)` call
-per route. The phone owns all state; this server turns an intention or
-unlock reason into a structured decision and stores nothing. It also holds
-the Clocked API key, since a key inside the APK could be extracted.
+FastAPI service implementing `POST /v1/plan`, `POST /v1/unlock`, and
+`POST /v1/proof` per the Curre contracts, over one `clocked-sdk` (0.7.0)
+`AsyncClocked.pipeline(...)` call per route. The phone owns all state; this
+server turns plan, unlock, and completion text into structured decisions and
+stores nothing. It also holds the Clocked API key, since a key inside the APK
+could be extracted.
 
 ## Run locally
 
@@ -20,7 +21,7 @@ uvicorn app.main:app --reload
 `CLOCKED_API_KEY` must be a non-empty string for the server to start (the
 SDK checks this at construction), but it does not need to be a real key to
 run locally against the fake-client test suite below -- it only needs to be
-real for actual `/v1/plan` and `/v1/unlock` calls to Clocked.
+real for actual `/v1/plan`, `/v1/unlock`, and `/v1/proof` calls to Clocked.
 
 ## Test
 
@@ -33,6 +34,9 @@ All tests run without network calls or credit spend. Most route cases use the
 fake Clocked client in `tests/fakes.py`; `tests/test_contract.py` also feeds
 one recorded real pipeline response per route from `tests/fixtures/` through
 the production parsers and validates the resulting Pydantic response types.
+`/v1/proof` has not made a real call yet, so its fixture
+(`modeled_proof_pipeline.json`, marked `"recorded": false`) copies the
+envelope and step shapes of the recorded unlock response.
 
 ## Environment variables
 
@@ -43,6 +47,7 @@ the production parsers and validates the resulting Pydantic response types.
 | `DECIDE_THRESHOLD` | Confidence threshold for Decide's `kind` choice (default `0.7`). |
 | `PLAN_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/plan` (default `20`). |
 | `UNLOCK_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/unlock` (default `30`). |
+| `PROOF_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/proof` (default `30`). |
 
 ## Endpoint map
 
@@ -51,11 +56,12 @@ the production parsers and validates the resulting Pydantic response types.
 | `GET /healthz` | none | `{"status": "ok"}` |
 | `POST /v1/plan` | Fill (`apps` multiselect + up to 8 `door_<id>` choice fields) -> Extract (`ends` + up to 6 `q_<id>` fields) | Selected `apps` labels map back to candidate ids; a step error on Fill is `503`. An Extract step error still returns the apps Fill chose, without spans. |
 | `POST /v1/unlock` | Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Guard stop (flagged verdict) -> `flagged`. `kind` in task/person/time_sensitive at or above the threshold -> `open` (grant = Extract `minutes` clamped 1-30, else 10 for task / 5 for person or time-sensitive). `browse` at or above the threshold -> `later`. `unclear`, or below the threshold -> `specify`. Any step error, the total timeout (6 s), or a Clocked error surviving the SDK's own retries -> `unavailable`. |
+| `POST /v1/proof` | Guard (`injection`, `stop: true`) -> Decide (`proof` choice) -> Extract (`result`, `learning` on the note alone) | `specific_completion` at probability `>= 0.75` plus at least one extracted span -> `accepted`. A judged vague, future, unrelated, or guarded note -> `vague`. A step error, malformed result, total timeout (6 s), or Clocked error after retries -> `pending`. |
 
 Credits and model time (`usage.credits`, `usage.model_ms`) come straight
 from `Result.credits` / `Result.model_ms` on the pipeline call. Logs carry
-route, status, latency and credits only -- never the intention or reason
-text.
+route, status, latency and credits only -- never the intention, reason, task,
+or completion note text.
 
 The app starts a non-blocking `GET /healthz` when it boots and whenever a
 check-in opens, so a sleeping deployment can wake while the user types. A plan
@@ -88,9 +94,10 @@ APP_KEY=local-only python scripts/measure.py \
   --output /tmp/curre-clocked-measurement.json
 ```
 
-The script sends 10 plan intentions and 25 unlock reasons, prints exact
-credits and p50/p95 client-observed HTTP latency, and re-scores the same
-unlock answers at thresholds 0.6, 0.7 and 0.8 without spending more credits.
+The script sends 10 plan intentions and 25 unlock reasons (it does not cover
+`/v1/proof` yet), prints exact credits and p50/p95 client-observed HTTP
+latency, and re-scores the same unlock answers at thresholds 0.6, 0.7 and 0.8
+without spending more credits.
 The optional JSON report contains only the authored samples, route responses
 and measurements; it never contains either key.
 
@@ -151,6 +158,13 @@ host's job, not the container's.
   (Extract gets the reason alone as its own `text`). The phone should treat
   `guard.quote` as a literal copy of flagged words, not assume it slices
   the reason it sent.
+- Past the app key, rate limit and input checks, `/v1/proof` always answers
+  `200`. Anything that is not a judgement of the note (a step error, a
+  malformed result, the 6 s timeout, a Clocked error after retries) is
+  `pending`, so the phone keeps the note, retries it later and credits it to
+  the task's original day. A note Guard stops is a judgement and comes back
+  `vague`. `result`/`learning` offsets index the note alone, which is
+  Extract's own `text`.
 - `/v1/plan` has no `outcome` field, so a pipeline-level failure (the Fill
   step erroring, a timeout, or a Clocked error surviving retries) comes
   back as HTTP `503`, which the phone's existing "no network at check-in"

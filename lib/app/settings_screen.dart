@@ -161,7 +161,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _SettingsTile(
                   glyph: CurreGlyphKind.history,
                   title: 'Clear history',
-                  subtitle: 'Remove 30 days of check-ins and unlock choices',
+                  subtitle:
+                      'Remove 30 days of check-ins, unlock choices and notes',
                   onTap: _confirmClearHistory,
                   destructive: true,
                 ),
@@ -205,7 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Clear local history?'),
         content: const Text(
-          'This removes saved check-ins, grants and unlock attempts. Today’s live plan and active app timers stay in place.',
+          'This removes saved check-ins, grants, unlock attempts and the notes you wrote after tasks. Your proof days, today’s live plan and active app timers stay in place.',
         ),
         actions: [
           TextButton(

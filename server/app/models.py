@@ -11,12 +11,15 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 Session = Literal["morning", "afternoon", "evening"]
 Kind = Literal["task", "person", "time_sensitive", "browse", "unclear"]
 Outcome = Literal["open", "later", "specify", "flagged", "unavailable"]
+ProofOutcome = Literal["accepted", "vague", "pending"]
+ProofKind = Literal["specific_completion", "vague", "future", "unrelated"]
 
 MAX_LABEL_LEN = 60
 MAX_CANDIDATES = 30
 MAX_INTENTION_LEN = 500
 MIN_REASON_LEN = 8
 MAX_REASON_LEN = 300
+MAX_PROOF_NOTE_LEN = 300
 
 
 class Span(BaseModel):
@@ -106,4 +109,18 @@ class UnlockResponse(BaseModel):
     person: Span | None = None
     minutes: int | None = None
     guard: GuardInfo | None = None
+    usage: Usage | None = None
+
+
+class ProofRequest(BaseModel):
+    task: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
+    note: str = Field(min_length=1, max_length=MAX_PROOF_NOTE_LEN)
+
+
+class ProofResponse(BaseModel):
+    outcome: ProofOutcome
+    kind: ProofKind | None = None
+    specific_completion: float | None = None
+    result: Span | None = None
+    learning: Span | None = None
     usage: Usage | None = None

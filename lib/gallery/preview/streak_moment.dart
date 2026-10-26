@@ -171,7 +171,7 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _RollingCount(
+                    RollingCount(
                       from: widget.from,
                       to: widget.from + 1,
                       t: tick,
@@ -218,44 +218,6 @@ class _StreakMomentScreenState extends State<StreakMomentScreen> with SingleTick
     opacity: p.clamp(0, 1),
     child: Transform.translate(offset: Offset(0, (1 - p) * 14), child: child),
   );
-}
-
-/// A count that rolls from [from] to [to] (the `tick` token: a short
-/// decelerating roll).
-class _RollingCount extends StatelessWidget {
-  const _RollingCount({required this.from, required this.to, required this.t, required this.style});
-
-  final int from;
-  final int to;
-  final double t;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    final h = (style.fontSize ?? 60) * 1.1;
-    final shown = t >= .5 ? to : from;
-    return Semantics(
-      label: ProofDaysLabel.text(shown),
-      excludeSemantics: true,
-      child: ClipRect(
-        child: SizedBox(
-          height: h,
-          child: Stack(
-            children: [
-              Transform.translate(
-                offset: Offset(0, -t * h),
-                child: Text('$from', style: style),
-              ),
-              Transform.translate(
-                offset: Offset(0, (1 - t) * h),
-                child: Text('$to', style: style),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// The proof: the door the task went through, in its link colour, and the

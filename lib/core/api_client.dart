@@ -24,7 +24,7 @@ class PlanCallResult {
   bool get requiresManualChecklist => response == null;
 }
 
-/// Typed client for Curre's two backend routes.
+/// Typed client for Curre's three backend routes.
 class CurreApiClient {
   CurreApiClient({
     required Uri baseUrl,
@@ -32,6 +32,7 @@ class CurreApiClient {
     required http.Client httpClient,
     Duration unlockTimeout = const Duration(seconds: 8),
     Duration planTimeout = const Duration(seconds: 12),
+    Duration proofTimeout = const Duration(seconds: 8),
     Duration planFirstAttemptTimeout = const Duration(seconds: 9),
     Duration planRetryDelay = const Duration(milliseconds: 250),
     Duration warmUpTimeout = const Duration(seconds: 3),
@@ -43,6 +44,7 @@ class CurreApiClient {
          httpClient,
          unlockTimeout: unlockTimeout,
          planTimeout: planTimeout,
+         proofTimeout: proofTimeout,
          planFirstAttemptTimeout: planFirstAttemptTimeout,
          planRetryDelay: planRetryDelay,
          warmUpTimeout: warmUpTimeout,
@@ -56,6 +58,7 @@ class CurreApiClient {
     this._httpClient, {
     required this.unlockTimeout,
     required this.planTimeout,
+    required this.proofTimeout,
     required this.planFirstAttemptTimeout,
     required this.planRetryDelay,
     required this.warmUpTimeout,
@@ -87,6 +90,7 @@ class CurreApiClient {
   final http.Client _httpClient;
   final Duration unlockTimeout;
   final Duration planTimeout;
+  final Duration proofTimeout;
   final Duration planFirstAttemptTimeout;
   final Duration planRetryDelay;
   final Duration warmUpTimeout;
@@ -216,6 +220,24 @@ class CurreApiClient {
       // Every transport, timeout, status, and malformed-response failure must
       // leave the user with the 60-second local override.
       return const UnlockResponse.unavailable();
+    }
+  }
+
+  /// Returns pending for every transport, timeout, status, or malformed
+  /// response failure. The phone keeps the note and retries it against its
+  /// original Curre day.
+  Future<ProofResponse> proof(ProofRequest request) async {
+    try {
+      final response = await _post(
+        'v1/proof',
+        request.toJson(),
+      ).timeout(proofTimeout);
+      if (!_isSuccess(response.statusCode)) {
+        return const ProofResponse.pending();
+      }
+      return ProofResponse.fromJson(_decodeObject(response.body));
+    } on Object {
+      return const ProofResponse.pending();
     }
   }
 

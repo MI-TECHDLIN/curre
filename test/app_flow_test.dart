@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:curre/app/app_widgets.dart';
 import 'package:curre/app/checkin_screen.dart';
+import 'package:curre/app/completion_sheet.dart';
 import 'package:curre/app/curre_controller.dart';
 import 'package:curre/app/hidden_apps_screen.dart';
 import 'package:curre/app/home_screen.dart';
@@ -92,6 +94,7 @@ void main() {
     final homeAvatar = tester.widget<Avatar>(find.byType(Avatar));
     expect(homeAvatar.avatarId, isNull);
     expect(homeAvatar.motion, AvatarMotion.reactOnce);
+    expect(find.text('No proof days yet'), findsOneWidget);
     for (final label in <String>['Phone', 'Messages', 'Settings', 'Curre']) {
       expect(find.text(label), findsOneWidget);
     }
@@ -104,6 +107,7 @@ void main() {
     expect(controller.settings.avatarId, 'avatar-01');
     expect(find.text('Proof days'), findsOneWidget);
     expect(find.text('Best run'), findsOneWidget);
+    expect(find.text('Cloud days'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('History'),
       260,
@@ -269,6 +273,265 @@ void main() {
       expect(find.text('Choose the apps yourself'), findsNothing);
     },
   );
+
+  testWidgets('a planned Door records its start and asks once on return', (
+    tester,
+  ) async {
+    await phone(tester);
+    final platform = _FakeDoorPlatform(CurreController.fallbackApps);
+    final controller = _controller(platform: platform);
+    controller.plans = <Plan>[_doorPlan()];
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await tester.pump();
+
+    await tester.tap(find.byType(DoorRow).first);
+    await tester.pumpAndSettle();
+
+    expect(platform.launches, 1);
+    expect(controller.taskTraces.single.kind, TaskTraceKind.door);
+    expect(find.text(completionQuestion), findsOneWidget);
+    expect(find.text('YouTube → Search “G chord”'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('completion-note')),
+      'I wrote a clear summary of the central example',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Add proof'));
+    await tester.pump();
+    await tester.pump();
+
+    // No backend on this phone: the note waits on its own day.
+    expect(find.byKey(const Key('proof-pending')), findsOneWidget);
+    final record = controller.proofRecords.single;
+    expect(record.judgement, ProofJudgement.pending);
+    expect(record.date, const LocalDate(2026, 10, 24));
+    await tester.tap(find.widgetWithText(CurrePrimaryButton, 'Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('No proof days yet'), findsOneWidget);
+
+    // The same door again opens the task without asking twice.
+    await tester.tap(find.byType(DoorRow).first);
+    await tester.pumpAndSettle();
+    expect(platform.launches, 2);
+    expect(find.text(completionQuestion), findsNothing);
+  });
+
+  testWidgets('an accepted note plays the sunrise; Home only counts', (
+    tester,
+  ) async {
+    await phone(tester);
+    final sent = <Map<String, Object?>>[];
+    final api = CurreApiClient(
+      baseUrl: Uri.parse('https://curre.test'),
+      appKey: 'test-key',
+      httpClient: MockClient((request) async {
+        expect(request.url.path, '/v1/proof');
+        sent.add(jsonDecode(request.body) as Map<String, Object?>);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'outcome': 'accepted',
+            'kind': 'specific_completion',
+            'specific_completion': .94,
+            'result': <String, Object?>{
+              'text': 'switched from G to C without looking',
+              'start': 2,
+              'end': 38,
+            },
+            'learning': null,
+            'usage': <String, Object?>{'credits': 4, 'model_ms': 81.5},
+          }),
+          200,
+        );
+      }),
+    );
+    final controller = _controller(api: api);
+    controller.plans = <Plan>[_doorPlan()];
+    controller.proofRecords = <ProofRecord>[
+      for (var day = 20; day <= 23; day++)
+        _supportedOn(LocalDate(2026, 10, day)),
+    ];
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await tester.pump();
+    expect(find.text('4 proof days'), findsOneWidget);
+
+    await tester.tap(find.byType(DoorRow).first);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('completion-note')),
+      'I switched from G to C without looking',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Add proof'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(sent.single, <String, Object?>{
+      'task': 'Learn the G chord on YouTube',
+      'note': 'I switched from G to C without looking',
+    });
+    expect(find.byKey(const Key('proof-accepted')), findsOneWidget);
+    expect(find.text('Today’s sun is up'), findsOneWidget);
+    final reaction = tester.widget<Avatar>(
+      find.descendant(
+        of: find.byKey(const Key('proof-accepted')),
+        matching: find.byType(Avatar),
+      ),
+    );
+    expect(reaction.expression, AvatarExpression.happy);
+    expect(controller.lastProofCall?.usage?.credits, 4);
+
+    await tester.pump(ProoflightMoment.length);
+    await tester.ensureVisible(find.text('Continue'));
+    await tester.tap(find.text('Continue'));
+    // Home settles: nothing about the streak moves there.
+    await tester.pumpAndSettle();
+    expect(find.text('5 proof days'), findsOneWidget);
+    final sun = tester.widget<ProoflightSun>(find.byType(ProoflightSun));
+    expect((sun.rays, sun.rise), (1, null));
+  });
+
+  testWidgets('a task away from the phone waits past its plan for Done', (
+    tester,
+  ) async {
+    await phone(tester);
+    var now = DateTime.utc(2026, 10, 24, 5, 30);
+    final controller = _controller(now: () => now);
+    controller.plans = <Plan>[
+      Plan(
+        id: 'offline-plan',
+        session: SessionName.morning,
+        date: const LocalDate(2026, 10, 24),
+        intention: 'Pray for twenty minutes',
+        apps: const <PlannedApp>[],
+        endsAt: DateTime.utc(2026, 10, 24, 6),
+        source: PlanSource.clocked,
+      ),
+    ];
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await tester.pump();
+
+    expect(find.text('Tap Start when you begin'), findsOneWidget);
+    expect(
+      find.text('Long-press any door to open the app normally.'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+    expect(controller.taskTraces.single.kind, TaskTraceKind.offlineStart);
+    expect(find.textContaining('tap when you’re done'), findsOneWidget);
+
+    // The plan ends while the task goes on; its row waits for Done.
+    now = DateTime.utc(2026, 10, 24, 6, 25);
+    await controller.refresh();
+    await tester.pump();
+    expect(controller.activePlan, isNull);
+    expect(find.text('Away from your phone'), findsOneWidget);
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text(completionQuestion), findsOneWidget);
+    expect(find.text('Pray for twenty minutes'), findsOneWidget);
+    await tester.tap(find.text('Just mark it done'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(CurrePrimaryButton, 'Done'));
+    await tester.pumpAndSettle();
+
+    final record = controller.proofRecords.single;
+    expect(record.judgement, ProofJudgement.none);
+    expect(record.date, const LocalDate(2026, 10, 24));
+    expect(controller.proofSummary.totalProofDays, 0);
+    // Closed, and its plan is over: nothing is left waiting on Home.
+    expect(find.text('Away from your phone'), findsNothing);
+  });
+
+  testWidgets('History and the profile carry Prooflight’s figures and marks', (
+    tester,
+  ) async {
+    await phone(tester);
+    final controller = _controller();
+    controller.historyPlans = <Plan>[_doorPlan()];
+    controller.proofRecords = <ProofRecord>[
+      for (var day = 20; day <= 23; day++)
+        _supportedOn(LocalDate(2026, 10, day)),
+      _pendingOn(const LocalDate(2026, 10, 24)),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: HistoryScreen(controller: controller),
+      ),
+    );
+
+    expect(find.text('4 proof days'), findsOneWidget);
+    expect(
+      find.text('4 proof days in all · Best run 4 · 0 cloud days'),
+      findsOneWidget,
+    );
+    final week = tester.widget<WeekStrip>(find.byType(WeekStrip));
+    expect(week.days.map((day) => day.state), <DayState>[
+      DayState.quiet,
+      DayState.quiet,
+      DayState.proof,
+      DayState.proof,
+      DayState.proof,
+      DayState.proof,
+      DayState.pending,
+    ]);
+    expect(week.days.last.isToday, isTrue);
+    expect(
+      find.text('3 more proof days to your next cloud day.'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(find.text('Waiting to be checked'), 300);
+    expect(find.text('Waiting to be checked'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Fri, 23 October'), 300);
+    expect(find.text('Supported proof'), findsWidgets);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: Scaffold(body: ProfileSheet(controller: controller)),
+      ),
+    );
+    Finder stat(String label, String value) => find.ancestor(
+      of: find.text(label),
+      matching: find.ancestor(
+        of: find.text(value),
+        matching: find.byType(Column),
+      ),
+    );
+    expect(stat('Proof days', '4'), findsWidgets);
+    expect(stat('Best run', '4 days'), findsWidgets);
+    expect(stat('Cloud days', '0'), findsWidgets);
+  });
+
+  testWidgets('a run that ended is told plainly, with nothing erased', (
+    tester,
+  ) async {
+    await phone(tester);
+    final controller = _controller();
+    controller.proofRecords = <ProofRecord>[
+      for (var day = 1; day <= 5; day++) _supportedOn(LocalDate(2026, 10, day)),
+    ];
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await tester.pump();
+    expect(find.text('Next sunrise: one proof away'), findsOneWidget);
+    expect(find.textContaining(RegExp('lost|failed|zero')), findsNothing);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: HistoryScreen(controller: controller),
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.text('That run ended at 5 proof days.'),
+      300,
+    );
+    expect(find.text('Today’s proof starts the next sunrise.'), findsOneWidget);
+    expect(find.text('Best run 5 · 5 proof days in all'), findsOneWidget);
+    expect(find.textContaining(RegExp('lost|failed|zero')), findsNothing);
+  });
 
   testWidgets('hidden apps are alphabetical text and navigate to the gate', (
     tester,
@@ -513,6 +776,17 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Under the hood'), findsOneWidget);
+    await tester.tap(find.text('Under the hood'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -900));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('/v1/proof'), findsOneWidget);
+    expect(
+      find.textContaining('Decide specific completion at 0.75'),
+      findsOneWidget,
+    );
+    Navigator.of(tester.element(find.textContaining('/v1/proof'))).pop();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Clear history'),
       300,
@@ -534,7 +808,14 @@ void main() {
     );
 
     expect(find.text('0 of 21 sessions started with a plan'), findsOneWidget);
-    expect(find.text('Proof days · —'), findsOneWidget);
+    expect(find.text('No proof days yet'), findsOneWidget);
+    expect(
+      find.text(
+        'After a task, say what changed. A specific note adds a proof day.',
+      ),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(find.text('A quiet start.'), 300);
     expect(find.text('A quiet start.'), findsOneWidget);
   });
 
@@ -578,6 +859,10 @@ void main() {
     await phone(tester);
     final controller = _controller();
     _addHistory(controller);
+    controller.proofRecords = <ProofRecord>[
+      _supportedOn(const LocalDate(2026, 10, 23)),
+      _pendingOn(const LocalDate(2026, 10, 24)),
+    ];
     await tester.pumpWidget(
       MaterialApp(
         theme: curreTheme(Brightness.light),
@@ -599,6 +884,11 @@ void main() {
     expect(controller.historyPlans, isEmpty);
     expect(controller.historyGrants, isEmpty);
     expect(controller.historyAttempts, isEmpty);
+    // Proof days stay; every word written after a task goes.
+    final kept = controller.proofRecords.single;
+    expect(kept.date, const LocalDate(2026, 10, 23));
+    expect((kept.note, kept.taskText), ('', ''));
+    expect(controller.proofSummary.totalProofDays, 1);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -606,7 +896,110 @@ void main() {
         home: HistoryScreen(controller: controller),
       ),
     );
+    await tester.scrollUntilVisible(find.text('A quiet start.'), 300);
     expect(find.text('A quiet start.'), findsOneWidget);
+  });
+
+  test(
+    'pending proof retries are bounded and keep their original days',
+    () async {
+      var calls = 0;
+      final api = CurreApiClient(
+        baseUrl: Uri.parse('https://curre.test'),
+        appKey: 'test-key',
+        httpClient: MockClient((request) async {
+          calls++;
+          expect(request.url.path, '/v1/proof');
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'outcome': 'accepted',
+              'specific_completion': .92,
+              'result': <String, Object?>{
+                'text': 'a concrete result',
+                'start': 0,
+                'end': 17,
+              },
+            }),
+            200,
+          );
+        }),
+      );
+      final controller = _controller(api: api);
+      controller.proofRecords = <ProofRecord>[
+        for (var day = 21; day <= 23; day++)
+          ProofRecord(
+            id: 'proof-$day',
+            taskId: 'task-$day',
+            planId: 'plan-$day',
+            date: LocalDate(2026, 10, day),
+            taskText: 'task $day',
+            note: 'a concrete result',
+            submittedAt: DateTime.utc(2026, 10, day, 7),
+            judgement: ProofJudgement.pending,
+            level: ProofLevel.selfReported,
+            traceId: 'trace-$day',
+          ),
+      ];
+
+      await controller.retryPendingProofs();
+      await controller.retryPendingProofs();
+
+      expect(calls, CurreController.pendingProofRetryBatchSize);
+      expect(
+        controller.proofRecords
+            .where((record) => record.judgement == ProofJudgement.accepted)
+            .map((record) => record.date),
+        <LocalDate>[
+          const LocalDate(2026, 10, 21),
+          const LocalDate(2026, 10, 22),
+        ],
+      );
+      expect(
+        controller.proofRecords
+            .singleWhere(
+              (record) => record.date == const LocalDate(2026, 10, 23),
+            )
+            .judgement,
+        ProofJudgement.pending,
+      );
+    },
+  );
+
+  test('a retry never overwrites a newer note for the same task', () async {
+    late CurreController controller;
+    final api = CurreApiClient(
+      baseUrl: Uri.parse('https://curre.test'),
+      appKey: 'test-key',
+      httpClient: MockClient((request) async {
+        // The person writes again while the older note is out.
+        final old = controller.proofRecords.single;
+        controller.proofRecords = <ProofRecord>[
+          ProofRecord(
+            id: old.id,
+            taskId: old.taskId,
+            planId: old.planId,
+            date: old.date,
+            taskText: old.taskText,
+            note: 'a newer, more specific note',
+            submittedAt: old.submittedAt.add(const Duration(minutes: 5)),
+            judgement: ProofJudgement.pending,
+            level: ProofLevel.selfReported,
+            traceId: old.traceId,
+          ),
+        ];
+        return http.Response(jsonEncode({'outcome': 'vague'}), 200);
+      }),
+    );
+    controller = _controller(api: api);
+    controller.proofRecords = <ProofRecord>[
+      _pendingOn(const LocalDate(2026, 10, 24)),
+    ];
+
+    await controller.retryPendingProofs();
+
+    final record = controller.proofRecords.single;
+    expect(record.note, 'a newer, more specific note');
+    expect(record.isPending, isTrue);
   });
 
   for (final brightness in Brightness.values) {
@@ -636,6 +1029,11 @@ void main() {
             endsAt: DateTime.utc(2026, 10, 24, 9),
             source: PlanSource.clocked,
           ),
+        ];
+        controller.proofRecords = <ProofRecord>[
+          for (var day = 10; day <= 22; day++)
+            if (day != 16) _supportedOn(LocalDate(2026, 10, day)),
+          _pendingOn(const LocalDate(2026, 10, 24)),
         ];
         controller.grants = <Grant>[
           Grant(
@@ -672,6 +1070,37 @@ void main() {
         await show(HistoryScreen(controller: controller));
         await show(SettingsScreen(controller: controller));
         await show(ProfileSheet(controller: controller));
+        final task = PlannedTask.forDoor(
+          controller.plans.single,
+          controller.plans.single.apps.first,
+        );
+        await show(
+          Scaffold(
+            body: CompletionSheet(controller: controller, task: task),
+          ),
+        );
+        final today = _supportedOn(const LocalDate(2026, 10, 24));
+        await show(
+          Scaffold(
+            body: SingleChildScrollView(
+              child: ProoflightMoment(
+                submission: ProofSubmission(
+                  record: today,
+                  before: controller.proofSummary,
+                  after: ProoflightRules.summarize(
+                    records: <ProofRecord>[...controller.proofRecords, today],
+                    today: const LocalDate(2026, 10, 24),
+                  ),
+                ),
+                title: 'A Very Long Social Application Name → Search “capo tutorial for Sunday”',
+                avatarId: 'avatar-03',
+                displayName: 'Chidiebere Nwachukwu-Okafor',
+                progress: 1,
+                onContinue: () {},
+              ),
+            ),
+          ),
+        );
         await show(
           UnlockGateScreen(
             controller: controller,
@@ -736,10 +1165,60 @@ void _addHistory(CurreController controller) {
   ];
 }
 
+Plan _doorPlan({LocalDate date = const LocalDate(2026, 10, 24)}) => Plan(
+  id: 'door-plan-$date',
+  session: SessionName.morning,
+  date: date,
+  intention: 'Learn the G chord on YouTube',
+  apps: const <PlannedApp>[
+    PlannedApp(
+      packageName: 'com.google.android.youtube',
+      query: SourceSpan(text: 'G chord', start: 10, end: 17),
+    ),
+  ],
+  endsAt: DateTime.utc(date.year, date.month, date.day, 8),
+  source: PlanSource.clocked,
+);
+
+ProofRecord _proofOn(LocalDate date, ProofResponse response) {
+  final plan = _doorPlan(date: date);
+  final task = PlannedTask.forDoor(plan, plan.apps.single);
+  final at = DateTime.utc(date.year, date.month, date.day, 5);
+  return ProoflightRules.recordFromResponse(
+    task: task,
+    note: 'I switched from G to C without looking',
+    submittedAt: at,
+    response: response,
+    trace: TaskTrace.forTask(
+      task,
+      kind: TaskTraceKind.door,
+      at: at.subtract(const Duration(minutes: 20)),
+    ),
+  );
+}
+
+ProofRecord _supportedOn(LocalDate date) => _proofOn(
+  date,
+  const ProofResponse(
+    outcome: ProofOutcome.accepted,
+    kind: ProofKind.specificCompletion,
+    specificCompletion: .94,
+    result: SourceSpan(
+      text: 'switched from G to C without looking',
+      start: 2,
+      end: 38,
+    ),
+  ),
+);
+
+ProofRecord _pendingOn(LocalDate date) =>
+    _proofOn(date, const ProofResponse.pending());
+
 CurreController _controller({
   bool onboardingComplete = true,
   _FakeDoorPlatform? platform,
   CurreApiClient? api,
+  DateTime Function()? now,
 }) {
   final launcher = platform ?? _FakeDoorPlatform(CurreController.fallbackApps);
   final essentials = <String>{
@@ -763,7 +1242,7 @@ CurreController _controller({
     ),
     apps: CurreController.fallbackApps,
     onboardingComplete: onboardingComplete,
-    now: () => DateTime.utc(2026, 10, 24, 5, 30),
+    now: now ?? () => DateTime.utc(2026, 10, 24, 5, 30),
   );
 }
 

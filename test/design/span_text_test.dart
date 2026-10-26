@@ -52,6 +52,17 @@ void main() {
       expect(runs.last.$1, 'ort');
     });
 
+    test('overlapping highlights never repeat text', () {
+      // Extract's result and learning can mark the same words.
+      const text = 'I learned to switch from G to C';
+      final first = SpanHighlight(2, 31, style: const TextStyle());
+      final inside = SpanHighlight(13, 31, style: const TextStyle());
+      final runs = SpanText.buildRuns(text, [inside, first]);
+
+      expect(runs.map((r) => r.$1).join(), text);
+      expect(runs.where((r) => r.$2 != null).map((r) => r.$1), ['learned to switch from G to C']);
+    });
+
     test('returns the whole text as one run when there are no highlights', () {
       const text = 'no highlights here';
       final runs = SpanText.buildRuns(text, const []);

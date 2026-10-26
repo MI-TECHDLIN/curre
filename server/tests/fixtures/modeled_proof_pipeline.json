@@ -1,0 +1,137 @@
+{
+  "metadata": {
+    "credits": 4,
+    "model_ms": 81.5,
+    "modeled_on": [
+      "real_unlock_pipeline.json",
+      "real_plan_pipeline.json"
+    ],
+    "recorded": false,
+    "why": "No real /v1/proof call has been made. The envelope, the guard step and the Decide and Extract result keys are copied from the recorded unlock response; only the labels, numbers and note differ."
+  },
+  "response": {
+    "model": "clocked-1.0",
+    "steps": [
+      {
+        "endpoint": "injection",
+        "ms": 23,
+        "name": "guard",
+        "result": {
+          "categories": {
+            "benign": 0.9915995090811042,
+            "instruction override": 0.0019265196059653,
+            "obfuscated or encoded payload": 0.0011282395528131532,
+            "role-play or persona jailbreak": 0.001208828844815766,
+            "social engineering": 0.001616996256679221,
+            "system prompt or secret extraction": 0.0012316422578406,
+            "tool misuse or data exfiltration": 0.0012882644007817911
+          },
+          "category": "benign",
+          "evidence": [],
+          "injection": 0.0019413553983823606,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "severities": {
+            "critical": 0.0015641163664205007,
+            "high": 0.0017481040013747895,
+            "low": 0.003698054470174961,
+            "medium": 0.0017684699648554494,
+            "none": 0.9912212551971743
+          },
+          "severity": "none",
+          "severity_expected": 1.019,
+          "source": "user",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 22,
+            "total_ms": 23
+          },
+          "verdict": "benign"
+        },
+        "status": 200,
+        "step": 0
+      },
+      {
+        "endpoint": "decide",
+        "ms": 32,
+        "name": "proof",
+        "result": {
+          "answers": {
+            "proof": {
+              "choice": "specific_completion",
+              "confidence": 0.9312,
+              "probabilities": {
+                "future": 0.0108,
+                "specific_completion": 0.9446,
+                "unrelated": 0.0121,
+                "vague": 0.0325
+              },
+              "type": "choice"
+            }
+          },
+          "model": "clocked-1.0",
+          "usage": {
+            "input_tokens": 64,
+            "output_tokens": 6
+          }
+        },
+        "status": 200,
+        "step": 1
+      },
+      {
+        "endpoint": "extract",
+        "ms": 39,
+        "name": "caption",
+        "result": {
+          "fields": {
+            "learning": {
+              "confidence": 1,
+              "value": null
+            },
+            "result": {
+              "confidence": 0.9999981236,
+              "end": 38,
+              "p_verify": 0.9999981236,
+              "start": 2,
+              "value": "switched from G to C without looking"
+            }
+          },
+          "model": "clocked-1.0",
+          "timing": {
+            "forwards": {
+              "fields": [
+                2,
+                0
+              ]
+            },
+            "read_ms": 36,
+            "server_ms": 39,
+            "stages": {
+              "fields": {
+                "assemble": 0,
+                "branches": 0,
+                "doc": 0,
+                "generate": 24,
+                "locate": 0,
+                "reader": "recognition",
+                "verify": 11
+              }
+            },
+            "total_ms": 36
+          }
+        },
+        "status": 200,
+        "step": 2
+      }
+    ],
+    "stopped": null,
+    "timing": {
+      "model_ms": 66,
+      "total_ms": 97
+    }
+  },
+  "route_request": {
+    "note": "I switched from G to C without looking",
+    "task": "learn the G chord on YouTube, then pray"
+  }
+}

@@ -231,6 +231,109 @@ class UnlockResponse {
   String? get guardQuoteText => guard?.quote.text;
 }
 
+/// The backend's verdict on a completion note. [pending] covers every way
+/// the note went unanswered: offline, a timeout, an error or a malformed
+/// reply. It is never a judgement of the note.
+enum ProofOutcome { accepted, vague, pending }
+
+/// How Decide classed a completion note.
+enum ProofKind { specificCompletion, vague, future, unrelated }
+
+extension ProofKindWire on ProofKind {
+  String get wireValue => switch (this) {
+    ProofKind.specificCompletion => 'specific_completion',
+    ProofKind.vague => 'vague',
+    ProofKind.future => 'future',
+    ProofKind.unrelated => 'unrelated',
+  };
+
+  static ProofKind fromWireValue(String value) => switch (value) {
+    'specific_completion' => ProofKind.specificCompletion,
+    'vague' => ProofKind.vague,
+    'future' => ProofKind.future,
+    'unrelated' => ProofKind.unrelated,
+    _ => throw FormatException('Unknown proof kind: $value'),
+  };
+}
+
+class ProofRequest {
+  ProofRequest({required this.task, required this.note}) {
+    _checkLength(task, 'task', minimum: 1, maximum: 500);
+    _checkLength(note, 'note', minimum: 1, maximum: 300);
+  }
+
+  /// The plan in the user's words.
+  final String task;
+
+  /// What the user said changed, finished or became clear.
+  final String note;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'task': task,
+    'note': note,
+  };
+}
+
+class ProofResponse {
+  const ProofResponse({
+    required this.outcome,
+    this.kind,
+    this.specificCompletion,
+    this.result,
+    this.learning,
+    this.usage,
+  });
+
+  factory ProofResponse.fromJson(Map<String, Object?> json) => ProofResponse(
+    outcome: switch (_string(json['outcome'], 'outcome')) {
+      'accepted' => ProofOutcome.accepted,
+      'vague' => ProofOutcome.vague,
+      'pending' => ProofOutcome.pending,
+      final value => throw FormatException('Unknown proof outcome: $value'),
+    },
+    kind: json['kind'] == null
+        ? null
+        : ProofKindWire.fromWireValue(_string(json['kind'], 'kind')),
+    specificCompletion: json['specific_completion'] == null
+        ? null
+        : _number(
+            json['specific_completion'],
+            'specific_completion',
+          ).toDouble(),
+    result: json['result'] == null
+        ? null
+        : SourceSpan.fromJson(_map(json['result'], 'result')),
+    learning: json['learning'] == null
+        ? null
+        : SourceSpan.fromJson(_map(json['learning'], 'learning')),
+    usage: json['usage'] == null
+        ? null
+        : ApiUsage.fromJson(_map(json['usage'], 'usage')),
+  );
+
+  const ProofResponse.pending()
+    : outcome = ProofOutcome.pending,
+      kind = null,
+      specificCompletion = null,
+      result = null,
+      learning = null,
+      usage = null;
+
+  final ProofOutcome outcome;
+
+  /// Decide's choice, when the note was judged. A note Guard stopped is
+  /// vague with no kind.
+  final ProofKind? kind;
+
+  /// Decide's probability for `specific_completion`.
+  final double? specificCompletion;
+
+  /// Spans Extract copied from the note; offsets index the note itself.
+  final SourceSpan? result;
+  final SourceSpan? learning;
+  final ApiUsage? usage;
+}
+
 void _checkLength(String value, String name, {int minimum = 0, int? maximum}) {
   final length = value.runes.length;
   if (length < minimum || (maximum != null && length > maximum)) {

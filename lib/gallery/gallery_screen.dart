@@ -1134,6 +1134,20 @@ class _ProoflightDemo extends StatelessWidget {
               ],
             ),
             const SizedBox(height: CurreSpace.s4),
+            // History's week: a note still waiting to be checked rings faintly,
+            // and keeps today's label bold.
+            const WeekStrip(
+              days: [
+                WeekDay('Sun', 18, DayState.quiet),
+                WeekDay('Mon', 19, DayState.proof),
+                WeekDay('Tue', 20, DayState.cloud),
+                WeekDay('Wed', 21, DayState.proof),
+                WeekDay('Thu', 22, DayState.proof),
+                WeekDay('Fri', 23, DayState.proof),
+                WeekDay('Sat', 24, DayState.pending, isToday: true),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s4),
             const RunEndedNote(endedAt: 12, best: 12, total: 31),
           ],
         );

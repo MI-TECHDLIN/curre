@@ -203,16 +203,20 @@ class _ProoflightPainter extends CustomPainter {
 /// days", nothing more. The sun is up with today's rays once today has
 /// proof, and still below the line before that, never red and never
 /// crossed out. One day reads "1 proof day"; none yet, "No proof days yet".
-/// [cloudDay] adds the soft cloud of a cloud day in hand.
+/// Between runs ([runEnded]) it looks ahead instead of reading zero: "Next
+/// sunrise: one proof away". [cloudDay] adds the soft cloud of a cloud day
+/// in hand.
 class ProofDaysLabel extends StatelessWidget {
-  const ProofDaysLabel({super.key, required this.days, this.raysToday = 0, this.cloudDay = false, this.color});
+  const ProofDaysLabel({super.key, required this.days, this.raysToday = 0, this.cloudDay = false, this.runEnded = false, this.color});
 
   final int days;
   final int raysToday;
   final bool cloudDay;
+  final bool runEnded;
   final Color? color;
 
-  static String text(int days) => switch (days) {
+  static String text(int days, {bool runEnded = false}) => switch (days) {
+    0 when runEnded => 'Next sunrise: one proof away',
     0 => 'No proof days yet',
     1 => '1 proof day',
     _ => '$days proof days',
@@ -224,7 +228,7 @@ class ProofDaysLabel extends StatelessWidget {
     final t = Theme.of(context).extension<CurreType>()!;
     final ink = color ?? c.ink2;
     final label = [
-      text(days),
+      text(days, runEnded: runEnded),
       if (raysToday > 0) 'today’s sun is up',
       if (cloudDay) 'one cloud day in hand',
     ].join(', ');
@@ -239,7 +243,7 @@ class ProofDaysLabel extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              text(days),
+              text(days, runEnded: runEnded),
               style: t.label.copyWith(fontSize: 14, color: ink),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -377,6 +381,236 @@ class RunEndedNote extends StatelessWidget {
           Text(next, style: t.body.copyWith(color: c.ink2)),
           if (meta != null) ...[const SizedBox(height: CurreSpace.s3), Text(meta, style: t.meta)],
         ],
+      ),
+    );
+  }
+}
+
+/// How a day reads in the [WeekStrip].
+enum DayState {
+  /// A proof day: a task with proof raised that day's sun (ember ring).
+  proof,
+
+  /// A day held open by a note still waiting to be checked: a faint ember
+  /// ring, never a warning.
+  pending,
+
+  /// A past day without proof: plain. Never red, never crossed out.
+  quiet,
+
+  /// An empty day a cloud day covered: a soft cloud, adding nothing to the
+  /// count (proof audit §3, rule 7).
+  cloud,
+
+  /// Today, still open: the session's sky, as the check-in card is.
+  today,
+
+  /// A day still to come.
+  future,
+}
+
+@immutable
+class WeekDay {
+  const WeekDay(this.label, this.date, this.state, {this.isToday = false});
+
+  final String label;
+  final int date;
+  final DayState state;
+
+  /// Today, whatever its mark: its label stays bold while a note waits.
+  final bool isToday;
+
+  bool get _today => isToday || state == DayState.today;
+
+  /// What the day says to a screen reader.
+  String get description => switch (state) {
+    DayState.proof => 'proof day',
+    DayState.pending => 'note waiting to be checked',
+    DayState.quiet => 'no proof',
+    DayState.cloud => 'cloud day',
+    DayState.today => 'today',
+    DayState.future => 'still to come',
+  };
+}
+
+/// The Mombo week strip, carrying Curre's Prooflight streak: past proof
+/// days wear an ember ring (a sun rose), a day a cloud day covered wears a
+/// soft cloud, today wears the session's sky like the check-in card below
+/// it, and a quiet day is simply unlit. [todayLit] (0–1) turns today from
+/// open to a proof day, for the moment today's sun rises. Display only in
+/// core: the days are not buttons.
+class WeekStrip extends StatelessWidget {
+  const WeekStrip({super.key, required this.days, this.session = Session.morning, this.todayLit = 0});
+
+  final List<WeekDay> days;
+  final Session session;
+  final double todayLit;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).extension<CurreColors>()!;
+    final t = Theme.of(context).extension<CurreType>()!;
+    final sky = c.sky(session);
+    // One line of caption at the reader's text size: every label sits in
+    // the same height, so the day marks below stay in one row.
+    final labelHeight = MediaQuery.textScalerOf(context).scale(t.caption.fontSize ?? 13) * (t.caption.height ?? 1.4);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final col = box.maxWidth / days.length;
+        final d = (col - 6).clamp(36.0, 44.0);
+        return Row(
+          children: [
+            for (final day in days)
+              Expanded(
+                child: Semantics(
+                  label: [
+                    '${day.label} ${day.date}',
+                    if (day._today) 'today',
+                    if (day.state == DayState.today) todayLit >= 1 ? 'proof day' : 'still open' else day.description,
+                  ].join(', '),
+                  excludeSemantics: true,
+                  child: Column(
+                    children: [
+                      // Large text shrinks to its column instead of running
+                      // into the next day.
+                      SizedBox(
+                        height: labelHeight,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              day.label,
+                              maxLines: 1,
+                              style: t.caption.copyWith(color: day._today ? c.ink : c.ink3).weight(day._today ? 700 : 520),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _DayDot(
+                        day: day,
+                        diameter: d,
+                        colors: c,
+                        type: t,
+                        sky: sky,
+                        lit: day.state == DayState.today ? todayLit : 0,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  const _DayDot({
+    required this.day,
+    required this.diameter,
+    required this.colors,
+    required this.type,
+    required this.sky,
+    required this.lit,
+  });
+
+  final WeekDay day;
+  final double diameter;
+  final CurreColors colors;
+  final CurreType type;
+  final Pair sky;
+  final double lit;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colors;
+    if (day.state == DayState.cloud) {
+      return CloudDayMark(size: diameter, label: '${day.date}', semanticLabel: null);
+    }
+    // A proof day wears an ember ring (a sun that rose), quiet enough that
+    // the check-in card below stays the loudest thing on the screen.
+    final proof = BorderSide(color: c.ember, width: 2.5);
+    final (Color fill, Color fg, BorderSide side) = switch (day.state) {
+      DayState.proof => (c.raised, c.ink, proof),
+      DayState.pending => (c.raised, c.ink2, BorderSide(color: c.ember.withValues(alpha: .38), width: 2.5)),
+      DayState.cloud || DayState.quiet => (c.raised, c.ink2, BorderSide(color: c.hairline)),
+      DayState.future => (Colors.transparent, c.ink3, BorderSide(color: c.hairline)),
+      DayState.today => (
+        Color.lerp(sky.bg, c.raised, lit)!,
+        Color.lerp(sky.fg, c.ink, lit)!,
+        BorderSide(color: Color.lerp(sky.fg, c.ember, lit)!, width: lit > 0 ? 2.5 : 2),
+      ),
+    };
+    // A short pop as today lights up, then it settles.
+    final pop = lit <= 0 || lit >= 1 ? 1.0 : 1 + .14 * (lit < .5 ? lit * 2 : (1 - lit) * 2);
+    return Transform.scale(
+      scale: pop,
+      child: Container(
+        width: diameter,
+        height: diameter,
+        alignment: Alignment.center,
+        decoration: ShapeDecoration(
+          color: fill,
+          shape: CircleBorder(side: side),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(diameter * .14),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${day.date}',
+              maxLines: 1,
+              style: type.label.weight(day.state == DayState.today ? 720 : 600).copyWith(color: fg),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A count that rolls from [from] to [to] as [t] goes 0–1 (the `tick`
+/// token: a short decelerating roll).
+class RollingCount extends StatelessWidget {
+  const RollingCount({super.key, required this.from, required this.to, required this.t, required this.style});
+
+  final int from;
+  final int to;
+  final double t;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    // The window is one line of the number as it is drawn, large text
+    // included, so the roll never clips the digits.
+    final h = MediaQuery.textScalerOf(context).scale(style.fontSize ?? 60) * 1.1;
+    final shown = t >= .5 ? to : from;
+    final width = '${math.max(from, to)}'.length;
+    return Semantics(
+      label: ProofDaysLabel.text(shown),
+      excludeSemantics: true,
+      child: ClipRect(
+        child: SizedBox(
+          height: h,
+          child: Stack(
+            children: [
+              // Keeps the box as wide as the longer number while both move.
+              Opacity(opacity: 0, child: Text('8' * width, style: style)),
+              if (from != to)
+                Transform.translate(
+                  offset: Offset(0, -t * h),
+                  child: Text('$from', style: style),
+                ),
+              Transform.translate(
+                offset: Offset(0, from == to ? 0 : (1 - t) * h),
+                child: Text('$to', style: style),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

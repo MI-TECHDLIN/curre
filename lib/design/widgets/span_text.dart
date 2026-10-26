@@ -62,7 +62,9 @@ class SpanText extends StatelessWidget {
     var cursor = 0;
 
     for (final h in sorted) {
-      final start = h.start.clamp(0, n);
+      // A highlight that starts inside an earlier one keeps only what is
+      // left of it, so overlapping spans never repeat text.
+      final start = h.start.clamp(cursor, n);
       final end = h.end.clamp(start, n);
       if (start > cursor) {
         runs.add((String.fromCharCodes(runes.sublist(cursor, start)), null));
