@@ -381,6 +381,21 @@ void main() {
     expect(find.text('Which apps will your plans need?'), findsOneWidget);
   });
 
+  testWidgets('not now saves every quiet nudge as off', (tester) async {
+    final controller = newUser();
+    await pump(tester, controller);
+    await walkTo(tester, 'Want a quiet nudge when time’s up?');
+
+    await tapText(tester, 'Not now');
+
+    expect(find.text('Which apps will your plans need?'), findsOneWidget);
+    final use = find.textContaining(RegExp(r'^Use these \d+ apps$'));
+    await tapText(tester, tester.widget<Text>(use).data!);
+    await tapText(tester, 'I’ll plan later');
+
+    expect(controller.settings.hasAnyNudges, isFalse);
+  });
+
   testWidgets('plans need at least two apps', (tester) async {
     final controller = newUser();
     await pump(tester, controller);

@@ -36,6 +36,8 @@ class PlanBuildResult {
   final PlanFallbackReason? fallbackReason;
 }
 
+enum AppInventoryState { ready, loading, failed }
+
 /// Screen-facing state over Curre's phone-owned core.
 ///
 /// The controller deliberately keeps network decisions separate from local
@@ -63,6 +65,7 @@ class CurreController extends ChangeNotifier {
     List<Plan> historyPlans = const <Plan>[],
     List<Grant> historyGrants = const <Grant>[],
     List<Attempt> historyAttempts = const <Attempt>[],
+    this.appInventoryState = AppInventoryState.ready,
     this.onboardingComplete = false,
     this.hiddenAppsTipDismissed = false,
     DateTime Function()? now,
@@ -97,13 +100,21 @@ class CurreController extends ChangeNotifier {
     }
 
     var apps = <LaunchableApp>[];
+    var appInventoryState = AppInventoryState.ready;
     try {
       apps = await launcher.listApps();
     } on Object {
-      // Method channels are absent on web; sample labels keep review builds
-      // navigable without pretending that they are installed Android apps.
+      appInventoryState = AppInventoryState.failed;
     }
-    if (apps.isEmpty) apps = fallbackApps;
+    if (apps.isEmpty && usesReviewInventoryFixtures()) {
+      // The Android app never substitutes fixture labels for installed apps.
+      // Web and desktop review builds have no launcher channel, so their
+      // explicit fixture inventory remains useful for gallery review.
+      apps = fallbackApps;
+      appInventoryState = AppInventoryState.ready;
+    } else if (apps.isEmpty) {
+      appInventoryState = AppInventoryState.failed;
+    }
 
     final now = DateTime.now();
     final settings = store?.loadSettings() ?? Settings();
@@ -138,6 +149,7 @@ class CurreController extends ChangeNotifier {
       historyPlans: historyPlans,
       historyGrants: historyGrants,
       historyAttempts: historyAttempts,
+      appInventoryState: appInventoryState,
       onboardingComplete: store?.isOnboardingComplete ?? false,
       hiddenAppsTipDismissed: store?.isHiddenAppsTipDismissed ?? false,
     );
@@ -170,6 +182,17 @@ class CurreController extends ChangeNotifier {
     LaunchableApp(packageName: 'com.netflix.mediaclient', label: 'Netflix'),
   ];
 
+  @visibleForTesting
+  static bool usesReviewInventoryFixtures({
+    bool? web,
+    TargetPlatform? platform,
+    bool? debugMode,
+  }) {
+    if (web ?? kIsWeb) return true;
+    return (debugMode ?? kDebugMode) &&
+        (platform ?? defaultTargetPlatform) != TargetPlatform.android;
+  }
+
   final DoorPlatform launcher;
   final CurreLocalStore? store;
   final HomePlatformGateway homePlatform;
@@ -191,6 +214,7 @@ class CurreController extends ChangeNotifier {
   List<Plan> historyPlans;
   List<Grant> historyGrants;
   List<Attempt> historyAttempts;
+  AppInventoryState appInventoryState;
   bool onboardingComplete;
 
   /// Whether the Hidden apps explainer has been put away for good.
@@ -373,6 +397,7 @@ class CurreController extends ChangeNotifier {
     required Set<String> essentials,
     required Set<String> candidates,
     LocalTime? morningStart,
+    bool? nudgesEnabled,
     String? firstIntention,
   }) async {
     final next = settings.copyWith(
@@ -387,6 +412,10 @@ class CurreController extends ChangeNotifier {
               ...settings.sessionStarts,
               SessionName.morning: morningStart,
             },
+      checkInNudges: nudgesEnabled,
+      planEndingNudges: nudgesEnabled,
+      unlockTimeUpNudges: nudgesEnabled,
+      proofNudges: nudgesEnabled,
     );
     // Save first: if the phone can't store the answers, onboarding stays
     // open with everything still filled in, ready to try again.
@@ -399,7 +428,7 @@ class CurreController extends ChangeNotifier {
     onboardingComplete = true;
     await _syncGentleInterceptPolicy();
     try {
-      await _scheduleSessionReminders();
+      await _syncReminderSettings();
     } on Object {
       // Reminders are optional; onboarding is already saved.
     }
@@ -410,10 +439,12 @@ class CurreController extends ChangeNotifier {
   /// they were and throws, so the screen can say so.
   Future<void> updateSettings(Settings value) async {
     await store?.saveSettings(value);
+    final unlockNudgeChanged =
+        settings.unlockTimeUpNudges != value.unlockTimeUpNudges;
     settings = value;
     await _syncGentleInterceptPolicy();
     try {
-      await _scheduleSessionReminders();
+      await _syncReminderSettings(syncGrantNotifications: unlockNudgeChanged);
     } on Object {
       // Settings stay local and authoritative if notifications are unavailable.
     }
@@ -618,19 +649,44 @@ class CurreController extends ChangeNotifier {
   Future<bool> requestNotifications() async {
     try {
       final allowed = await notifications?.requestPermission() ?? true;
-      if (allowed) await _scheduleSessionReminders();
+      if (allowed) await _syncReminderSettings();
       return allowed;
     } on Object {
       return false;
     }
   }
 
+  Future<void> retryAppInventory() async {
+    appInventoryState = AppInventoryState.loading;
+    notifyListeners();
+    try {
+      final found = await launcher.listApps();
+      if (found.isEmpty) {
+        appInventoryState = AppInventoryState.failed;
+      } else {
+        apps = found;
+        appInventoryState = AppInventoryState.ready;
+        _icons.clear();
+        _staticShortcuts.clear();
+        _conversationShortcuts.clear();
+      }
+    } on Object {
+      appInventoryState = AppInventoryState.failed;
+    }
+    notifyListeners();
+  }
+
   Future<void> refresh() async {
     try {
       final found = await launcher.listApps();
-      if (found.isNotEmpty) apps = found;
+      if (found.isNotEmpty) {
+        apps = found;
+        appInventoryState = AppInventoryState.ready;
+      } else if (apps.isEmpty) {
+        appInventoryState = AppInventoryState.failed;
+      }
     } on Object {
-      // Keep the last local snapshot.
+      if (apps.isEmpty) appInventoryState = AppInventoryState.failed;
     }
     final instant = now;
     if (store != null) {
@@ -807,7 +863,7 @@ class CurreController extends ChangeNotifier {
     await store?.appendPlanHistory(plan, now: now);
     await _syncGentleInterceptPolicy();
     try {
-      await reminders?.schedulePlanReminders(plan);
+      await reminders?.schedulePlanReminders(plan, settings: settings);
     } on Object {
       // The plan is authoritative; reminder delivery is best effort.
     }
@@ -816,16 +872,31 @@ class CurreController extends ChangeNotifier {
 
   Future<void> _prepareReminders() async {
     try {
-      await _scheduleSessionReminders();
-      final plan = activePlan;
-      if (plan != null) await reminders?.schedulePlanReminders(plan);
+      await _syncReminderSettings();
     } on Object {
       // Notifications are optional on platforms without Android channels.
     }
   }
 
-  Future<void> _scheduleSessionReminders() async {
+  Future<void> _syncReminderSettings({
+    bool syncGrantNotifications = true,
+  }) async {
     await reminders?.scheduleSessionReminders(settings);
+    for (final plan in plans) {
+      await reminders?.schedulePlanReminders(plan, settings: settings);
+    }
+    if (!syncGrantNotifications) return;
+    for (final grant in activeGrants) {
+      if (!settings.unlockTimeUpNudges) {
+        await notifications?.endGrant(grant.packageName);
+        continue;
+      }
+      await notifications?.startGrant(
+        grant: grant,
+        appLabel: appFor(grant.packageName)?.label ?? grant.packageName,
+        settings: settings,
+      );
+    }
   }
 
   String destinationFor(PlannedApp app, Plan plan) {
@@ -1144,6 +1215,7 @@ class CurreController extends ChangeNotifier {
               appLabel: app.label,
               planIntention: activePlan?.intention,
               reason: reason,
+              threshold: settings.threshold,
               shortcutLabels: shortcuts
                   .map((shortcut) => shortcut.shortLabel)
                   .toSet()
@@ -1195,11 +1267,10 @@ class CurreController extends ChangeNotifier {
       fallbackUnlockMinutes: settings.unlockMinutes,
     );
     await _saveGrant(grant, app.label);
-    await _logAttempt(
+    await _markLatestAttemptOverridden(
       app: app,
       reason: reason,
       response: response,
-      overridden: true,
     );
     final launched = await plainLaunch(app.packageName);
     return DoorLaunchResult(
@@ -1249,7 +1320,11 @@ class CurreController extends ChangeNotifier {
     // event from that launch could race the new grant and reopen the gate.
     await _syncGentleInterceptPolicy();
     try {
-      await notifications?.startGrant(grant: grant, appLabel: appLabel);
+      await notifications?.startGrant(
+        grant: grant,
+        appLabel: appLabel,
+        settings: settings,
+      );
     } on Object {
       // Stored expiry is authoritative; a notification is only a nudge.
     }
@@ -1265,7 +1340,7 @@ class CurreController extends ChangeNotifier {
     final highlights = <SourceSpan>[
       ?response.person,
       ?response.target,
-      ?_literalSpan(reason, response.guard?.quote.text),
+      ?literalSpanInSource(reason, response.guard?.quote.text),
     ];
     final attempt = Attempt(
       at: now,
@@ -1279,6 +1354,43 @@ class CurreController extends ChangeNotifier {
     );
     historyAttempts = <Attempt>[...historyAttempts, attempt];
     await store?.appendAttempt(attempt, now: now);
+  }
+
+  Future<void> _markLatestAttemptOverridden({
+    required LaunchableApp app,
+    required String reason,
+    required UnlockResponse response,
+  }) async {
+    final index = historyAttempts.lastIndexWhere(
+      (attempt) =>
+          attempt.packageName == app.packageName &&
+          attempt.reason == reason &&
+          attempt.outcome == response.outcome &&
+          !attempt.overridden,
+    );
+    if (index < 0) {
+      await _logAttempt(
+        app: app,
+        reason: reason,
+        response: response,
+        overridden: true,
+      );
+      return;
+    }
+
+    final previous = historyAttempts[index];
+    historyAttempts[index] = Attempt(
+      at: previous.at,
+      packageName: previous.packageName,
+      outcome: previous.outcome,
+      confidence: previous.confidence,
+      overridden: true,
+      kind: previous.kind,
+      reason: previous.reason,
+      highlights: previous.highlights,
+    );
+    await store?.saveAttempts(historyAttempts, now: now);
+    notifyListeners();
   }
 
   String? _shortcutIdForLabel(List<AppShortcut> shortcuts, String? label) {
@@ -1309,16 +1421,4 @@ class CurreController extends ChangeNotifier {
     unawaited(gentleIntercept.dispose());
     super.dispose();
   }
-}
-
-SourceSpan? _literalSpan(String source, String? literal) {
-  if (literal == null || literal.isEmpty) return null;
-  final utf16Start = source.indexOf(literal);
-  if (utf16Start < 0) return null;
-  final start = source.substring(0, utf16Start).runes.length;
-  return SourceSpan(
-    text: literal,
-    start: start,
-    end: start + literal.runes.length,
-  );
 }

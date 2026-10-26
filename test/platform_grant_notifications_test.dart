@@ -84,6 +84,23 @@ void main() {
     expect(gateway.scheduled, isEmpty);
   });
 
+  test('saved time-up choice cancels an existing grant notice', () async {
+    final gateway = _FakeGrantNotificationGateway();
+    final service = GrantNotificationService(gateway, now: () => now);
+
+    await service.startGrant(
+      grant: grant,
+      appLabel: 'Instagram',
+      settings: Settings(unlockTimeUpNudges: false),
+    );
+
+    expect(gateway.cancelled, <int>[
+      notificationIdForPackage(grant.packageName),
+    ]);
+    expect(gateway.shown, isEmpty);
+    expect(gateway.scheduled, isEmpty);
+  });
+
   test(
     'requests notification permission only when the caller chooses',
     () async {

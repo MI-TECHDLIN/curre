@@ -473,7 +473,8 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             decorationThickness: 2,
           ),
         ),
-      if (response.guard?.quote case final span?)
+      if (literalSpanInSource(_reason.text, response.guard?.quote.text)
+          case final span?)
         SpanHighlight(
           span.start,
           span.end,

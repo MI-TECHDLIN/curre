@@ -53,3 +53,18 @@ String sliceExtractSpan(String source, SourceSpan span) {
   }
   return value;
 }
+
+/// Finds a returned literal inside [source] and reports its position in
+/// Unicode code points. Guard offsets refer to a larger composed string, so
+/// callers must locate [literal] itself before highlighting the user's text.
+SourceSpan? literalSpanInSource(String source, String? literal) {
+  if (literal == null || literal.isEmpty) return null;
+  final utf16Start = source.indexOf(literal);
+  if (utf16Start < 0) return null;
+  final start = source.substring(0, utf16Start).runes.length;
+  return SourceSpan(
+    text: literal,
+    start: start,
+    end: start + literal.runes.length,
+  );
+}

@@ -9,6 +9,7 @@ import 'app_choice_screen.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'history_screen.dart';
+import 'privacy_details_screen.dart';
 import 'voice_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -174,11 +175,31 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Quiet nudges'),
                 const SizedBox(height: CurreSpace.s2),
+                _ReminderSettingsCard(
+                  settings: settings,
+                  onCheckInChanged: (value) =>
+                      _saveNudges(settings.copyWith(checkInNudges: value)),
+                  onPlanEndingChanged: (value) =>
+                      _saveNudges(settings.copyWith(planEndingNudges: value)),
+                  onUnlockTimeUpChanged: (value) =>
+                      _saveNudges(settings.copyWith(unlockTimeUpNudges: value)),
+                  onProofChanged: (value) =>
+                      _saveNudges(settings.copyWith(proofNudges: value)),
+                  onAllChanged: (value) => _saveNudges(
+                    settings.copyWith(
+                      checkInNudges: value,
+                      planEndingNudges: value,
+                      unlockTimeUpNudges: value,
+                      proofNudges: value,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: CurreSpace.s2),
                 _SettingsTile(
                   glyph: CurreGlyphKind.notify,
-                  title: 'Turn on quiet nudges',
-                  subtitle: 'A silent note when time you asked for is up. No sound, no buzz.',
-                  onTap: _askForNudges,
+                  title: 'Allow notifications',
+                  subtitle: 'Android controls whether the quiet nudges you choose can appear',
+                  onTap: _askForNotificationPermission,
                 ),
                 const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Voice typing'),
@@ -216,6 +237,16 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => HistoryScreen(controller: controller),
+                    ),
+                  ),
+                ),
+                _SettingsTile(
+                  glyph: CurreGlyphKind.privacy,
+                  title: 'Privacy details',
+                  subtitle: 'What is read online, what stays here and when online copies are deleted',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PrivacyDetailsScreen(),
                     ),
                   ),
                 ),
@@ -331,6 +362,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     controller.settings.copyWith(quietNotificationsFromHiddenApps: enabled),
   );
 
+  void _saveNudges(Settings next) => unawaited(_save(next));
+
   Future<void> _requestUsageAccess() async {
     final granted = await controller.requestUsageAccess();
     if (!mounted) return;
@@ -364,12 +397,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) setState(() {});
   }
 
-  Future<void> _askForNudges() async {
+  Future<void> _askForNotificationPermission() async {
     final allowed = await controller.requestNotifications();
     if (!mounted) return;
     showCurreSnack(
       context,
-      allowed ? 'Quiet nudges are on.' : 'Nudges are off. To turn them on, allow notifications for Curre in your phone’s Settings.',
+      allowed
+          ? 'Notifications are allowed. Curre will use the quiet nudge choices above.'
+          : 'Notifications are not allowed. You can allow them for Curre in your phone’s Settings.',
     );
   }
 
@@ -592,6 +627,122 @@ class _AccessCard extends StatelessWidget {
   }
 }
 
+class _ReminderSettingsCard extends StatelessWidget {
+  const _ReminderSettingsCard({
+    required this.settings,
+    required this.onCheckInChanged,
+    required this.onPlanEndingChanged,
+    required this.onUnlockTimeUpChanged,
+    required this.onProofChanged,
+    required this.onAllChanged,
+  });
+
+  final Settings settings;
+  final ValueChanged<bool> onCheckInChanged;
+  final ValueChanged<bool> onPlanEndingChanged;
+  final ValueChanged<bool> onUnlockTimeUpChanged;
+  final ValueChanged<bool> onProofChanged;
+  final ValueChanged<bool> onAllChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    return Material(
+      color: colors.raised,
+      shape: RoundedRectangleBorder(
+        borderRadius: CurreShape.md,
+        side: BorderSide(color: colors.hairline),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          CurreSpace.s4,
+          CurreSpace.s3,
+          CurreSpace.s4,
+          CurreSpace.s4,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Choose which silent notes Curre sends. Turning one off also cancels any of that kind already waiting.',
+              style: type.caption.copyWith(color: colors.ink2),
+            ),
+            const SizedBox(height: CurreSpace.s2),
+            _ReminderSwitch(
+              key: const Key('nudge-check-in'),
+              title: 'Plan your day',
+              subtitle: 'When a new part of your day begins',
+              value: settings.checkInNudges,
+              onChanged: onCheckInChanged,
+            ),
+            _ReminderSwitch(
+              key: const Key('nudge-plan-ending'),
+              title: 'Plan ending',
+              subtitle: 'Ten minutes before your plan ends',
+              value: settings.planEndingNudges,
+              onChanged: onPlanEndingChanged,
+            ),
+            _ReminderSwitch(
+              key: const Key('nudge-unlock-time-up'),
+              title: 'App time up',
+              subtitle: 'When time for a hidden app runs out',
+              value: settings.unlockTimeUpNudges,
+              onChanged: onUnlockTimeUpChanged,
+            ),
+            _ReminderSwitch(
+              key: const Key('nudge-proof'),
+              title: 'Add proof',
+              subtitle: 'A few minutes after your plan ends',
+              value: settings.proofNudges,
+              onChanged: onProofChanged,
+            ),
+            const SizedBox(height: CurreSpace.s2),
+            CurreSecondaryButton(
+              label: settings.hasAnyNudges
+                  ? 'Turn all quiet nudges off'
+                  : 'Turn all quiet nudges on',
+              onPressed: () => onAllChanged(!settings.hasAnyNudges),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReminderSwitch extends StatelessWidget {
+  const _ReminderSwitch({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<CurreType>()!;
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    return SwitchListTile.adaptive(
+      contentPadding: EdgeInsets.zero,
+      title: Text(title, style: type.label),
+      subtitle: Text(
+        subtitle,
+        style: type.caption.copyWith(color: colors.ink3),
+      ),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
 class _StrictnessCard extends StatelessWidget {
   const _StrictnessCard({
     required this.value,
@@ -628,8 +779,8 @@ class _StrictnessCard extends StatelessWidget {
             Slider(
               value: value,
               min: .5,
-              max: .95,
-              divisions: 9,
+              max: .9,
+              divisions: 8,
               label: wordFor(value),
               semanticFormatterCallback: wordFor,
               onChanged: onChanged,

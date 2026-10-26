@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 
 /// A highlighted span of [SpanText], given as Unicode **code-point**
-/// offsets into the text, end exclusive — the same offsets Clocked's
-/// Extract and Guard return (differentiator report §6.3: `Span = {text,
-/// start, end}` within the source text, code points). [style] is merged
-/// over the base style for the run between [start] and [end].
+/// offsets into the text, end exclusive — the offsets Clocked's Extract
+/// returns (differentiator report §6.3: `Span = {text, start, end}` within
+/// the source text, code points). Guard offsets index a composed server
+/// string, so callers locate its literal quote before building one of these.
+/// [style] is merged over the base style for the run between [start] and [end].
 @immutable
 class SpanHighlight {
-  const SpanHighlight(this.start, this.end, {required this.style, this.semanticsLabel, this.after});
+  const SpanHighlight(
+    this.start,
+    this.end, {
+    required this.style,
+    this.semanticsLabel,
+    this.after,
+  });
 
   /// Code-point offset of the first highlighted character.
   final int start;
@@ -52,7 +59,10 @@ class SpanText extends StatelessWidget {
 
   /// Splits [text] into runs of (text, highlight-or-null) by code-point
   /// offset. Exposed for testing without needing a widget tree.
-  static List<(String, SpanHighlight?)> buildRuns(String text, List<SpanHighlight> highlights) {
+  static List<(String, SpanHighlight?)> buildRuns(
+    String text,
+    List<SpanHighlight> highlights,
+  ) {
     final runes = text.runes.toList(growable: false);
     final n = runes.length;
     if (n == 0 || highlights.isEmpty) return [(text, null)];
@@ -89,7 +99,11 @@ class SpanText extends StatelessWidget {
       TextSpan(
         children: [
           for (final (runText, highlight) in runs) ...[
-            TextSpan(text: runText, style: highlight?.style, semanticsLabel: highlight?.semanticsLabel),
+            TextSpan(
+              text: runText,
+              style: highlight?.style,
+              semanticsLabel: highlight?.semanticsLabel,
+            ),
             if (highlight?.after != null) highlight!.after!,
           ],
         ],

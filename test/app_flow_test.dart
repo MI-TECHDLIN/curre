@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:curre/app/app_widgets.dart';
 import 'package:curre/app/checkin_screen.dart';
@@ -15,6 +14,7 @@ import 'package:curre/design/design.dart';
 import 'package:curre/doors/door_models.dart';
 import 'package:curre/main.dart';
 import 'package:curre/platform/home_refresh.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -29,6 +29,76 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
   }
+
+  test('sample app inventory is never used on Android', () {
+    expect(
+      CurreController.usesReviewInventoryFixtures(
+        web: false,
+        platform: TargetPlatform.android,
+        debugMode: true,
+      ),
+      isFalse,
+    );
+    expect(
+      CurreController.usesReviewInventoryFixtures(
+        web: true,
+        platform: TargetPlatform.android,
+        debugMode: false,
+      ),
+      isTrue,
+    );
+    expect(
+      CurreController.usesReviewInventoryFixtures(
+        web: false,
+        platform: TargetPlatform.linux,
+        debugMode: true,
+      ),
+      isTrue,
+    );
+    expect(
+      CurreController.usesReviewInventoryFixtures(
+        web: false,
+        platform: TargetPlatform.linux,
+        debugMode: false,
+      ),
+      isFalse,
+    );
+  });
+
+  testWidgets('an app inventory failure shows a retry, then real apps', (
+    tester,
+  ) async {
+    await phone(tester);
+    final installed = <LaunchableApp>[
+      const LaunchableApp(
+        packageName: 'com.android.settings',
+        label: 'Settings',
+      ),
+    ];
+    final platform = _FakeDoorPlatform(installed);
+    final controller = CurreController(
+      launcher: platform,
+      apps: const <LaunchableApp>[],
+      appInventoryState: AppInventoryState.failed,
+      speech: fakeSpeech(),
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await tester.pump();
+
+    expect(find.text('Couldn’t read your apps'), findsOneWidget);
+    expect(find.text('Spotify'), findsNothing);
+    expect(controller.apps, isEmpty);
+
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    expect(find.text('Couldn’t read your apps'), findsNothing);
+    expect(controller.apps, installed);
+    expect(controller.appInventoryState, AppInventoryState.ready);
+  });
 
   testWidgets('Home has the fixed dock and profile sheet', (tester) async {
     await phone(tester);
@@ -722,6 +792,48 @@ void main() {
     expect(platform.launches, 0);
   });
 
+  test(
+    'a finished wait updates its attempt instead of adding another',
+    () async {
+      final api = CurreApiClient(
+        baseUrl: Uri.parse('https://curre.test'),
+        appKey: 'test-key',
+        httpClient: MockClient((request) async {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'outcome': 'later',
+              'kind': 'browse',
+              'confidence': 0.88,
+            }),
+            200,
+          );
+        }),
+      );
+      final platform = _FakeDoorPlatform(CurreController.fallbackApps);
+      final controller = _controller(platform: platform, api: api);
+      addTearDown(controller.dispose);
+      final app = controller.apps.firstWhere(
+        (item) => item.label == 'Instagram',
+      );
+      const reason = 'just checking today’s posts';
+
+      final response = await controller.judgeUnlock(app: app, reason: reason);
+      expect(controller.historyAttempts, hasLength(1));
+      expect(controller.historyAttempts.single.overridden, isFalse);
+
+      await controller.finishOverride(
+        app: app,
+        reason: reason,
+        response: response,
+      );
+
+      expect(controller.historyAttempts, hasLength(1));
+      expect(controller.historyAttempts.single.overridden, isTrue);
+      expect(controller.historyAttempts.single.outcome, UnlockOutcome.later);
+      expect(platform.launches, 1);
+    },
+  );
+
   testWidgets('an open result grants, launches and returns from the gate', (
     tester,
   ) async {
@@ -830,6 +942,7 @@ void main() {
         home: SettingsScreen(controller: controller),
       ),
     );
+    await tester.pump();
     expect(find.text('Curre settings'), findsOneWidget);
     expect(find.text('Judge demo mode'), findsNothing);
     for (final section in <String>[
@@ -844,12 +957,16 @@ void main() {
       'Your home screen',
       'History and privacy',
     ]) {
-      await tester.scrollUntilVisible(
-        find.text(section),
-        300,
-        scrollable: find.byType(Scrollable).first,
+      final heading = find.text(section);
+      for (var i = 0; i < 80 && heading.evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -240));
+        await tester.pump();
+      }
+      expect(
+        heading,
+        findsOneWidget,
+        reason: 'Missing Settings section $section',
       );
-      expect(find.text(section), findsOneWidget);
     }
     expect(find.text('Under the hood'), findsNothing);
     expect(find.textContaining('/v1/'), findsNothing);

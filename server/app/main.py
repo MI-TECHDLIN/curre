@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -28,6 +29,16 @@ from app.rate_limit import RateLimiter, client_ip
 
 logger = logging.getLogger("curre.server")
 logging.basicConfig(level=logging.INFO)
+
+MIN_DECIDE_THRESHOLD = 0.5
+MAX_DECIDE_THRESHOLD = 0.9
+
+
+def _bounded_decide_threshold(value: float | None, fallback: float) -> float:
+    selected = value if value is not None and math.isfinite(value) else fallback
+    if not math.isfinite(selected):
+        selected = 0.7
+    return max(MIN_DECIDE_THRESHOLD, min(MAX_DECIDE_THRESHOLD, selected))
 
 
 @asynccontextmanager
@@ -120,7 +131,7 @@ async def unlock(
         req.plan_intention,
         req.reason,
         req.shortcut_labels,
-        settings.decide_threshold,
+        _bounded_decide_threshold(req.threshold, settings.decide_threshold),
     )
     latency_ms = (time.monotonic() - start) * 1000
     credits = response.usage.credits if response.usage else None

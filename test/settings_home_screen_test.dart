@@ -107,6 +107,69 @@ void main() {
     });
   });
 
+  group('Quiet nudges in settings', () {
+    testWidgets('saves each kind and keeps Android permission separate', (
+      tester,
+    ) async {
+      final notifications = FakeNotificationGateway();
+      final reminderGateway = _RecordingReminderGateway();
+      final controller = fakeController(
+        notifications: notifications,
+        reminders: LocalReminderService(reminderGateway),
+      );
+      await showSettings(tester, controller);
+      await tester.scrollUntilVisible(
+        find.text('Quiet nudges'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pump();
+
+      expect(controller.settings.checkInNudges, isTrue);
+      await tester.tap(find.byKey(const Key('nudge-check-in')));
+      await tester.pumpAndSettle();
+      expect(controller.settings.checkInNudges, isFalse);
+      expect(controller.settings.planEndingNudges, isTrue);
+      expect(reminderGateway.cancelled, containsAll(<int>[1101, 1102, 1103]));
+      expect(reminderGateway.scheduled, isEmpty);
+      expect(notifications.requests, 0);
+
+      await tapText(tester, 'Turn all quiet nudges off');
+      expect(controller.settings.hasAnyNudges, isFalse);
+      expect(find.text('Turn all quiet nudges on'), findsOneWidget);
+      expect(notifications.requests, 0);
+
+      await tapText(tester, 'Allow notifications');
+      expect(notifications.requests, 1);
+      expect(
+        find.text(
+          'Notifications are allowed. Curre will use the quiet nudge choices above.',
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  testWidgets('opens the short privacy details from settings', (tester) async {
+    final controller = fakeController();
+    await showSettings(tester, controller);
+    await tester.scrollUntilVisible(
+      find.text('Privacy details'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tapText(tester, 'Privacy details');
+
+    expect(find.text('How long a copy may remain'), findsOneWidget);
+    expect(
+      find.textContaining(
+        'Curre keeps no online copy. The AI service that reads your words may keep a successful answer',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('What stays here'), findsOneWidget);
+  });
+
   group('Switch to another home screen', () {
     testWidgets('explains kindly and opens Android’s home screen choice', (
       tester,
@@ -221,4 +284,20 @@ void main() {
       );
     });
   });
+}
+
+class _RecordingReminderGateway implements ReminderNotificationGateway {
+  final List<int> cancelled = <int>[];
+  final List<CurreReminder> scheduled = <CurreReminder>[];
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  Future<void> cancelReminder(int id) async => cancelled.add(id);
+
+  @override
+  Future<void> scheduleReminder(CurreReminder reminder) async {
+    scheduled.add(reminder);
+  }
 }

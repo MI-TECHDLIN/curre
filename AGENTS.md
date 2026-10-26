@@ -76,6 +76,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   answers are both under `result["fields"]`, where a Fill `choice` or
   `multiselect` field's chosen value(s) are `["value"]` instead. See the
   module docstring in `server/app/clocked_pipeline.py` for the full set.
+  Guard quote offsets index the server's composed text, not the user's
+  reason: highlight with `literalSpanInSource` (`lib/core/span.dart`).
 
 ## Maintaining this file
 

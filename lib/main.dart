@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'app/app_widgets.dart';
 import 'app/checkin_screen.dart';
 import 'app/completion_sheet.dart';
 import 'app/curre_controller.dart';
@@ -263,9 +264,67 @@ class _CurreRootState extends State<_CurreRoot> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) => controller.onboardingComplete
-          ? HomeScreen(controller: controller)
-          : OnboardingScreen(controller: controller),
+      builder: (context, _) {
+        if (controller.appInventoryState != AppInventoryState.ready) {
+          return _AppInventoryRetry(controller: controller);
+        }
+        return controller.onboardingComplete
+            ? HomeScreen(controller: controller)
+            : OnboardingScreen(controller: controller);
+      },
+    );
+  }
+}
+
+class _AppInventoryRetry extends StatelessWidget {
+  const _AppInventoryRetry({required this.controller});
+
+  final CurreController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final loading = controller.appInventoryState == AppInventoryState.loading;
+    return Scaffold(
+      backgroundColor: colors.paper,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(CurreSpace.gutter),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CurreGlyph(
+                    CurreGlyphKind.unavailable,
+                    size: 42,
+                    color: colors.ink2,
+                  ),
+                  const SizedBox(height: CurreSpace.s4),
+                  Text(
+                    'Couldn’t read your apps',
+                    style: type.headline,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: CurreSpace.s2),
+                  Text(
+                    'Curre couldn’t read the apps installed on this phone. Try again, and your real apps will appear here.',
+                    style: type.body.copyWith(color: colors.ink2),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: CurreSpace.s5),
+                  CurrePrimaryButton(
+                    label: loading ? 'Reading apps…' : 'Try again',
+                    onPressed: loading ? null : controller.retryAppInventory,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

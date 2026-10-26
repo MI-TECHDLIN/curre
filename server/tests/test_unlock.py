@@ -190,6 +190,30 @@ def test_unlock_specify_when_below_threshold(make_client):
     assert body["outcome"] == "specify"
 
 
+def test_unlock_request_threshold_changes_the_outcome_and_is_bounded(make_client):
+    async def handler(*, text, steps, **kwargs):
+        decide_fields = {"kind": decide_choice("task", 0.75)}
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": decide_fields}),
+                ok_step("task", "extract", {"fields": {}}),
+            ]
+        )
+
+    client = make_client(handler, threshold=0.65)
+
+    gentle = client.post("/v1/unlock", json=_unlock_payload(threshold=0.7))
+    strict = client.post("/v1/unlock", json=_unlock_payload(threshold=0.8))
+    clamped_low = client.post("/v1/unlock", json=_unlock_payload(threshold=-4))
+    clamped_high = client.post("/v1/unlock", json=_unlock_payload(threshold=4))
+
+    assert gentle.json()["outcome"] == "open"
+    assert strict.json()["outcome"] == "specify"
+    assert clamped_low.json()["outcome"] == "open"
+    assert clamped_high.json()["outcome"] == "specify"
+
+
 def test_unlock_flagged_on_guard_stop(make_client):
     async def handler(*, text, steps, **kwargs):
         evidence = [

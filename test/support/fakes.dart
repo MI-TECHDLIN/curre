@@ -188,10 +188,12 @@ CurreController fakeController({
   FakeHomeSettings? homeSettings,
   FakeGentleIntercept? gentleIntercept,
   FakeNotificationGateway? notifications,
+  LocalReminderService? reminders,
   CurreApiClient? api,
   CurreLocalStore? store,
   SpeechInputService? speech,
   DateTime? now,
+  AppInventoryState appInventoryState = AppInventoryState.ready,
 }) {
   final homePlatform = home ?? FakeHomePlatform();
   final launcher = platform ?? FakeDoorPlatform();
@@ -204,6 +206,7 @@ CurreController fakeController({
     notifications: notifications == null
         ? null
         : GrantNotificationService(notifications),
+    reminders: reminders,
     api: api,
     store: store,
     speech: speech ?? fakeSpeech(),
@@ -225,6 +228,7 @@ CurreController fakeController({
           },
         ),
     apps: launcher.apps,
+    appInventoryState: appInventoryState,
     onboardingComplete: onboardingComplete,
     now: () => now ?? DateTime(2026, 10, 26, 6, 40),
   );

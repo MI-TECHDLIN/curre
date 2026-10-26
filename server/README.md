@@ -46,7 +46,7 @@ cover; it is not a claim that no real `/v1/proof` call has been made.
 | --- | --- |
 | `CLOCKED_API_KEY` | Clocked API key. Never committed; `.env` is git-ignored. |
 | `APP_KEY` | Shared secret the Flutter app sends as `X-App-Key`. |
-| `DECIDE_THRESHOLD` | Confidence threshold for Decide's `kind` choice (default `0.7`). |
+| `DECIDE_THRESHOLD` | Fallback confidence threshold for Decide's `kind` choice (default `0.7`). Each unlock request may supply the user's saved threshold; the server clamps it to `0.5`-`0.9`. |
 | `PLAN_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/plan` (default `20`). |
 | `UNLOCK_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/unlock` (default `30`). |
 | `PROOF_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/proof` (default `30`). |
