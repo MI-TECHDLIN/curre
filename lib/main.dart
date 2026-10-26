@@ -3,14 +3,18 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'app/checkin_screen.dart';
+import 'app/completion_sheet.dart';
 import 'app/curre_controller.dart';
+import 'app/hidden_apps_screen.dart';
+import 'app/history_screen.dart';
 import 'app/home_screen.dart';
 import 'app/onboarding_screen.dart';
 import 'app/unlock_gate_screen.dart';
 import 'design/design.dart';
 import 'doors/door_lab_screen.dart';
 import 'gallery/gallery_screen.dart';
-import 'platform/gentle_intercept.dart';
+import 'platform/platform.dart';
 
 void main() {
   registerCurreLicenses();
@@ -22,6 +26,7 @@ class CurreApp extends StatefulWidget {
     super.key,
     this.controller,
     this.themeMode = ThemeMode.system,
+    this.onProofNotification,
   });
 
   /// Injection point for widget tests and review renders. Production creates
@@ -29,23 +34,52 @@ class CurreApp extends StatefulWidget {
   final CurreController? controller;
   final ThemeMode themeMode;
 
+  /// Test hook for observing proof-reminder routing without replacing the
+  /// production Prooflight completion sheet.
+  final Future<void> Function(String? note)? onProofNotification;
+
   @override
   State<CurreApp> createState() => _CurreAppState();
 }
 
 class _CurreAppState extends State<CurreApp> {
   Future<CurreController>? _bootstrap;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  late final StreamSubscription<CurreNotificationIntent>
+  _notificationSubscription;
+  CurreController? _resolvedController;
+  CurreNotificationIntent? _pendingNotification;
 
   @override
   void initState() {
     super.initState();
+    _notificationSubscription = CurreNotificationInbox.instance.stream.listen(
+      _handleNotification,
+    );
     if (widget.controller == null) {
       _bootstrap = CurreController.bootstrap();
+      unawaited(_rememberBootstrappedController());
+    } else {
+      _resolvedController = widget.controller;
+    }
+  }
+
+  Future<void> _rememberBootstrappedController() async {
+    try {
+      final controller = await _bootstrap!;
+      if (!mounted) return;
+      _resolvedController = controller;
+      final pending = _pendingNotification;
+      _pendingNotification = null;
+      if (pending != null) _handleNotification(pending);
+    } on Object {
+      // FutureBuilder owns the visible bootstrap error state.
     }
   }
 
   @override
   void dispose() {
+    _notificationSubscription.cancel();
     final future = _bootstrap;
     if (future != null) future.then((controller) => controller.dispose());
     super.dispose();
@@ -54,6 +88,7 @@ class _CurreAppState extends State<CurreApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Curre',
       debugShowCheckedModeBanner: false,
       themeMode: widget.themeMode,
@@ -76,6 +111,65 @@ class _CurreAppState extends State<CurreApp> {
             )
           : _CurreRoot(controller: widget.controller!),
     );
+  }
+
+  void _handleNotification(CurreNotificationIntent intent) {
+    final controller = _resolvedController;
+    if (controller == null) {
+      _pendingNotification = intent;
+      return;
+    }
+    if (!controller.onboardingComplete) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final navigator = _navigatorKey.currentState;
+      if (navigator == null) return;
+      switch (intent.destination) {
+        case CurreNotificationDestination.home:
+          navigator.popUntil((route) => route.isFirst);
+        case CurreNotificationDestination.checkIn:
+          unawaited(
+            navigator.push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => CheckinScreen(controller: controller),
+              ),
+            ),
+          );
+        case CurreNotificationDestination.hiddenApps:
+          unawaited(
+            navigator.push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => HiddenAppsScreen(controller: controller),
+              ),
+            ),
+          );
+        case CurreNotificationDestination.proof:
+          final handler = widget.onProofNotification;
+          if (handler != null) {
+            unawaited(handler(intent.note));
+            return;
+          }
+          final task = controller.proofTaskForPlan(intent.reference);
+          if (task != null) {
+            unawaited(
+              showCompletionSheet(
+                navigator.context,
+                controller: controller,
+                task: task,
+                initialNote: intent.note,
+              ),
+            );
+          } else {
+            unawaited(
+              navigator.push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => HistoryScreen(controller: controller),
+                ),
+              ),
+            );
+          }
+      }
+    });
   }
 }
 
@@ -171,17 +265,61 @@ class _BootScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final type = Theme.of(context).extension<CurreType>()!;
     final colors = Theme.of(context).extension<CurreColors>()!;
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('curre', style: type.display),
-            const SizedBox(height: CurreSpace.s4),
-            SizedBox(width: 120, child: HorizonLine(color: colors.ink)),
-          ],
+      backgroundColor: colors.paper,
+      body: const Center(child: _SplashMark()),
+    );
+  }
+}
+
+/// Matches Android's native light/dark splash mark, so Flutter's first frame
+/// replaces it without a white flash or a geometry jump.
+class _SplashMark extends StatelessWidget {
+  const _SplashMark();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final sky = colors.sky(Session.morning);
+    return Semantics(
+      image: true,
+      label: 'Curre',
+      child: ClipOval(
+        child: SizedBox.square(
+          key: const Key('curre-splash-mark'),
+          dimension: 112,
+          child: ColoredBox(
+            color: sky.bg,
+            child: Stack(
+              children: [
+                const Positioned(
+                  left: 20,
+                  top: 19,
+                  child: PeekMascot(
+                    size: 72,
+                    compact: true,
+                    animate: false,
+                    groundShadow: false,
+                    semanticLabel: null,
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 72,
+                  bottom: 0,
+                  child: ColoredBox(color: sky.bg),
+                ),
+                Positioned(
+                  left: 18,
+                  right: 18,
+                  top: 70,
+                  child: HorizonLine(color: const Color(0xFF1E1A16)),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

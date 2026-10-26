@@ -119,6 +119,29 @@ class _HomeBody extends StatelessWidget {
     final today = controller.now;
     final proof = controller.proofSummary;
     final offlineTasks = controller.offlineTasksOnHome;
+    final schedule = SessionSchedule.fromSettings(controller.settings);
+    final dayProgress = DayProgress.of(
+      plans: controller.plans,
+      uses: controller.doorUses,
+      schedule: schedule,
+      now: today,
+    );
+    final planProgress = plan == null
+        ? null
+        : PlanProgress.of(
+            plan,
+            startsAt: schedule
+                .current(plan.endsAt.subtract(const Duration(microseconds: 1)))
+                .startsAt,
+            now: today,
+            uses: controller.doorUses,
+          );
+    final plannedPackages = plan?.packages ?? const <String>{};
+    final doorCount =
+        (plan?.apps.length ?? 0) +
+        controller.activeGrants
+            .where((grant) => !plannedPackages.contains(grant.packageName))
+            .length;
     final fixedEssentialPackages = <String>{
       ?controller.phonePackage,
       ?controller.messagesPackage,
@@ -191,7 +214,11 @@ class _HomeBody extends StatelessWidget {
                   ),
                   const SizedBox(height: CurreSpace.s6),
                   if (plan == null)
-                    _CheckinPrompt(session: window.session, onTap: openCheckin)
+                    _CheckinPrompt(
+                      session: window.session,
+                      progress: dayProgress.value,
+                      onTap: openCheckin,
+                    )
                   else
                     Hero(
                       tag: 'active-plan-${plan.id}',
@@ -199,7 +226,11 @@ class _HomeBody extends StatelessWidget {
                           PlanHeroSentence(intention: plan.intention),
                       child: Material(
                         color: Colors.transparent,
-                        child: _PlanCard(plan: plan, onEdit: openCheckin),
+                        child: _PlanCard(
+                          plan: plan,
+                          progress: planProgress!.value,
+                          onEdit: openCheckin,
+                        ),
                       ),
                     ),
                   for (final grant in controller.activeGrants) ...[
@@ -212,31 +243,12 @@ class _HomeBody extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: CurreSpace.s6),
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    runSpacing: CurreSpace.s1,
-                    children: [
-                      Text('On Home', style: type.title),
-                      Text(
-                        'Tap opens the task',
-                        style: type.caption.copyWith(color: colors.ink3),
-                      ),
-                    ],
-                  ),
+                  _SightHeader(doorCount: doorCount),
                   const SizedBox(height: CurreSpace.s3),
                   if (plan == null &&
                       controller.activeGrants.isEmpty &&
                       offlineTasks.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: CurreSpace.s8,
-                      ),
-                      child: Text(
-                        'Nothing else in sight yet.',
-                        style: type.body.copyWith(color: colors.ink2),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
+                    const _EmptySightNote(),
                   if (plan != null)
                     for (final (index, app) in plan.apps.indexed) ...[
                       if (index > 0) const SizedBox(height: CurreSpace.s2),
@@ -319,9 +331,14 @@ class _HomeBody extends StatelessWidget {
 }
 
 class _CheckinPrompt extends StatelessWidget {
-  const _CheckinPrompt({required this.session, required this.onTap});
+  const _CheckinPrompt({
+    required this.session,
+    required this.progress,
+    required this.onTap,
+  });
 
   final SessionName session;
+  final double progress;
   final VoidCallback onTap;
 
   @override
@@ -329,57 +346,103 @@ class _CheckinPrompt extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final sky = colors.sky(session.designSession);
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.4;
     return Semantics(
+      key: const Key('home-checkin-card'),
       button: true,
       label: 'Plan this ${session.label}',
       excludeSemantics: true,
-      child: Material(
-        color: sky.bg,
-        borderRadius: CurreShape.dome,
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          splashFactory: NoSplash.splashFactory,
-          child: Padding(
-            padding: const EdgeInsets.all(CurreSpace.s5),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: _HomeSceneSettle(
+          builder: (context, animate) => SizedBox(
+            height: largeText ? 600 : 344,
+            child: SkyScene(
+              session: session.designSession,
+              sun: SkySun.peek,
+              sunAt: .82,
+              sunSize: largeText ? 126 : 104,
+              sunRise: switch (session) {
+                SessionName.morning => .68,
+                SessionName.afternoon => .9,
+                SessionName.evening => .56,
+              },
+              groundHeight: largeText ? 104 : 82,
+              live: true,
+              animatePeek: animate,
+              animate: animate,
+              keepClear: Rect.fromLTWH(0, 0, largeText ? 420 : 248, 246),
+              water: progress,
+              waterFrom: (progress - .16).clamp(0.0, 1.0),
+              waterLabel:
+                  'Today is ${(progress * 100).round()} percent complete',
+              borderRadius: CurreShape.lg,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      CurreGlyph(session.glyph, size: 24, color: sky.fg),
-                      const SizedBox(height: CurreSpace.s5),
+                      CurreGlyph(session.glyph, size: 23, color: sky.fg),
+                      const SizedBox(width: CurreSpace.s2),
                       Text(
-                        'What’s this ${session.label} for?',
-                        style: type.title.weight(720).copyWith(color: sky.fg),
-                      ),
-                      const SizedBox(height: CurreSpace.s2),
-                      Text(
-                        'Say it or type it in one sentence.',
-                        style: type.body.copyWith(
-                          color: sky.fg.withValues(alpha: .84),
-                        ),
+                        _capitalise(session.label),
+                        style: type.label.weight(680).copyWith(color: sky.fg),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: CurreSpace.s4),
-                Container(
-                  width: 52,
-                  height: 52,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: sky.fg,
-                    shape: BoxShape.circle,
+                  const SizedBox(height: CurreSpace.s4),
+                  FractionallySizedBox(
+                    widthFactor: .74,
+                    child: Text(
+                      'What’s this ${session.label} for?',
+                      style: type.headline.weight(730).copyWith(color: sky.fg),
+                    ),
                   ),
-                  child: CurreGlyph(
-                    CurreGlyphKind.speak,
-                    color: sky.bg,
-                    semanticLabel: 'Speak or type',
+                  const SizedBox(height: CurreSpace.s2),
+                  FractionallySizedBox(
+                    widthFactor: .68,
+                    child: Text(
+                      'Name it in one sentence. Curre brings only those apps into sight.',
+                      style: type.body.copyWith(
+                        color: sky.fg.withValues(alpha: .86),
+                      ),
+                      maxLines: largeText ? 4 : 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: sky.fg,
+                      shape: CurreShape.pill,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: CurreSpace.s4,
+                        vertical: CurreSpace.s2,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Start check-in',
+                            style: type.label
+                                .weight(680)
+                                .copyWith(color: sky.bg),
+                          ),
+                          const SizedBox(width: CurreSpace.s2),
+                          CurreGlyph(
+                            CurreGlyphKind.go,
+                            size: 18,
+                            color: sky.bg,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -389,9 +452,14 @@ class _CheckinPrompt extends StatelessWidget {
 }
 
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.plan, required this.onEdit});
+  const _PlanCard({
+    required this.plan,
+    required this.progress,
+    required this.onEdit,
+  });
 
   final Plan plan;
+  final double progress;
   final VoidCallback onEdit;
 
   @override
@@ -430,60 +498,235 @@ class _PlanCard extends StatelessWidget {
         ),
       );
     }
-    return DecoratedBox(
-      decoration: BoxDecoration(color: sky.bg, borderRadius: CurreShape.lg),
-      child: Padding(
-        padding: const EdgeInsets.all(CurreSpace.s5),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CurreGlyph(plan.session.glyph, size: 21, color: sky.fg),
-                const SizedBox(width: CurreSpace.s2),
-                Expanded(
-                  child: Text(
-                    'Your ${plan.session.label}',
-                    style: type.label.weight(680).copyWith(color: sky.fg),
-                  ),
-                ),
-                if (!largeText) ...[
-                  Text(
-                    'ends ${formatClock(plan.endsAt)}',
-                    style: type.meta.copyWith(color: sky.fg),
-                  ),
+    return _HomeSceneSettle(
+      builder: (context, animate) => SizedBox(
+        key: const Key('home-plan-card'),
+        height: largeText ? 580 : 306,
+        child: SkyScene(
+          session: plan.session.designSession,
+          sun: SkySun.peek,
+          sunAt: .84,
+          sunSize: largeText ? 120 : 98,
+          sunRise: switch (plan.session) {
+            SessionName.morning => .7,
+            SessionName.afternoon => .92,
+            SessionName.evening => .58,
+          },
+          groundHeight: largeText ? 102 : 76,
+          live: true,
+          animatePeek: animate,
+          animate: animate,
+          keepClear: Rect.fromLTWH(0, 0, largeText ? 440 : 258, 210),
+          water: progress,
+          waterFrom: (progress - .16).clamp(0.0, 1.0),
+          waterLabel:
+              'This plan is ${(progress * 100).round()} percent complete',
+          borderRadius: CurreShape.lg,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CurreGlyph(plan.session.glyph, size: 21, color: sky.fg),
                   const SizedBox(width: CurreSpace.s2),
-                ],
-                IconButton(
-                  onPressed: onEdit,
-                  tooltip: 'Change this plan',
-                  icon: CurreGlyph(
-                    CurreGlyphKind.editSpecify,
-                    size: 20,
-                    color: sky.fg,
+                  Expanded(
+                    child: Text(
+                      'Your ${plan.session.label}',
+                      style: type.label.weight(680).copyWith(color: sky.fg),
+                    ),
                   ),
+                  if (!largeText) ...[
+                    Text(
+                      'ends ${formatClock(plan.endsAt)}',
+                      style: type.meta.copyWith(color: sky.fg),
+                    ),
+                    const SizedBox(width: CurreSpace.s2),
+                  ],
+                  IconButton(
+                    onPressed: onEdit,
+                    tooltip: 'Change this plan',
+                    icon: CurreGlyph(
+                      CurreGlyphKind.editSpecify,
+                      size: 20,
+                      color: sky.fg,
+                    ),
+                  ),
+                ],
+              ),
+              if (largeText) ...[
+                const SizedBox(height: CurreSpace.s1),
+                Text(
+                  'ends ${formatClock(plan.endsAt)}',
+                  style: type.meta.copyWith(color: sky.fg),
                 ),
               ],
-            ),
-            if (largeText) ...[
-              const SizedBox(height: CurreSpace.s1),
-              Text(
-                'ends ${formatClock(plan.endsAt)}',
-                style: type.meta.copyWith(color: sky.fg),
+              const SizedBox(height: CurreSpace.s3),
+              Padding(
+                padding: EdgeInsets.only(right: largeText ? 0 : CurreSpace.s12),
+                child: SpanText(
+                  plan.intention,
+                  style: type.you.copyWith(color: sky.fg),
+                  highlights: highlights,
+                  maxLines: largeText ? 5 : 4,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              DecoratedBox(
+                decoration: ShapeDecoration(
+                  color: sky.fg,
+                  shape: CurreShape.pill,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: CurreSpace.s3,
+                    vertical: CurreSpace.s2,
+                  ),
+                  child: Text(
+                    '${plan.apps.length} ${plan.apps.length == 1 ? 'task' : 'tasks'} ready',
+                    style: type.caption.weight(680).copyWith(color: sky.bg),
+                  ),
+                ),
               ),
             ],
-            const SizedBox(height: CurreSpace.s3),
-            SpanText(
-              plan.intention,
-              style: type.you.copyWith(color: sky.fg),
-              highlights: highlights,
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// Lets Home acknowledge a newly visible scene, then leaves every essential
+/// still. LiveSky and RisingWater also honor reduce motion and TickerMode.
+class _HomeSceneSettle extends StatefulWidget {
+  const _HomeSceneSettle({required this.builder});
+
+  final Widget Function(BuildContext context, bool animate) builder;
+
+  @override
+  State<_HomeSceneSettle> createState() => _HomeSceneSettleState();
+}
+
+class _HomeSceneSettleState extends State<_HomeSceneSettle> {
+  Timer? _timer;
+  var _animate = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(RisingWater.sloshLength, () {
+      if (mounted) setState(() => _animate = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _animate);
+}
+
+class _SightHeader extends StatelessWidget {
+  const _SightHeader({required this.doorCount});
+
+  final int doorCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.4;
+    final words = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('In sight now', style: type.title),
+        const SizedBox(height: 2),
+        Text(
+          doorCount == 0
+              ? 'Your essentials stay ready below.'
+              : 'Tap a row to land where you planned.',
+          style: type.caption.copyWith(color: colors.ink3),
+        ),
+      ],
+    );
+    final count = DecoratedBox(
+      decoration: ShapeDecoration(
+        color: colors.raised,
+        shape: StadiumBorder(side: BorderSide(color: colors.hairline)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: CurreSpace.s3,
+          vertical: CurreSpace.s2,
+        ),
+        child: Text(
+          doorCount == 0 ? 'essentials only' : '$doorCount ready',
+          style: type.meta.copyWith(color: colors.ink2),
+        ),
+      ),
+    );
+    if (largeText) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          words,
+          const SizedBox(height: CurreSpace.s3),
+          count,
+        ],
+      );
+    }
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(child: words),
+        const SizedBox(width: CurreSpace.s3),
+        count,
+      ],
+    );
+  }
+}
+
+class _EmptySightNote extends StatelessWidget {
+  const _EmptySightNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    return Semantics(
+      key: const Key('home-empty-state'),
+      label: 'No task doors yet. They appear after check-in.',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.raised,
+          borderRadius: CurreShape.md,
+          border: Border.all(color: colors.hairline),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(CurreSpace.s4),
+          child: Row(
+            children: [
+              CurreGlyph(CurreGlyphKind.door, size: 24, color: colors.ink2),
+              const SizedBox(width: CurreSpace.s3),
+              Expanded(
+                child: Text(
+                  'Your task doors will appear here after check-in.',
+                  style: type.body.copyWith(color: colors.ink2),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _capitalise(String value) =>
+    value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
 
 class _GrantBanner extends StatelessWidget {
   const _GrantBanner({

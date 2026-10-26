@@ -458,7 +458,7 @@ class _TypeVoices extends StatelessWidget {
             const SizedBox(height: CurreSpace.s2),
             Text('Opens at Instagram → Messages', style: t.caption),
             const SizedBox(height: CurreSpace.s2),
-            Text('23 apps out of sight', style: t.listItem),
+            Text('Hidden apps · 23', style: t.listItem),
             const SizedBox(height: CurreSpace.s2),
             Text('reply Ada about rehearsal', style: t.youLarge),
             const SizedBox(height: CurreSpace.s2),

@@ -139,8 +139,8 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
               CurreSpace.s3,
             ),
             child: CurreTopBar(
-              title: 'Out of sight',
-              subtitle: '${apps.length} apps · tap a name and say why',
+              title: 'Hidden apps',
+              subtitle: 'Apps you didn\'t plan for wait here. Tap one to bring it back.',
             ),
           ),
           Expanded(
@@ -149,7 +149,7 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(CurreSpace.gutter),
                       child: Text(
-                        'Everything you chose is already in sight.',
+                        'Every app in your plan is already ready.',
                         style: type.body.copyWith(color: colors.ink2),
                         textAlign: TextAlign.center,
                       ),

@@ -10,7 +10,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const CurreApp());
 
-    expect(find.text('curre'), findsOneWidget);
+    expect(find.byKey(const Key('curre-splash-mark')), findsOneWidget);
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.theme?.extension<CurreColors>(), isNotNull);
   });

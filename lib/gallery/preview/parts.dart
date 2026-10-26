@@ -40,14 +40,20 @@ class StatusBar extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
         child: Row(
           children: [
-            Text(time, style: t.label.weight(620).copyWith(fontSize: 14, color: ink)),
+            Text(
+              time,
+              style: t.label.weight(620).copyWith(fontSize: 14, color: ink),
+            ),
             const Spacer(),
             for (final h in const [4.0, 6.0, 8.0, 10.0])
               Container(
                 width: 3,
                 height: h,
                 margin: const EdgeInsets.only(left: 2),
-                decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(1.5)),
+                decoration: BoxDecoration(
+                  color: ink,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
               ),
             const SizedBox(width: 8),
             Container(
@@ -62,7 +68,10 @@ class StatusBar extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: .72,
                 child: DecoratedBox(
-                  decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(1.5)),
+                  decoration: BoxDecoration(
+                    color: ink,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
                 ),
               ),
             ),
@@ -128,7 +137,9 @@ class RoundGlyphButton extends StatelessWidget {
         alignment: Alignment.center,
         decoration: ShapeDecoration(
           color: background ?? c.raised,
-          shape: CircleBorder(side: outlined ? BorderSide(color: c.hairline) : BorderSide.none),
+          shape: CircleBorder(
+            side: outlined ? BorderSide(color: c.hairline) : BorderSide.none,
+          ),
         ),
         child: CurreGlyph(glyph, size: 24, color: foreground ?? c.ink),
       ),
@@ -145,7 +156,13 @@ class RoundGlyphButton extends StatelessWidget {
 /// one at which every session's greeting fits with this name, so it does
 /// not change between the morning and the afternoon.
 class Greeting extends StatelessWidget {
-  const Greeting({super.key, required this.greeting, this.name, required this.subtitle, this.trailing});
+  const Greeting({
+    super.key,
+    required this.greeting,
+    this.name,
+    required this.subtitle,
+    this.trailing,
+  });
 
   final String greeting;
 
@@ -162,10 +179,19 @@ class Greeting extends StatelessWidget {
   }
 
   /// Font size, line height and line count, tried in order.
-  static const _fits = <(double, double, int)>[(30, 36, 1), (26, 32, 1), (26, 32, 2), (22, 28, 2)];
+  static const _fits = <(double, double, int)>[
+    (30, 36, 1),
+    (26, 32, 1),
+    (26, 32, 2),
+    (22, 28, 2),
+  ];
 
   /// The three session greetings; the longest sets the size.
-  static const sessionGreetings = ['Good morning', 'Good afternoon', 'Good evening'];
+  static const sessionGreetings = [
+    'Good morning',
+    'Good afternoon',
+    'Good evening',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +212,10 @@ class Greeting extends StatelessWidget {
                   final painter = TextPainter(
                     text: TextSpan(
                       text: line,
-                      style: t.headline.copyWith(fontSize: candidate.$1, height: candidate.$2 / candidate.$1),
+                      style: t.headline.copyWith(
+                        fontSize: candidate.$1,
+                        height: candidate.$2 / candidate.$1,
+                      ),
                     ),
                     maxLines: candidate.$3,
                     textDirection: TextDirection.ltr,
@@ -210,7 +239,10 @@ class Greeting extends StatelessWidget {
                 children: [
                   Text(
                     text,
-                    style: t.headline.copyWith(fontSize: fit.$1, height: fit.$2 / fit.$1),
+                    style: t.headline.copyWith(
+                      fontSize: fit.$1,
+                      height: fit.$2 / fit.$1,
+                    ),
                     maxLines: fit.$3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -226,7 +258,10 @@ class Greeting extends StatelessWidget {
             },
           ),
         ),
-        if (trailing != null) ...[const SizedBox(width: CurreSpace.s3), trailing!],
+        if (trailing != null) ...[
+          const SizedBox(width: CurreSpace.s3),
+          trailing!,
+        ],
       ],
     );
   }
@@ -253,7 +288,10 @@ class SectionLabel extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (trailing != null) ...[const SizedBox(width: CurreSpace.s3), trailing!],
+        if (trailing != null) ...[
+          const SizedBox(width: CurreSpace.s3),
+          trailing!,
+        ],
       ],
     );
   }
@@ -297,13 +335,14 @@ class CheckinCard extends StatelessWidget {
   static const ground = 84.0;
 
   /// What today's water says it measures, in Curre's words.
-  static String waterLabel(DayProgress day) => switch ((day.plans, day.doorsUsed)) {
-    (0, _) => 'Today · nothing yet',
-    (1, 0) => 'Today · 1 plan',
-    (final plans, 0) => 'Today · $plans plans',
-    (_, 1) => 'Today · 1 door used',
-    (_, final doors) => 'Today · $doors doors used',
-  };
+  static String waterLabel(DayProgress day) =>
+      switch ((day.plans, day.doorsUsed)) {
+        (0, _) => 'Today · nothing yet',
+        (1, 0) => 'Today · 1 plan',
+        (final plans, 0) => 'Today · $plans plans',
+        (_, 1) => 'Today · 1 door used',
+        (_, final doors) => 'Today · $doors doors used',
+      };
 
   /// Where Peek stands for each session: across the card, and how far its
   /// body has risen over the line.
@@ -315,7 +354,12 @@ class CheckinCard extends StatelessWidget {
 
   /// The box the question and hint take up on a card [w] wide, measured at
   /// the phone's text scale, so the sky's moving shapes can keep out of it.
-  Rect _wordsBox(BuildContext context, double w, TextStyle questionStyle, TextStyle hintStyle) {
+  Rect _wordsBox(
+    BuildContext context,
+    double w,
+    TextStyle questionStyle,
+    TextStyle hintStyle,
+  ) {
     final scaler = MediaQuery.textScalerOf(context);
     Size measure(String text, TextStyle style, double maxWidth) {
       final painter = TextPainter(
@@ -330,7 +374,12 @@ class CheckinCard extends StatelessWidget {
 
     final q = measure(question, questionStyle, w * .64);
     final h = measure(hint, hintStyle, w * .66);
-    return Rect.fromLTWH(20, 24, math.max(q.width, h.width), q.height + 8 + h.height);
+    return Rect.fromLTWH(
+      20,
+      24,
+      math.max(q.width, h.width),
+      q.height + 8 + h.height,
+    );
   }
 
   @override
@@ -339,8 +388,14 @@ class CheckinCard extends StatelessWidget {
     final t = Theme.of(context).extension<CurreType>()!;
     final sky = c.sky(session);
     final (sunAt, sunRise) = peekPlace(session);
-    final questionStyle = t.title.copyWith(fontSize: 26, height: 32 / 26, color: sky.fg).weight(720);
-    final hintStyle = t.body.copyWith(fontSize: 15, height: 20 / 15, color: sky.fg.withValues(alpha: .86));
+    final questionStyle = t.title
+        .copyWith(fontSize: 26, height: 32 / 26, color: sky.fg)
+        .weight(720);
+    final hintStyle = t.body.copyWith(
+      fontSize: 15,
+      height: 20 / 15,
+      color: sky.fg.withValues(alpha: .86),
+    );
     return LayoutBuilder(
       builder: (context, box) {
         final w = box.maxWidth;
@@ -394,7 +449,10 @@ class CheckinCard extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: ExcludeSemantics(
-                      child: MetaPill(text: progressLabel!, glyph: CurreGlyphKind.water),
+                      child: MetaPill(
+                        text: progressLabel!,
+                        glyph: CurreGlyphKind.water,
+                      ),
                     ),
                   ),
                 ),
@@ -443,15 +501,25 @@ class PrimaryPill extends StatelessWidget {
           final mirror = glyph != null && box.maxWidth >= 300;
           return Container(
             constraints: const BoxConstraints(minHeight: 56),
-            padding: EdgeInsets.fromLTRB(glyph == null || !mirror ? 20 : 56, 8, glyph == null ? 20 : 8, 8),
-            decoration: ShapeDecoration(color: bg, shape: const StadiumBorder()),
+            padding: EdgeInsets.fromLTRB(
+              glyph == null || !mirror ? 20 : 56,
+              8,
+              glyph == null ? 20 : 8,
+              8,
+            ),
+            decoration: ShapeDecoration(
+              color: bg,
+              shape: const StadiumBorder(),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: t.label.weight(660).copyWith(fontSize: 16, color: fg),
+                    style: t.label
+                        .weight(660)
+                        .copyWith(fontSize: 16, color: fg),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -462,8 +530,15 @@ class PrimaryPill extends StatelessWidget {
                     width: 40,
                     height: 40,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(color: glyphBackground ?? fg, shape: BoxShape.circle),
-                    child: CurreGlyph(glyph!, size: 20, color: glyphColor ?? bg),
+                    decoration: BoxDecoration(
+                      color: glyphBackground ?? fg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: CurreGlyph(
+                      glyph!,
+                      size: 20,
+                      color: glyphColor ?? bg,
+                    ),
                   ),
                 ],
               ],
@@ -529,11 +604,18 @@ class MetaPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (glyph != null) ...[CurreGlyph(glyph!, size: 16, color: c.ink), const SizedBox(width: 4)],
+          if (glyph != null) ...[
+            CurreGlyph(glyph!, size: 16, color: c.ink),
+            const SizedBox(width: 4),
+          ],
           Flexible(
             child: Text(
               text,
-              style: t.figure.copyWith(fontSize: 12, height: 16 / 12, color: c.ink),
+              style: t.figure.copyWith(
+                fontSize: 12,
+                height: 16 / 12,
+                color: c.ink,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -587,7 +669,10 @@ InlineSpan linkBadgeSpan(BuildContext context, int n) {
           shape: BoxShape.circle,
           border: Border.all(color: c.markInk.withValues(alpha: .18)),
         ),
-        child: Text('$n', style: t.figure.copyWith(fontSize: 11, height: 1, color: c.markInk)),
+        child: Text(
+          '$n',
+          style: t.figure.copyWith(fontSize: 11, height: 1, color: c.markInk),
+        ),
       ),
     ),
   );
@@ -595,7 +680,13 @@ InlineSpan linkBadgeSpan(BuildContext context, int n) {
 
 /// Highlight for span/door link [n]: the link's highlighter behind the
 /// user's own words, set in mark ink, with the number after it.
-SpanHighlight linkHighlight(BuildContext context, String text, String phrase, int n, TextStyle base) {
+SpanHighlight linkHighlight(
+  BuildContext context,
+  String text,
+  String phrase,
+  int n,
+  TextStyle base,
+) {
   final c = Theme.of(context).extension<CurreColors>()!;
   final (s, e) = spanOf(text, phrase);
   return SpanHighlight(
@@ -608,13 +699,22 @@ SpanHighlight linkHighlight(BuildContext context, String text, String phrase, in
 
 /// Highlight for a time phrase: underlined in ember, the visible reason
 /// for when the plan ends or how long a grant runs.
-SpanHighlight timeHighlight(BuildContext context, String text, String phrase, TextStyle base) {
+SpanHighlight timeHighlight(
+  BuildContext context,
+  String text,
+  String phrase,
+  TextStyle base,
+) {
   final c = Theme.of(context).extension<CurreColors>()!;
   final (s, e) = spanOf(text, phrase);
   return SpanHighlight(
     s,
     e,
-    style: base.copyWith(decoration: TextDecoration.underline, decorationColor: c.ember, decorationThickness: 2.5),
+    style: base.copyWith(
+      decoration: TextDecoration.underline,
+      decorationColor: c.ember,
+      decorationThickness: 2.5,
+    ),
   );
 }
 
@@ -622,7 +722,12 @@ SpanHighlight timeHighlight(BuildContext context, String text, String phrase, Te
 /// phone's icon, and only above the horizon). Neutral on purpose: no brand
 /// colours or marks are imitated.
 class AppIconStandIn extends StatelessWidget {
-  const AppIconStandIn({super.key, required this.icon, this.size = CurreSpace.doorIcon, this.ring});
+  const AppIconStandIn({
+    super.key,
+    required this.icon,
+    this.size = CurreSpace.doorIcon,
+    this.ring,
+  });
 
   final IconData icon;
   final double size;
@@ -649,7 +754,11 @@ class AppIconStandIn extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        foregroundPainter: _GrantRingPainter(left: ring!, color: c.ember, track: c.ink.withValues(alpha: .12)),
+        foregroundPainter: _GrantRingPainter(
+          left: ring!,
+          color: c.ember,
+          track: c.ink.withValues(alpha: .12),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(5),
           child: FittedBox(child: tile),
@@ -660,7 +769,11 @@ class AppIconStandIn extends StatelessWidget {
 }
 
 class _GrantRingPainter extends CustomPainter {
-  _GrantRingPainter({required this.left, required this.color, required this.track});
+  _GrantRingPainter({
+    required this.left,
+    required this.color,
+    required this.track,
+  });
 
   final double left;
   final Color color;
@@ -669,7 +782,10 @@ class _GrantRingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(1.5);
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(size.width * .34));
+    final rrect = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(size.width * .34),
+    );
     final trackPaint = Paint()
       ..color = track
       ..style = PaintingStyle.stroke
@@ -686,7 +802,10 @@ class _GrantRingPainter extends CustomPainter {
     } else {
       arc
         ..addPath(metric.extractPath(start, metric.length), Offset.zero)
-        ..addPath(metric.extractPath(0, start + len - metric.length), Offset.zero);
+        ..addPath(
+          metric.extractPath(0, start + len - metric.length),
+          Offset.zero,
+        );
     }
     canvas.drawPath(
       arc,
@@ -699,12 +818,13 @@ class _GrantRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _GrantRingPainter old) => old.left != left || old.color != color || old.track != track;
+  bool shouldRepaint(covariant _GrantRingPainter old) =>
+      old.left != left || old.color != color || old.track != track;
 }
 
-/// Essentials pinned on the horizon, never moving, and the single way down
-/// to everything out of sight (design report 4.4). Sits in the same place
-/// on every screen and in every state, like Mombo's tab bar.
+/// Essentials pinned on the horizon, never moving, and the single way into
+/// Hidden apps. Sits in the same place on every screen and in every state,
+/// like Mombo's tab bar.
 class EssentialsDock extends StatelessWidget {
   const EssentialsDock({super.key, this.outOfSight = 23});
 
@@ -744,7 +864,11 @@ class EssentialsDock extends StatelessWidget {
                         button: true,
                         label: label,
                         excludeSemantics: true,
-                        child: SizedBox(width: 56, height: 56, child: Icon(icon, size: 24, color: c.ink)),
+                        child: SizedBox(
+                          width: 56,
+                          height: 56,
+                          child: Icon(icon, size: 24, color: c.ink),
+                        ),
                       ),
                   ],
                 ),
@@ -754,14 +878,19 @@ class EssentialsDock extends StatelessWidget {
         ),
         Semantics(
           button: true,
-          label: '$outOfSight apps out of sight. Open the list.',
+          label: 'Hidden apps, $outOfSight apps. Open the list.',
           excludeSemantics: true,
           child: SizedBox(
             height: 48,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('$outOfSight out of sight', style: t.listItem.copyWith(fontSize: 16, height: 20 / 16).weight(520)),
+                Text(
+                  'Hidden apps · $outOfSight',
+                  style: t.listItem
+                      .copyWith(fontSize: 16, height: 20 / 16)
+                      .weight(520),
+                ),
                 const SizedBox(width: 8),
                 CurreGlyph(CurreGlyphKind.rise, size: 20, color: c.ink2),
               ],

@@ -49,6 +49,7 @@ class CurreController extends ChangeNotifier {
     this.homePlatform = const HomePlatformService(),
     this.gentleIntercept = const DisabledGentleInterceptGateway(),
     this.notifications,
+    this.reminders,
     SpeechInputService? speech,
     this.api,
     Settings? settings,
@@ -117,13 +118,13 @@ class CurreController extends ChangeNotifier {
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android
         ? AndroidGentleInterceptGateway()
         : const DisabledGentleInterceptGateway();
+    final notificationGateway = FlutterGrantNotificationGateway();
     final controller = CurreController(
       launcher: launcher,
       store: store,
       gentleIntercept: gentleIntercept,
-      notifications: GrantNotificationService(
-        FlutterGrantNotificationGateway(),
-      ),
+      notifications: GrantNotificationService(notificationGateway),
+      reminders: LocalReminderService(notificationGateway),
       api: api,
       settings: settings,
       apps: apps,
@@ -138,6 +139,7 @@ class CurreController extends ChangeNotifier {
       onboardingComplete: store?.isOnboardingComplete ?? false,
     );
     await controller.initializeGentleIntercept();
+    await controller._prepareReminders();
     return controller;
   }
 
@@ -170,6 +172,7 @@ class CurreController extends ChangeNotifier {
   final HomePlatformGateway homePlatform;
   final GentleInterceptGateway gentleIntercept;
   final GrantNotificationService? notifications;
+  final LocalReminderService? reminders;
   final SpeechInputService speech;
   final CurreApiClient? api;
   final DateTime Function() _now;
@@ -370,6 +373,11 @@ class CurreController extends ChangeNotifier {
     settings = value;
     await store?.saveSettings(value);
     await _syncGentleInterceptPolicy();
+    try {
+      await _scheduleSessionReminders();
+    } on Object {
+      // Settings stay local and authoritative if notifications are unavailable.
+    }
     notifyListeners();
   }
 
@@ -550,7 +558,9 @@ class CurreController extends ChangeNotifier {
 
   Future<bool> requestNotifications() async {
     try {
-      return await notifications?.requestPermission() ?? true;
+      final allowed = await notifications?.requestPermission() ?? true;
+      if (allowed) await _scheduleSessionReminders();
+      return allowed;
     } on Object {
       return false;
     }
@@ -737,7 +747,26 @@ class CurreController extends ChangeNotifier {
     await store?.saveTodayPlans(plans, now: now);
     await store?.appendPlanHistory(plan, now: now);
     await _syncGentleInterceptPolicy();
+    try {
+      await reminders?.schedulePlanReminders(plan);
+    } on Object {
+      // The plan is authoritative; reminder delivery is best effort.
+    }
     notifyListeners();
+  }
+
+  Future<void> _prepareReminders() async {
+    try {
+      await _scheduleSessionReminders();
+      final plan = activePlan;
+      if (plan != null) await reminders?.schedulePlanReminders(plan);
+    } on Object {
+      // Notifications are optional on platforms without Android channels.
+    }
+  }
+
+  Future<void> _scheduleSessionReminders() async {
+    await reminders?.scheduleSessionReminders(settings);
   }
 
   String destinationFor(PlannedApp app, Plan plan) {
@@ -791,6 +820,34 @@ class CurreController extends ChangeNotifier {
   /// task has no record. A supported, waiting or done task is not asked
   /// again, so a door used often never nags.
   bool asksAfterDoor(PlannedTask task) => proofFor(task) == null;
+
+  /// The unfinished task a plan-ending proof reminder should open.
+  /// A task Curre saw start wins; otherwise the first unfinished door is a
+  /// calm fallback. Finished plans do not reopen an already completed task.
+  PlannedTask? proofTaskForPlan(String? planId) {
+    if (planId == null || planId.isEmpty) return null;
+    final plan = <Plan>[
+      ...plans,
+      ...historyPlans,
+    ].where((item) => item.id == planId).firstOrNull;
+    if (plan == null) return null;
+    final tasks = plan.apps.isEmpty
+        ? <PlannedTask>[PlannedTask.offline(plan)]
+        : <PlannedTask>[
+            for (final app in plan.apps) PlannedTask.forDoor(plan, app),
+          ];
+    final unfinished = tasks.where((task) => proofFor(task) == null).toList();
+    PlannedTask? latestStarted;
+    DateTime? latestAt;
+    for (final task in unfinished) {
+      final at = latestTraceFor(task)?.at;
+      if (at != null && (latestAt == null || at.isAfter(latestAt))) {
+        latestStarted = task;
+        latestAt = at;
+      }
+    }
+    return latestStarted ?? unfinished.firstOrNull;
+  }
 
   /// The tasks done away from the phone that Home offers: the active plan's
   /// when it has no doors, and any started today whose plan has since
