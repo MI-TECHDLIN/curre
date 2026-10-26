@@ -146,11 +146,18 @@ void main() {
     tester,
   ) async {
     await phone(tester);
+    var deploymentAwake = false;
     final api = CurreApiClient(
       baseUrl: Uri.parse('https://curre.test'),
       appKey: 'test-key',
       httpClient: MockClient((request) async {
+        if (request.method == 'GET') {
+          expect(request.url.path, '/healthz');
+          deploymentAwake = true;
+          return http.Response('{}', 200);
+        }
         expect(request.url.path, '/v1/plan');
+        expect(deploymentAwake, isTrue);
         return http.Response(
           jsonEncode(<String, Object?>{
             'apps': <Object?>[
@@ -198,6 +205,70 @@ void main() {
     expect(find.text('Your morning'), findsOneWidget);
     expect(controller.lastPlanCall?.usage?.credits, 18);
   });
+
+  testWidgets(
+    'check-in recovers when the first plan request is transiently unavailable',
+    (tester) async {
+      await phone(tester);
+      var warmupCalls = 0;
+      var planCalls = 0;
+      final api = CurreApiClient(
+        baseUrl: Uri.parse('https://curre.test'),
+        appKey: 'test-key',
+        planRetryDelay: Duration.zero,
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') {
+            warmupCalls++;
+            return http.Response('{}', 200);
+          }
+          planCalls++;
+          if (planCalls == 1) return http.Response('waking', 503);
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'apps': <Object?>[
+                <String, Object?>{
+                  'id': 'com.google.android.youtube',
+                  'query': <String, Object?>{
+                    'text': 'G chord',
+                    'start': 10,
+                    'end': 17,
+                  },
+                },
+              ],
+              'end_phrase': null,
+              'usage': <String, Object?>{'credits': 4, 'model_ms': 86},
+            }),
+            200,
+          );
+        }),
+      );
+      final controller = _controller(api: api);
+      await tester.pumpWidget(CurreApp(controller: controller));
+      await tester.pump();
+      await tester.tap(find.text('What’s this morning for?'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.enterText(
+        find.byKey(const Key('checkin-intention')),
+        'Learn the G chord on YouTube till 7',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Set my morning'));
+
+      for (
+        var i = 0;
+        i < 10 && find.text('Here’s what comes into sight').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(warmupCalls, 1);
+      expect(planCalls, 2);
+      expect(find.text('Here’s what comes into sight'), findsOneWidget);
+      expect(find.text('Choose the apps yourself'), findsNothing);
+    },
+  );
 
   testWidgets('hidden apps are alphabetical text and navigate to the gate', (
     tester,

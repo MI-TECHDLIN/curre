@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 from tests.fakes import (
     error_step,
     extract_field,
@@ -143,6 +145,43 @@ def test_plan_requires_app_key(make_client):
     client.headers.pop("X-App-Key")
     resp = client.post("/v1/plan", json=_plan_payload())
     assert resp.status_code == 401
+
+
+def test_plan_forwards_the_app_idempotency_key_to_clocked(make_client):
+    key = uuid4()
+
+    async def handler(*, text, steps, **kwargs):
+        assert kwargs["idempotency_key"] == key
+        fields = {"apps": fill_multiselect(["YouTube"])}
+        return make_pipeline_result(
+            [
+                ok_step("plan", "fill", {"fields": fields}),
+                ok_step("spans", "extract", {"fields": {}}),
+            ]
+        )
+
+    client = make_client(handler)
+    resp = client.post(
+        "/v1/plan",
+        json=_plan_payload(),
+        headers={"Idempotency-Key": str(key)},
+    )
+
+    assert resp.status_code == 200
+
+
+def test_plan_rejects_an_invalid_idempotency_key(make_client):
+    async def handler(*, text, steps, **kwargs):  # pragma: no cover
+        raise AssertionError("must not call Clocked with an invalid idempotency key")
+
+    client = make_client(handler)
+    resp = client.post(
+        "/v1/plan",
+        json=_plan_payload(),
+        headers={"Idempotency-Key": "not-a-uuid"},
+    )
+
+    assert resp.status_code == 422
 
 
 def test_plan_rejects_fewer_than_two_candidates(make_client):

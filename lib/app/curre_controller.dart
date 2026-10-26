@@ -83,6 +83,7 @@ class CurreController extends ChangeNotifier {
     CurreApiClient? api;
     try {
       api = CurreApiClient.fromEnvironment();
+      unawaited(api.warmUp());
     } on Object {
       // No dart-defines is a supported offline state, not an app-start crash.
     }
@@ -383,6 +384,10 @@ class CurreController extends ChangeNotifier {
     } on Object {
       return _conversationShortcuts[packageName] = <AppShortcut>[];
     }
+  }
+
+  Future<void> warmUpPlanning() async {
+    await api?.warmUp();
   }
 
   Future<PlanBuildResult> buildPlan(String intention) async {

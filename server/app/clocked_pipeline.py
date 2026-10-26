@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from uuid import UUID
 
 from clocked_sdk import AsyncClocked, ClockedError
 
@@ -130,12 +131,19 @@ def build_plan_steps(intention: str, candidates: list[Candidate]) -> list[dict[s
 
 
 async def run_plan_pipeline(
-    client: AsyncClocked, intention: str, candidates: list[Candidate]
+    client: AsyncClocked,
+    intention: str,
+    candidates: list[Candidate],
+    idempotency_key: UUID | None = None,
 ) -> PlanResponse:
     steps = build_plan_steps(intention, candidates)
     try:
         result = await asyncio.wait_for(
-            client.pipeline(text=intention, steps=steps),
+            client.pipeline(
+                text=intention,
+                steps=steps,
+                idempotency_key=idempotency_key,
+            ),
             timeout=PLAN_TIMEOUT_SECONDS,
         )
     except (TimeoutError, ClockedError) as exc:

@@ -4,6 +4,7 @@ import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from uuid import UUID
 
 from clocked_sdk import AsyncClocked
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -68,13 +69,19 @@ async def healthz() -> dict[str, str]:
 async def plan(
     req: PlanRequest,
     request: Request,
+    idempotency_key: UUID | None = Header(default=None, alias="Idempotency-Key"),
     clocked: AsyncClocked = Depends(get_clocked_client),
     limiter: RateLimiter = Depends(get_plan_limiter),
 ) -> PlanResponse:
     limiter.check(client_ip(request))
     start = time.monotonic()
     try:
-        response = await run_plan_pipeline(clocked, req.intention, req.candidates)
+        response = await run_plan_pipeline(
+            clocked,
+            req.intention,
+            req.candidates,
+            idempotency_key=idempotency_key,
+        )
     except PipelineUnavailable:
         latency_ms = (time.monotonic() - start) * 1000
         _log_call("plan", 503, latency_ms, None)

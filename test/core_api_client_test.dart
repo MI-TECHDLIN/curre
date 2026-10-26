@@ -31,11 +31,19 @@ void main() {
   CurreApiClient client(
     http.Client transport, {
     Duration timeout = const Duration(milliseconds: 100),
+    Duration firstAttemptTimeout = const Duration(milliseconds: 75),
+    Duration retryDelay = Duration.zero,
+    Duration warmUpTimeout = const Duration(milliseconds: 100),
+    Map<String, String> localTestingHeaders = const <String, String>{},
   }) => CurreApiClient(
     baseUrl: Uri.parse('https://api.example.test/root/'),
     appKey: 'app-secret',
     httpClient: transport,
     planTimeout: timeout,
+    planFirstAttemptTimeout: firstAttemptTimeout,
+    planRetryDelay: retryDelay,
+    warmUpTimeout: warmUpTimeout,
+    localTestingHeaders: localTestingHeaders,
     unlockTimeout: timeout,
   );
 
@@ -43,6 +51,7 @@ void main() {
     final transport = MockClient((request) async {
       expect(request.url.toString(), 'https://api.example.test/root/v1/plan');
       expect(request.headers['x-app-key'], 'app-secret');
+      expect(request.headers['ngrok-skip-browser-warning'], isNull);
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       expect(body['session'], 'morning');
       expect(body['intention'], 'learn 😀 guitar till 8');
@@ -116,6 +125,138 @@ void main() {
   );
 
   test(
+    'plan retries a transient first failure with one idempotency key',
+    () async {
+      var calls = 0;
+      final idempotencyKeys = <String>[];
+      final transport = MockClient((request) async {
+        calls++;
+        idempotencyKeys.add(request.headers['idempotency-key']!);
+        if (calls == 1) return http.Response('waking', 503);
+        return _jsonResponse(<String, Object?>{
+          'apps': <Object?>[
+            <String, Object?>{'id': 'yt', 'door': null, 'query': null},
+          ],
+          'end_phrase': null,
+          'usage': <String, Object?>{'credits': 3, 'model_ms': 24},
+        });
+      });
+
+      final result = await client(transport).plan(planRequest());
+
+      expect(result.requiresManualChecklist, isFalse);
+      expect(calls, 2);
+      final uniqueKeys = idempotencyKeys.toSet();
+      expect(uniqueKeys, hasLength(1));
+      expect(
+        uniqueKeys.single,
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ),
+        ),
+      );
+    },
+  );
+
+  test('plan retries a tunnel HTML interstitial before parsing JSON', () async {
+    var calls = 0;
+    final transport = MockClient((request) async {
+      expect(request.headers['ngrok-skip-browser-warning'], 'true');
+      calls++;
+      if (calls == 1) {
+        return http.Response(
+          '<!doctype html><html><body>tunnel warning</body></html>',
+          200,
+          headers: <String, String>{'content-type': 'text/html; charset=utf-8'},
+        );
+      }
+      return _jsonResponse(<String, Object?>{
+        'apps': <Object?>[
+          <String, Object?>{'id': 'yt', 'door': null, 'query': null},
+        ],
+        'end_phrase': null,
+        'usage': <String, Object?>{'credits': 3, 'model_ms': 24},
+      });
+    });
+
+    final result = await client(
+      transport,
+      localTestingHeaders: const <String, String>{
+        'ngrok-skip-browser-warning': 'true',
+      },
+    ).plan(planRequest());
+
+    expect(result.requiresManualChecklist, isFalse);
+    expect(calls, 2);
+  });
+
+  test('plan treats repeated non-JSON responses as a hard failure', () async {
+    var calls = 0;
+    final transport = MockClient((_) async {
+      calls++;
+      return http.Response(
+        'tunnel unavailable',
+        200,
+        headers: <String, String>{'content-type': 'text/plain'},
+      );
+    });
+
+    final result = await client(transport).plan(planRequest());
+
+    expect(result.fallbackReason, PlanFallbackReason.invalidResponse);
+    expect(calls, 2);
+  });
+
+  test('plan retries when a slow cold first response times out', () async {
+    var calls = 0;
+    final firstResponse = Completer<http.Response>();
+    final transport = MockClient((_) async {
+      calls++;
+      if (calls == 1) return firstResponse.future;
+      return _jsonResponse(<String, Object?>{
+        'apps': <Object?>[
+          <String, Object?>{'id': 'yt', 'door': null, 'query': null},
+        ],
+        'end_phrase': null,
+        'usage': <String, Object?>{'credits': 3, 'model_ms': 24},
+      });
+    });
+
+    final result = await client(
+      transport,
+      timeout: const Duration(milliseconds: 80),
+      firstAttemptTimeout: const Duration(milliseconds: 5),
+    ).plan(planRequest());
+
+    expect(result.requiresManualChecklist, isFalse);
+    expect(calls, 2);
+  });
+
+  test('warmup is best-effort and does not send request text', () async {
+    var calls = 0;
+    final transport = MockClient((request) async {
+      calls++;
+      expect(request.method, 'GET');
+      expect(request.url.path, '/root/healthz');
+      expect(request.url.queryParameters['warmup'], isNotEmpty);
+      expect(request.headers['x-app-key'], 'app-secret');
+      expect(request.headers['ngrok-skip-browser-warning'], 'true');
+      expect(request.body, isEmpty);
+      throw http.ClientException('host is waking');
+    });
+
+    await client(
+      transport,
+      localTestingHeaders: const <String, String>{
+        'ngrok-skip-browser-warning': 'true',
+      },
+    ).warmUp();
+
+    expect(calls, 1);
+  });
+
+  test(
     'unlock sends exact fields and parses the five-outcome contract',
     () async {
       final transport = MockClient((request) async {
@@ -182,6 +323,8 @@ void main() {
     );
     expect(api.unlockTimeout, const Duration(seconds: 8));
     expect(api.planTimeout, const Duration(seconds: 12));
+    expect(api.planFirstAttemptTimeout, const Duration(seconds: 9));
+    expect(api.warmUpTimeout, const Duration(seconds: 3));
   });
 }
 
