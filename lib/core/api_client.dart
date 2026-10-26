@@ -218,7 +218,7 @@ class CurreApiClient {
       return UnlockResponse.fromJson(_decodeObject(response.body));
     } on Object {
       // Every transport, timeout, status, and malformed-response failure must
-      // leave the user with the 60-second local override.
+      // leave the user with the local override wait.
       return const UnlockResponse.unavailable();
     }
   }

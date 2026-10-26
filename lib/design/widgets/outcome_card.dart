@@ -23,10 +23,10 @@ CurreGlyphKind outcomeGlyph(Outcome o, {Session laterTarget = Session.evening}) 
 /// Spoken label for the outcome glyph (TalkBack).
 String outcomeGlyphLabel(Outcome o) => switch (o) {
   Outcome.open => 'Opens',
-  Outcome.later => 'Saved for later',
+  Outcome.later => 'Not now',
   Outcome.specify => 'Needs more detail',
-  Outcome.flagged => 'Flagged',
-  Outcome.unavailable => 'Unavailable',
+  Outcome.flagged => 'Not a reason',
+  Outcome.unavailable => 'Couldn’t check',
 };
 
 /// The unlock gate's outcome card (design report 4.6): a dome card in the

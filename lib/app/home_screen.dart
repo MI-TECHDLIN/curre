@@ -273,7 +273,7 @@ class _HomeBody extends StatelessWidget {
                   ],
                   if (extraEssentials.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s5),
-                    Text('Always in sight', style: type.label),
+                    Text('Always on Home', style: type.label),
                     const SizedBox(height: CurreSpace.s2),
                     for (final app in extraEssentials) ...[
                       _EssentialDoor(controller: controller, app: app),
@@ -283,7 +283,7 @@ class _HomeBody extends StatelessWidget {
                   if (plan != null && plan.apps.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s3),
                     Text(
-                      'Long-press any door to open the app normally.',
+                      'Press and hold an app to open it the usual way.',
                       style: type.caption.copyWith(color: colors.ink3),
                       textAlign: TextAlign.center,
                     ),
@@ -403,7 +403,7 @@ class _CheckinPrompt extends StatelessWidget {
                   FractionallySizedBox(
                     widthFactor: .68,
                     child: Text(
-                      'Name it in one sentence. Curre brings only those apps into sight.',
+                      'Say it in one sentence. Curre puts just the apps you need on Home.',
                       style: type.body.copyWith(
                         color: sky.fg.withValues(alpha: .86),
                       ),
@@ -426,7 +426,7 @@ class _CheckinPrompt extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Start check-in',
+                            'Plan now',
                             style: type.label
                                 .weight(680)
                                 .copyWith(color: sky.bg),
@@ -537,7 +537,7 @@ class _PlanCard extends StatelessWidget {
                   ),
                   if (!largeText) ...[
                     Text(
-                      'ends ${formatClock(plan.endsAt)}',
+                      'until ${formatClock(plan.endsAt)}',
                       style: type.meta.copyWith(color: sky.fg),
                     ),
                     const SizedBox(width: CurreSpace.s2),
@@ -556,7 +556,7 @@ class _PlanCard extends StatelessWidget {
               if (largeText) ...[
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'ends ${formatClock(plan.endsAt)}',
+                  'until ${formatClock(plan.endsAt)}',
                   style: type.meta.copyWith(color: sky.fg),
                 ),
               ],
@@ -642,12 +642,12 @@ class _SightHeader extends StatelessWidget {
     final words = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('In sight now', style: type.title),
+        Text('On Home now', style: type.title),
         const SizedBox(height: 2),
         Text(
           doorCount == 0
-              ? 'Your essentials stay ready below.'
-              : 'Tap a row to land where you planned.',
+              ? 'Your always-there apps are below.'
+              : 'Tap one to go straight to it.',
           style: type.caption.copyWith(color: colors.ink3),
         ),
       ],
@@ -663,7 +663,7 @@ class _SightHeader extends StatelessWidget {
           vertical: CurreSpace.s2,
         ),
         child: Text(
-          doorCount == 0 ? 'essentials only' : '$doorCount ready',
+          doorCount == 0 ? 'Nothing planned yet' : '$doorCount ready',
           style: type.meta.copyWith(color: colors.ink2),
         ),
       ),
@@ -698,7 +698,7 @@ class _EmptySightNote extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     return Semantics(
       key: const Key('home-empty-state'),
-      label: 'No task doors yet. They appear after check-in.',
+      label: 'Nothing planned yet. Plan your day and its apps show up here.',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colors.raised,
@@ -713,7 +713,7 @@ class _EmptySightNote extends StatelessWidget {
               const SizedBox(width: CurreSpace.s3),
               Expanded(
                 child: Text(
-                  'Your task doors will appear here after check-in.',
+                  'Plan your day and its apps show up here.',
                   style: type.body.copyWith(color: colors.ink2),
                 ),
               ),
@@ -768,7 +768,7 @@ class _GrantBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$appLabel is in sight',
+                        '$appLabel is back for now',
                         style: type.label.weight(680).copyWith(color: open.fg),
                       ),
                       Text(
@@ -820,7 +820,7 @@ class _EssentialDoor extends StatelessWidget {
     trailing: const CurreGlyph(
       CurreGlyphKind.essential,
       size: 19,
-      semanticLabel: 'Essential',
+      semanticLabel: 'Always on Home',
     ),
     onTap: () => controller.plainLaunch(app.packageName),
     onLongPress: () => controller.plainLaunch(app.packageName),
@@ -993,9 +993,12 @@ void _reportDoorResult(
   String? target,
 ) {
   if (result.kind == DoorLaunchKind.failed) {
-    showCurreSnack(context, 'That door did not open. Try a long-press.');
+    showCurreSnack(
+      context,
+      'That didn’t open. Press and hold the app to open it the usual way.',
+    );
   } else if (result.usedFallback && target != null) {
-    showCurreSnack(context, 'Copied: paste “$target” into search.');
+    showCurreSnack(context, 'Copied “$target”. Paste it into the search box.');
   }
 }
 
@@ -1053,7 +1056,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     const SizedBox(width: CurreSpace.s3),
                     Expanded(
                       child: Text(
-                        widget.controller.settings.displayName ?? 'Curre user',
+                        widget.controller.settings.displayName ?? 'You',
                         style: type.title,
                       ),
                     ),
@@ -1065,10 +1068,10 @@ class _ProfileSheetState extends State<ProfileSheet> {
                   ],
                 ),
                 const SizedBox(height: CurreSpace.s5),
-                Text('Choose your profile', style: type.label),
+                Text('Your face', style: type.label),
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'The faces stay unnamed. Pick the one that feels like you.',
+                  'Pick the one that feels like you.',
                   style: type.caption.copyWith(color: colors.ink2),
                 ),
                 const SizedBox(height: CurreSpace.s3),

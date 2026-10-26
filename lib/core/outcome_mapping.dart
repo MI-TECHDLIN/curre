@@ -36,7 +36,7 @@ class UnlockAction {
   final bool opensImmediately;
   final bool offersOverride;
 
-  /// Unavailable starts the 60-second fallback immediately; other non-open
+  /// Unavailable starts the [overrideWait] fallback immediately; other non-open
   /// outcomes wait for an explicit user choice.
   final bool startsOverrideImmediately;
   final DoorResolution? destination;

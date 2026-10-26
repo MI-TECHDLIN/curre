@@ -71,7 +71,7 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionHeading('Unlock gate, opens for a person'),
           PhoneFramePair(builder: (context) => const GatePreviewScreen()),
           const _SectionGap(),
-          const _SectionHeading('Unlock gate, the 60-second wait'),
+          const _SectionHeading('Unlock gate, the 30-second wait'),
           PhoneFramePair(builder: (context) => const WaitPreviewScreen()),
           const _SectionGap(),
           const _SectionHeading('Onboarding, step 1 of 6'),
@@ -156,6 +156,24 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionGap(),
           const _SectionHeading('PeekMascot'),
           const _PeekMascotDemo(),
+          const _SectionGap(),
+          const _SectionHeading('CurrePropArt (Fluent Emoji, outlined)'),
+          const _Note(
+            'Onboarding’s scene props: Microsoft’s Fluent Emoji Flat artwork (MIT), drawn as vectors with the avatars’ ink outline.',
+          ),
+          const _PropsDemo(),
+          const _SectionGap(),
+          const _SectionHeading('AvatarFigure'),
+          const _Note(
+            'A catalogue face on a body, for scenes: relaxed, waving, holding a phone, and the initial fallback.',
+          ),
+          const _FiguresDemo(),
+          const _SectionGap(),
+          const _SectionHeading('Scene kit'),
+          const _Note(
+            'Grain, a blob, a sticker card and a phone: the flat layers onboarding’s stages are built from.',
+          ),
+          const _SceneKitDemo(),
           const _SectionGap(),
           const _SectionHeading('LiveSky'),
           const _LiveSkies(),
@@ -819,7 +837,7 @@ class _OutcomeCards extends StatelessWidget {
             OutcomeCard(
               outcome: Outcome.specify,
               headline: 'What exactly will you do?',
-              body: 'One more try, or wait 60 s.',
+              body: 'One more try, or wait 30 s.',
             ),
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
@@ -830,7 +848,7 @@ class _OutcomeCards extends StatelessWidget {
             SizedBox(height: CurreSpace.s3),
             OutcomeCard(
               outcome: Outcome.unavailable,
-              headline: 'No answer. Opening anyway, in a minute',
+              headline: 'No answer. Opening anyway, in 30 seconds',
               body: 'The gate didn’t reply in 8 s. You may be offline.',
             ),
           ],
@@ -884,7 +902,7 @@ class _RisingDiscDemo extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: CurreSpace.s4),
                   // Shortened to 6 s here so the gallery shows the rise;
-                  // the real wait is 60 s (CurreMotion.countdown), linear.
+                  // the real wait is 30 s (CurreMotion.countdown), linear.
                   child: LayoutBuilder(
                     builder: (context, box) => RisingDisc(
                       duration: const Duration(seconds: 6),
@@ -898,7 +916,7 @@ class _RisingDiscDemo extends StatelessWidget {
               ),
             ),
             const SizedBox(height: CurreSpace.s2),
-            Text('6 s here; the real wait is 60 s, linear', style: t.meta),
+            Text('6 s here; the real wait is 30 s, linear', style: t.meta),
           ],
         );
       },
@@ -1150,6 +1168,116 @@ class _ProoflightDemo extends StatelessWidget {
             const SizedBox(height: CurreSpace.s4),
             const RunEndedNote(endedAt: 12, best: 12, total: 31),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _PropsDemo extends StatelessWidget {
+  const _PropsDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      builder: (context) => Wrap(
+        spacing: CurreSpace.s2,
+        runSpacing: CurreSpace.s2,
+        children: [
+          for (final prop in CurreProp.values)
+            Tooltip(
+              message: prop.name,
+              child: CurrePropArt(prop, size: 40, semanticLabel: prop.name),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FiguresDemo extends StatelessWidget {
+  const _FiguresDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      stacked: true,
+      builder: (context) {
+        final c = Theme.of(context).extension<CurreColors>()!;
+        return Container(
+          height: 170,
+          clipBehavior: Clip.hardEdge,
+          decoration: BoxDecoration(color: c.sky(Session.afternoon).bg),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AvatarFigure(avatarId: 'avatar-01', height: 160),
+              AvatarFigure(
+                avatarId: 'avatar-03',
+                height: 160,
+                pose: FigurePose.wave,
+              ),
+              AvatarFigure(
+                avatarId: 'avatar-09',
+                height: 160,
+                pose: FigurePose.phone,
+              ),
+              AvatarFigure(initial: 'Ada', height: 160),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SceneKitDemo extends StatelessWidget {
+  const _SceneKitDemo();
+
+  @override
+  Widget build(BuildContext context) {
+    return _DualTheme(
+      builder: (context) {
+        final c = Theme.of(context).extension<CurreColors>()!;
+        final sky = c.sky(Session.morning);
+        return SizedBox(
+          height: 220,
+          child: Stack(
+            children: [
+              Positioned.fill(child: ColoredBox(color: sky.bg)),
+              Positioned.fill(
+                child: SceneGrain(
+                  dark: sky.fg.withValues(alpha: .06),
+                  light: Colors.white.withValues(alpha: .16),
+                ),
+              ),
+              Positioned(
+                left: 10,
+                top: 20,
+                width: 160,
+                height: 150,
+                child: SceneBlob(color: Color.lerp(sky.bg, Colors.white, .3)!),
+              ),
+              const Positioned(
+                left: 24,
+                top: 40,
+                child: SceneCard(
+                  padding: EdgeInsets.all(12),
+                  child: Text('A sticker card'),
+                ),
+              ),
+              const Positioned(
+                right: 16,
+                top: 12,
+                child: ScenePhone(
+                  width: 92,
+                  height: 180,
+                  screen: Center(child: Text('Screen')),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );

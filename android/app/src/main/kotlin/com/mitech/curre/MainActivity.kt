@@ -5,6 +5,7 @@ import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.app.SearchManager
 import android.app.role.RoleManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.LauncherApps
@@ -117,6 +118,7 @@ class MainActivity : FlutterActivity() {
                     QuietNotificationListenerService.clearMissedNotifications(this)
                     result.success(null)
                 }
+                "openHomeSettings" -> result.success(openHomeSettings())
                 "setHomeSurfaceActive" -> {
                     homeSurfaceActive = call.arguments as Boolean
                     result.success(null)
@@ -417,6 +419,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /**
+     * Opens the screen where the user picks their home screen app, so they
+     * can leave Curre for another launcher (or come back). Phones that hide
+     * that screen get the default-apps list, then the main Settings screen.
+     * Returns which one opened, so Flutter can explain the remaining steps.
+     */
+    private fun openHomeSettings(): String {
+        val screens = listOf(
+            HOME_SETTINGS_OPENED to Settings.ACTION_HOME_SETTINGS,
+            DEFAULT_APPS_OPENED to Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+            SETTINGS_OPENED to Settings.ACTION_SETTINGS,
+        )
+        for ((opened, action) in screens) {
+            try {
+                startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return opened
+            } catch (error: ActivityNotFoundException) {
+                // This phone has no such screen; try the next one.
+            } catch (error: SecurityException) {
+                // Some builds protect a settings screen; try the next one.
+            }
+        }
+        return NOTHING_OPENED
+    }
+
     private fun isDefaultHome(): Boolean {
         val roleManager = getSystemService(RoleManager::class.java)
         return roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
@@ -560,6 +587,10 @@ class MainActivity : FlutterActivity() {
         private const val SPEECH_RECOGNIZED = "recognized"
         private const val SPEECH_CANCELLED = "cancelled"
         private const val SPEECH_UNAVAILABLE = "unavailable"
+        private const val HOME_SETTINGS_OPENED = "home"
+        private const val DEFAULT_APPS_OPENED = "defaultApps"
+        private const val SETTINGS_OPENED = "settings"
+        private const val NOTHING_OPENED = "none"
         private const val YOUTUBE_PACKAGE = "com.google.android.youtube"
         private const val MAPS_PACKAGE = "com.google.android.apps.maps"
     }

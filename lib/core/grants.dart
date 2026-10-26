@@ -1,7 +1,10 @@
 import 'api_models.dart';
 import 'models.dart';
 
-const Duration overrideWait = Duration(seconds: 60);
+/// How long "Why now?" makes the user wait before opening an app anyway
+/// (not now, needs more detail, an instruction, or no answer). Linear and
+/// cancellable; `CurreMotion.countdown` draws it.
+const Duration overrideWait = Duration(seconds: 30);
 
 int grantMinutesFor(UnlockResponse response, {int fallbackUnlockMinutes = 5}) {
   final extracted = response.minutes;

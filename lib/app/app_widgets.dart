@@ -524,7 +524,7 @@ class HomeDock extends StatelessWidget {
             Semantics(
               button: true,
               label:
-                  'Hidden apps, ${controller.hiddenApps.length} apps. Open list.',
+                  '${hiddenAppsLabel(controller.hiddenApps.length)}. Open the list to bring one back.',
               excludeSemantics: true,
               child: InkWell(
                 onTap: onHidden,
@@ -540,7 +540,7 @@ class HomeDock extends StatelessWidget {
                             vertical: CurreSpace.s2,
                           ),
                           child: Text(
-                            'Hidden apps · ${controller.hiddenApps.length}',
+                            hiddenAppsLabel(controller.hiddenApps.length),
                             style: type.listItem
                                 .weight(520)
                                 .copyWith(fontSize: 15),
@@ -569,6 +569,13 @@ class HomeDock extends StatelessWidget {
     if (packageName != null) controller.plainLaunch(packageName);
   }
 }
+
+/// The "Why now?" wait in words: "30 seconds".
+String get overrideWaitWords => '${overrideWait.inSeconds} seconds';
+
+/// "1 hidden app", "12 hidden apps".
+String hiddenAppsLabel(int count) =>
+    count == 1 ? '1 hidden app' : '$count hidden apps';
 
 void showCurreSnack(BuildContext context, String message) {
   final colors = Theme.of(context).extension<CurreColors>()!;

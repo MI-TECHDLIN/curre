@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
 
-/// The 60-second override's rising sun (design report 3.8 / 4.6): an ember
+/// The override wait's rising sun (design report 3.8 / 4.6): an ember
 /// disc with a 2 dp ink edge that rises **linearly**, never eased, from
 /// fully below the horizon to fully above it over [duration]. Time is
 /// information here, so it never gets the curves the rest of Curre's

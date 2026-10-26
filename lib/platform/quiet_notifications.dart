@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 const notificationAccessExplanation =
-    'Curre can quietly remove notifications from hidden apps and keep only '
-    'the app, title and time in Missed while hidden. Message bodies are never '
-    'saved or sent.';
+    'Hidden apps can still buzz you. With notification access, Curre keeps '
+    'them quiet until you bring them back, and saves just the app, title and '
+    'time in Missed notifications. Message text is never saved or shared.';
 
 @immutable
 class QuietNotificationConfiguration {

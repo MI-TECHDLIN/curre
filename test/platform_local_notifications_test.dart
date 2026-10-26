@@ -34,13 +34,13 @@ void main() {
       for (final reminder in gateway.scheduled) {
         expect(reminder.type, CurreNotificationType.checkIn);
         expect(reminder.destination, CurreNotificationDestination.checkIn);
-        expect(reminder.body, contains('into sight'));
+        expect(reminder.body, contains('on Home'));
         expect(reminder.actions, <CurreNotificationAction>[
           CurreNotificationAction.startCheckIn,
           CurreNotificationAction.snooze,
         ]);
       }
-      expect(gateway.scheduled.first.title, 'Morning check-in');
+      expect(gateway.scheduled.first.title, 'Plan your morning');
       expect(gateway.scheduled.last.reference, 'evening');
     });
 

@@ -73,7 +73,7 @@ class _HistoryBody extends StatelessWidget {
                           Text('A quiet start.', style: type.title),
                           const SizedBox(height: CurreSpace.s2),
                           Text(
-                            'Your check-ins and deliberate unlock choices will appear here. Nothing is uploaded.',
+                            'Your plans, and the apps you bring back, will show up here. It all stays on this phone.',
                             style: type.body.copyWith(color: colors.ink2),
                             textAlign: TextAlign.center,
                           ),
@@ -128,13 +128,10 @@ class _DawnOverview extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '$count of 21 sessions started with a plan',
-              style: type.title,
-            ),
+            Text('$count of 21 planned', style: type.title),
             const SizedBox(height: CurreSpace.s1),
             Text(
-              'Morning · afternoon · evening, across the last seven days',
+              'Each square is a morning, afternoon or evening in the last 7 days. Filled ones started with a plan.',
               style: type.caption.copyWith(color: colors.ink3),
             ),
             const SizedBox(height: CurreSpace.s4),
@@ -357,12 +354,12 @@ class _PlanHistoryCard extends StatelessWidget {
                 const SizedBox(width: CurreSpace.s2),
                 Expanded(
                   child: Text(
-                    '${_capitalise(plan.session.label)} check-in',
+                    '${_capitalise(plan.session.label)} plan',
                     style: type.label.copyWith(color: sky.fg),
                   ),
                 ),
                 Text(
-                  '${plan.apps.length} ${plan.apps.length == 1 ? 'door' : 'doors'}',
+                  '${plan.apps.length} ${plan.apps.length == 1 ? 'app' : 'apps'}',
                   style: type.meta.copyWith(color: sky.fg),
                 ),
               ],
@@ -423,15 +420,10 @@ class _AttemptHistoryCard extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _OutcomePill(attempt.outcome),
-                if (attempt.kind != null)
-                  KindChip(
-                    kind: attempt.kind!,
-                    confidence: attempt.confidence,
-                    threshold: controller.settings.threshold,
-                  ),
+                if (attempt.kind != null) KindChip(kind: attempt.kind!),
                 if (attempt.overridden)
                   _PlainPill(
-                    label: '60 s override used',
+                    label: 'Waited $overrideWaitWords',
                     foreground: colors.emberText,
                     background: colors.marker,
                   ),
@@ -439,7 +431,7 @@ class _AttemptHistoryCard extends StatelessWidget {
             ),
             const SizedBox(height: CurreSpace.s3),
             Text(
-              'Unlock · ${controller.appFor(attempt.packageName)?.label ?? attempt.packageName}',
+              'Why now? · ${controller.appFor(attempt.packageName)?.label ?? attempt.packageName}',
               style: type.label,
             ),
             const SizedBox(height: CurreSpace.s1),
@@ -499,7 +491,7 @@ class _GrantHistoryCard extends StatelessWidget {
                 const SizedBox(width: CurreSpace.s2),
                 Expanded(
                   child: Text(
-                    '${controller.appFor(grant.packageName)?.label ?? grant.packageName} came into sight',
+                    '${controller.appFor(grant.packageName)?.label ?? grant.packageName} came back',
                     style: type.label.copyWith(color: open.fg),
                   ),
                 ),
@@ -511,7 +503,7 @@ class _GrantHistoryCard extends StatelessWidget {
             if (grant.source == GrantSource.override) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
-                'Opened after the 60-second wait',
+                'Opened after waiting $overrideWaitWords',
                 style: type.caption.copyWith(color: open.fg),
               ),
             ],
@@ -617,7 +609,13 @@ class _OutcomePill extends StatelessWidget {
       laterTarget: Session.evening,
     );
     return _PlainPill(
-      label: _capitalise(outcome.name),
+      label: switch (outcome) {
+        UnlockOutcome.open => 'Opened',
+        UnlockOutcome.later => 'Not now',
+        UnlockOutcome.specify => 'Needed more detail',
+        UnlockOutcome.flagged => 'Not a reason',
+        UnlockOutcome.unavailable => 'Couldn’t check',
+      },
       foreground: pair.fg,
       background: pair.bg,
     );

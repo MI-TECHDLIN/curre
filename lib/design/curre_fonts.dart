@@ -30,11 +30,22 @@ const curreIconCredit =
     'Used through the solar_icons Flutter package; three glyphs are '
     'recomposed in code where the package font drops a cut-out.';
 
-/// Registers every outside asset's licence or credit: the three OFL fonts
-/// and the Solar icon credit. Call once at startup.
+/// The MIT licence of Microsoft's Fluent Emoji, whose Flat-style artwork
+/// Curre's illustration props are drawn from (`CurrePropArt`).
+const curreFluentEmojiLicenseAsset = 'assets/licenses/MIT-FluentEmoji.txt';
+
+/// Registers every outside asset's licence or credit: the three OFL fonts,
+/// the Solar icon credit and the Fluent Emoji licence. Call once at
+/// startup.
 void registerCurreLicenses() {
   registerCurreFontLicenses();
   LicenseRegistry.addLicense(() async* {
     yield const LicenseEntryWithLineBreaks(['Solar icons (480 Design)'], curreIconCredit);
+    yield LicenseEntryWithLineBreaks(
+      ['Fluent Emoji (Microsoft)'],
+      'Illustration props drawn from Fluent Emoji (Flat style) by Microsoft, '
+      'https://github.com/microsoft/fluentui-emoji.\n\n'
+      '${await rootBundle.loadString(curreFluentEmojiLicenseAsset)}',
+    );
   });
 }

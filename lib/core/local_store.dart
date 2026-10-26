@@ -21,6 +21,7 @@ class CurreLocalStore {
   static const String _grantHistoryKey = 'curre.grantHistory.v1';
   static const String _taskTracesKey = 'curre.taskTraces.v1';
   static const String _proofRecordsKey = 'curre.proofRecords.v1';
+  static const String _hiddenAppsTipKey = 'curre.hiddenAppsTip.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -42,6 +43,13 @@ class CurreLocalStore {
 
   Future<void> setOnboardingComplete(bool complete) =>
       _preferences.setBool(_onboardingKey, complete);
+
+  /// Whether the user has put away the Hidden apps explainer.
+  bool get isHiddenAppsTipDismissed =>
+      _preferences.getBool(_hiddenAppsTipKey) ?? false;
+
+  Future<void> dismissHiddenAppsTip() =>
+      _preferences.setBool(_hiddenAppsTipKey, true);
 
   Future<void> saveSettings(Settings settings) async {
     await _preferences.setString(_settingsKey, jsonEncode(settings.toJson()));

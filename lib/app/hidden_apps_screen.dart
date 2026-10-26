@@ -8,6 +8,9 @@ import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'unlock_gate_screen.dart';
 
+/// Hidden apps: every app that isn't part of the current plan, by name
+/// only (no icons, so nothing calls out to be opened). Tapping one asks
+/// "Why now?" before bringing it back.
 class HiddenAppsScreen extends StatefulWidget {
   const HiddenAppsScreen({super.key, required this.controller});
 
@@ -23,13 +26,20 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(_loadMissed());
+    unawaited(controller.refreshMissedNotifications());
   }
 
-  Future<void> _loadMissed() async {
-    await controller.refreshMissedNotifications();
-    if (mounted) setState(() {});
-  }
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) => _HiddenAppsBody(controller: controller),
+  );
+}
+
+class _HiddenAppsBody extends StatelessWidget {
+  const _HiddenAppsBody({required this.controller});
+
+  final CurreController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -43,41 +53,51 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
       rows.add(
         Padding(
           padding: const EdgeInsets.only(top: CurreSpace.s2),
-          child: Material(
-            color: colors.raised,
-            shape: RoundedRectangleBorder(
-              borderRadius: CurreShape.md,
-              side: BorderSide(color: colors.hairline),
-            ),
-            child: InkWell(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      MissedWhileHiddenScreen(notifications: missed),
-                ),
+          child: Semantics(
+            button: true,
+            label:
+                '${missedNotificationsLabel(missed.length)} from hidden apps. Open the list.',
+            excludeSemantics: true,
+            child: Material(
+              color: colors.raised,
+              shape: RoundedRectangleBorder(
+                borderRadius: CurreShape.md,
+                side: BorderSide(color: colors.hairline),
               ),
-              splashFactory: NoSplash.splashFactory,
-              borderRadius: CurreShape.md,
-              child: Padding(
-                padding: const EdgeInsets.all(CurreSpace.s4),
-                child: Row(
-                  children: [
-                    CurreGlyph(CurreGlyphKind.notify, color: colors.ink),
-                    const SizedBox(width: CurreSpace.s3),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Missed while hidden', style: type.label),
-                          Text(
-                            '${missed.length} notification${missed.length == 1 ? '' : 's'} · titles only',
-                            style: type.caption.copyWith(color: colors.ink3),
-                          ),
-                        ],
+              child: InkWell(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        MissedWhileHiddenScreen(notifications: missed),
+                  ),
+                ),
+                splashFactory: NoSplash.splashFactory,
+                borderRadius: CurreShape.md,
+                child: Padding(
+                  padding: const EdgeInsets.all(CurreSpace.s4),
+                  child: Row(
+                    children: [
+                      CurreGlyph(CurreGlyphKind.notify, color: colors.ink),
+                      const SizedBox(width: CurreSpace.s3),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Missed notifications', style: type.label),
+                            Text(
+                              '${missedNotificationsLabel(missed.length)} from hidden apps',
+                              style: type.caption.copyWith(color: colors.ink3),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    CurreGlyph(CurreGlyphKind.go, size: 18, color: colors.ink3),
-                  ],
+                      CurreGlyph(
+                        CurreGlyphKind.go,
+                        size: 18,
+                        color: colors.ink3,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -94,9 +114,11 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
               top: CurreSpace.s4,
               bottom: CurreSpace.s1,
             ),
-            child: Text(
-              letter,
-              style: type.meta.copyWith(color: colors.emberText),
+            child: ExcludeSemantics(
+              child: Text(
+                letter,
+                style: type.meta.copyWith(color: colors.emberText),
+              ),
             ),
           ),
         );
@@ -105,7 +127,7 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
       rows.add(
         Semantics(
           button: true,
-          label: 'Ask to open ${app.label}',
+          label: 'Bring back ${app.label}',
           excludeSemantics: true,
           child: InkWell(
             onTap: () => Navigator.of(context).push(
@@ -117,11 +139,15 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
             splashFactory: NoSplash.splashFactory,
             child: Container(
               constraints: const BoxConstraints(minHeight: 56),
-              alignment: Alignment.centerLeft,
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: colors.hairline)),
               ),
-              child: Text(app.label, style: type.listItem),
+              child: Row(
+                children: [
+                  Expanded(child: Text(app.label, style: type.listItem)),
+                  CurreGlyph(CurreGlyphKind.rise, size: 18, color: colors.ink3),
+                ],
+              ),
             ),
           ),
         ),
@@ -140,7 +166,7 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
             ),
             child: CurreTopBar(
               title: 'Hidden apps',
-              subtitle: 'Apps you didn\'t plan for wait here. Tap one to bring it back.',
+              subtitle: apps.length == 1 ? '1 app' : '${apps.length} apps',
             ),
           ),
           Expanded(
@@ -149,7 +175,7 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(CurreSpace.gutter),
                       child: Text(
-                        'Every app in your plan is already ready.',
+                        'No hidden apps right now. Everything you planned is on Home.',
                         style: type.body.copyWith(color: colors.ink2),
                         textAlign: TextAlign.center,
                       ),
@@ -164,7 +190,19 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
                           CurreSpace.s10,
                           CurreSpace.s6,
                         ),
-                        children: rows,
+                        children: [
+                          if (!controller.hiddenAppsTipDismissed &&
+                              apps.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: CurreSpace.s2,
+                              ),
+                              child: _HiddenAppsTip(
+                                onDismiss: controller.dismissHiddenAppsTip,
+                              ),
+                            ),
+                          ...rows,
+                        ],
                       ),
                       if (apps.isNotEmpty)
                         Positioned(
@@ -172,14 +210,16 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
                           top: CurreSpace.s2,
                           bottom: CurreSpace.s2,
                           child: Center(
-                            child: Text(
-                              'A\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\nQ\nR\nS\nT\nU\nV\nW\nX\nY\nZ',
-                              style: type.meta.copyWith(
-                                fontSize: 9,
-                                height: 1.15,
-                                color: colors.ink3,
+                            child: ExcludeSemantics(
+                              child: Text(
+                                'A\nB\nC\nD\nE\nF\nG\nH\nI\nJ\nK\nL\nM\nN\nO\nP\nQ\nR\nS\nT\nU\nV\nW\nX\nY\nZ',
+                                style: type.meta.copyWith(
+                                  fontSize: 9,
+                                  height: 1.15,
+                                  color: colors.ink3,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
                             ),
                           ),
                         ),
@@ -192,6 +232,64 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
   }
 }
 
+String missedNotificationsLabel(int count) =>
+    count == 1 ? '1 notification' : '$count notifications';
+
+/// The first-time explainer, until the user puts it away.
+class _HiddenAppsTip extends StatelessWidget {
+  const _HiddenAppsTip({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        CurreSpace.s4,
+        CurreSpace.s3,
+        CurreSpace.s2,
+        CurreSpace.s1,
+      ),
+      decoration: BoxDecoration(
+        color: colors.raised,
+        borderRadius: CurreShape.dome,
+        border: Border.all(color: colors.hairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const CurrePropArt(CurreProp.door, size: 40),
+              const SizedBox(width: CurreSpace.s3),
+              Expanded(
+                child: Text(
+                  'Apps you didn’t plan for wait here. Tap one to bring it back.',
+                  style: type.body.copyWith(color: colors.ink),
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onDismiss,
+              child: Text(
+                'Got it',
+                style: type.label.copyWith(color: colors.emberText),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Notifications Curre kept quiet while their apps were hidden: app, title
+/// and time only.
 class MissedWhileHiddenScreen extends StatelessWidget {
   const MissedWhileHiddenScreen({super.key, required this.notifications});
 
@@ -213,8 +311,9 @@ class MissedWhileHiddenScreen extends StatelessWidget {
               CurreSpace.s3,
             ),
             child: CurreTopBar(
-              title: 'Missed while hidden',
-              subtitle: 'App, title and time only · kept on this phone',
+              title: 'Missed notifications',
+              subtitle: 'Kept quiet while their apps were hidden. Only the app, title and time are saved, on this phone.',
+              maxTitleLines: 2,
             ),
           ),
           Expanded(

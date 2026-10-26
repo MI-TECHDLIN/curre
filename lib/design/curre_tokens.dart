@@ -65,7 +65,7 @@ abstract final class CurreElevation {
 }
 
 /// Durations and curves (design report 3.8). [countdown] is linear:
-/// the 60 s override and the grant ring are never eased.
+/// the override wait and the grant ring are never eased.
 abstract final class CurreMotion {
   static const tap = Duration(milliseconds: 90);
   static const quick = Duration(milliseconds: 160);
@@ -76,8 +76,9 @@ abstract final class CurreMotion {
   static const stagger = Duration(milliseconds: 60);
   static const tick = Duration(milliseconds: 160);
 
-  /// The 60-second unlock-gate override, and the grant ring. Both linear.
-  static const countdown = Duration(seconds: 60);
+  /// The unlock gate's override wait (core's `overrideWait`, 30 s), and
+  /// the grant ring. Both linear.
+  static const countdown = Duration(seconds: 30);
 
   static const riseCurve = Cubic(.16, 1, .3, 1);
   static const setCurve = Cubic(.7, 0, .84, 0);

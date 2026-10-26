@@ -29,11 +29,10 @@ class SpeechInputResult {
       'cancelled' => const SpeechInputResult._(
         status: SpeechInputStatus.cancelled,
       ),
-      'unavailable' => SpeechInputResult._(
+      // Native text can be a raw error; the screen always gets plain words.
+      'unavailable' => const SpeechInputResult._(
         status: SpeechInputStatus.unavailable,
-        message: (raw['message'] as String?)?.trim().isNotEmpty == true
-            ? (raw['message'] as String).trim()
-            : _unavailableMessage,
+        message: _unavailableMessage,
       ),
       _ => const SpeechInputResult._(
         status: SpeechInputStatus.unavailable,
@@ -43,7 +42,10 @@ class SpeechInputResult {
   }
 
   static const String _unavailableMessage =
-      "Speech input isn't available on this phone.";
+      "Voice typing isn't available on this phone. You can type instead.";
+
+  static const String _busyMessage =
+      'Voice typing is already open. Finish there, then try again.';
 
   final SpeechInputStatus status;
   final String? transcript;
@@ -68,10 +70,12 @@ class SpeechInputService {
       });
       return SpeechInputResult.fromChannel(raw);
     } on PlatformException catch (error) {
-      return SpeechInputResult.fromChannel(<Object?, Object?>{
-        'status': 'unavailable',
-        'message': error.message,
-      });
+      return SpeechInputResult._(
+        status: SpeechInputStatus.unavailable,
+        message: error.code == 'speech_in_progress'
+            ? SpeechInputResult._busyMessage
+            : SpeechInputResult._unavailableMessage,
+      );
     }
   }
 

@@ -865,8 +865,8 @@ class _ProofCard extends StatelessWidget {
                 const SizedBox(height: CurreSpace.s1),
                 Text(
                   offline
-                      ? 'Supported by your Start and your note'
-                      : 'Supported by the door you opened and your note',
+                      ? 'Backed by starting the task and your note'
+                      : 'Backed by the app you opened and your note',
                   style: type.meta.copyWith(
                     color: card.fg.withValues(alpha: .78),
                   ),
