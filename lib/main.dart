@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/curre_controller.dart';
 import 'app/home_screen.dart';
 import 'app/onboarding_screen.dart';
+import 'app/unlock_gate_screen.dart';
 import 'design/design.dart';
 import 'doors/door_lab_screen.dart';
 import 'gallery/gallery_screen.dart';
+import 'platform/gentle_intercept.dart';
 
 void main() {
   registerCurreLicenses();
@@ -75,10 +79,81 @@ class _CurreAppState extends State<CurreApp> {
   }
 }
 
-class _CurreRoot extends StatelessWidget {
+class _CurreRoot extends StatefulWidget {
   const _CurreRoot({required this.controller});
 
   final CurreController controller;
+
+  @override
+  State<_CurreRoot> createState() => _CurreRootState();
+}
+
+class _CurreRootState extends State<_CurreRoot> with WidgetsBindingObserver {
+  late final GentleInterceptCoordinator _interceptCoordinator;
+  bool _interceptGateOpen = false;
+
+  CurreController get controller => widget.controller;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _interceptCoordinator = GentleInterceptCoordinator(
+      source: controller.gentleIntercept,
+      snapshot: () => controller.gentleInterceptSnapshot,
+      onIntercept: _showInterceptGate,
+    )..start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(controller.pollPendingGentleIntercept());
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(_refreshAndPoll());
+  }
+
+  Future<void> _refreshAndPoll() async {
+    await controller.refreshUsageAccess();
+    await controller.refreshNotificationAccess();
+    await controller.pollPendingGentleIntercept();
+  }
+
+  Future<void> _showInterceptGate(ForegroundAppEvent event) async {
+    if (!mounted || !controller.onboardingComplete || _interceptGateOpen) {
+      return;
+    }
+    var app = controller.appFor(event.packageName);
+    if (app == null) {
+      await controller.refresh();
+      app = controller.appFor(event.packageName);
+    }
+    if (!mounted || app == null) return;
+    final targetApp = app;
+
+    _interceptGateOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => UnlockGateScreen(
+            controller: controller,
+            app: targetApp,
+            openedFromOutside: true,
+          ),
+        ),
+      );
+    } finally {
+      _interceptGateOpen = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_interceptCoordinator.dispose());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

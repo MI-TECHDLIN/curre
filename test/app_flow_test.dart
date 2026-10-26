@@ -757,7 +757,7 @@ void main() {
     },
   );
 
-  testWidgets('Curre settings exposes telemetry, licences and history only', (
+  testWidgets('Curre settings exposes app access, telemetry and history', (
     tester,
   ) async {
     await phone(tester);
@@ -770,11 +770,20 @@ void main() {
     );
     expect(find.text('Curre settings'), findsOneWidget);
     expect(find.text('Judge demo mode'), findsNothing);
+    expect(find.text('Ask why when hidden apps open'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Quiet notifications from hidden apps'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Quiet notifications from hidden apps'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Under the hood'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.text('Under the hood'));
+    await tester.pumpAndSettle();
     expect(find.text('Under the hood'), findsOneWidget);
     await tester.tap(find.text('Under the hood'));
     await tester.pumpAndSettle();

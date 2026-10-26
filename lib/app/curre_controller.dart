@@ -47,6 +47,7 @@ class CurreController extends ChangeNotifier {
     required this.launcher,
     this.store,
     this.homePlatform = const HomePlatformService(),
+    this.gentleIntercept = const DisabledGentleInterceptGateway(),
     this.notifications,
     SpeechInputService? speech,
     this.api,
@@ -112,9 +113,14 @@ class CurreController extends ChangeNotifier {
     final historyGrants = await store?.loadGrantHistory(now: now) ?? <Grant>[];
     final historyAttempts = await store?.loadAttempts(now: now) ?? <Attempt>[];
 
-    return CurreController(
+    final GentleInterceptGateway gentleIntercept =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+        ? AndroidGentleInterceptGateway()
+        : const DisabledGentleInterceptGateway();
+    final controller = CurreController(
       launcher: launcher,
       store: store,
+      gentleIntercept: gentleIntercept,
       notifications: GrantNotificationService(
         FlutterGrantNotificationGateway(),
       ),
@@ -131,6 +137,8 @@ class CurreController extends ChangeNotifier {
       historyAttempts: historyAttempts,
       onboardingComplete: store?.isOnboardingComplete ?? false,
     );
+    await controller.initializeGentleIntercept();
+    return controller;
   }
 
   static const fallbackApps = <LaunchableApp>[
@@ -160,6 +168,7 @@ class CurreController extends ChangeNotifier {
   final DoorPlatform launcher;
   final CurreLocalStore? store;
   final HomePlatformGateway homePlatform;
+  final GentleInterceptGateway gentleIntercept;
   final GrantNotificationService? notifications;
   final SpeechInputService speech;
   final CurreApiClient? api;
@@ -180,6 +189,8 @@ class CurreController extends ChangeNotifier {
   CallReceipt? lastUnlockCall;
   CallReceipt? lastProofCall;
   bool _firstCheckinRequested = false;
+  bool _hasUsageAccess = false;
+  bool _hasNotificationAccess = false;
   bool _retryingProofs = false;
   DateTime? _lastPendingProofRetryAt;
   int _pendingProofRetryCursor = 0;
@@ -193,6 +204,10 @@ class CurreController extends ChangeNotifier {
 
   DateTime get now => _now();
   bool get backendConfigured => api != null;
+  bool get hasUsageAccess => _hasUsageAccess;
+  bool get hasNotificationAccess => _hasNotificationAccess;
+  List<MissedWhileHiddenNotification> missedWhileHidden =
+      <MissedWhileHiddenNotification>[];
 
   SessionWindow get currentSession =>
       SessionSchedule.fromSettings(settings).current(now);
@@ -218,6 +233,40 @@ class CurreController extends ChangeNotifier {
 
   List<Grant> get activeGrants =>
       grants.where((grant) => grant.isActiveAt(now)).toList(growable: false);
+
+  GentleInterceptSnapshot get gentleInterceptSnapshot {
+    final plan = activePlan;
+    return GentleInterceptSnapshot(
+      enabled: onboardingComplete && settings.askWhyOnHiddenAppOpen,
+      hasUsageAccess: _hasUsageAccess,
+      launchablePackages: apps.map((app) => app.packageName).toSet(),
+      essentialPackages: <String>{
+        ...settings.essentials,
+        ...suggestedEssentials,
+      },
+      planPackages: plan == null
+          ? const <String>{}
+          : plan.apps.map((app) => app.packageName).toSet(),
+      grantPackages: activeGrants.map((grant) => grant.packageName).toSet(),
+    );
+  }
+
+  QuietNotificationSnapshot get quietNotificationSnapshot {
+    final plan = activePlan;
+    return QuietNotificationSnapshot(
+      enabled: onboardingComplete && settings.quietNotificationsFromHiddenApps,
+      hasNotificationAccess: _hasNotificationAccess,
+      launchablePackages: apps.map((app) => app.packageName).toSet(),
+      essentialPackages: <String>{
+        ...settings.essentials,
+        ...suggestedEssentials,
+      },
+      planPackages: plan == null
+          ? const <String>{}
+          : plan.apps.map((app) => app.packageName).toSet(),
+      grantPackages: activeGrants.map((grant) => grant.packageName).toSet(),
+    );
+  }
 
   LaunchableApp? appFor(String packageName) {
     for (final app in apps) {
@@ -313,13 +362,154 @@ class CurreController extends ChangeNotifier {
     onboardingComplete = true;
     await store?.saveSettings(settings);
     await store?.setOnboardingComplete(true);
+    await _syncGentleInterceptPolicy();
     notifyListeners();
   }
 
   Future<void> updateSettings(Settings value) async {
     settings = value;
     await store?.saveSettings(value);
+    await _syncGentleInterceptPolicy();
     notifyListeners();
+  }
+
+  Future<void> initializeGentleIntercept() async {
+    await refreshUsageAccess(notify: false);
+    await refreshNotificationAccess(notify: false);
+    await refreshMissedNotifications(notify: false);
+  }
+
+  Future<bool> refreshUsageAccess({bool notify = true}) async {
+    var granted = false;
+    try {
+      granted = await gentleIntercept.hasUsageAccess();
+    } on Object {
+      // Non-Android review builds have no usage-access channel.
+    }
+    final changed = granted != _hasUsageAccess;
+    _hasUsageAccess = granted;
+    await _syncGentleInterceptPolicy();
+    if (notify && changed) notifyListeners();
+    return granted;
+  }
+
+  Future<bool> requestUsageAccess() async {
+    var granted = false;
+    try {
+      granted = await gentleIntercept.requestUsageAccess();
+      if (!granted) granted = await gentleIntercept.hasUsageAccess();
+    } on Object {
+      // The settings action is unavailable outside Android.
+    }
+    final changed = granted != _hasUsageAccess;
+    _hasUsageAccess = granted;
+    await _syncGentleInterceptPolicy();
+    if (changed) notifyListeners();
+    return granted;
+  }
+
+  Future<bool> refreshNotificationAccess({bool notify = true}) async {
+    var granted = false;
+    try {
+      granted = await gentleIntercept.hasNotificationAccess();
+    } on Object {
+      // Non-Android review builds have no notification-listener channel.
+    }
+    final changed = granted != _hasNotificationAccess;
+    _hasNotificationAccess = granted;
+    await _syncGentleInterceptPolicy();
+    if (notify && changed) notifyListeners();
+    return granted;
+  }
+
+  Future<bool> requestNotificationAccess() async {
+    var granted = false;
+    try {
+      granted = await gentleIntercept.requestNotificationAccess();
+      if (!granted) {
+        granted = await gentleIntercept.hasNotificationAccess();
+      }
+    } on Object {
+      // The listener settings action is unavailable outside Android.
+    }
+    final changed = granted != _hasNotificationAccess;
+    _hasNotificationAccess = granted;
+    await _syncGentleInterceptPolicy();
+    if (changed) notifyListeners();
+    return granted;
+  }
+
+  Future<void> refreshMissedNotifications({bool notify = true}) async {
+    try {
+      missedWhileHidden = await gentleIntercept.loadMissedNotifications();
+    } on Object {
+      missedWhileHidden = <MissedWhileHiddenNotification>[];
+    }
+    if (notify) notifyListeners();
+  }
+
+  Future<void> pollPendingGentleIntercept() async {
+    try {
+      await gentleIntercept.pollPendingForegroundEvent();
+    } on Object {
+      // A pending handoff is best effort; Home remains usable without it.
+    }
+  }
+
+  Future<void> _syncGentleInterceptPolicy() async {
+    final allowedUntil = <String, DateTime>{};
+    void extend(String packageName, DateTime until) {
+      final existing = allowedUntil[packageName];
+      if (existing == null || existing.isBefore(until)) {
+        allowedUntil[packageName] = until.toUtc();
+      }
+    }
+
+    final plan = activePlan;
+    if (plan != null) {
+      for (final app in plan.apps) {
+        extend(app.packageName, plan.endsAt);
+      }
+    }
+    for (final grant in activeGrants) {
+      extend(grant.packageName, grant.expiresAt);
+    }
+    final monitoredPackages = apps
+        .map((app) => app.packageName)
+        .where((packageName) => packageName != currePackageName)
+        .toSet();
+    final alwaysAllowedPackages = <String>{
+      currePackageName,
+      ...settings.essentials,
+      ...suggestedEssentials,
+    };
+
+    try {
+      await gentleIntercept.configureGentleIntercept(
+        GentleInterceptConfiguration(
+          enabled: onboardingComplete && settings.askWhyOnHiddenAppOpen,
+          monitoredPackages: monitoredPackages,
+          alwaysAllowedPackages: alwaysAllowedPackages,
+          allowedUntilUtc: allowedUntil,
+        ),
+      );
+    } on Object {
+      // Android owns the foreground helper; local visibility still works if
+      // it cannot be configured.
+    }
+    try {
+      await gentleIntercept.configureQuietNotifications(
+        QuietNotificationConfiguration(
+          enabled:
+              onboardingComplete && settings.quietNotificationsFromHiddenApps,
+          monitoredPackages: monitoredPackages,
+          alwaysAllowedPackages: alwaysAllowedPackages,
+          allowedUntilUtc: allowedUntil,
+        ),
+      );
+    } on Object {
+      // Notification access is optional and local visibility is unaffected.
+    }
   }
 
   Future<void> updateDisplayName(String value) =>
@@ -327,9 +517,15 @@ class CurreController extends ChangeNotifier {
 
   Future<void> clearHistory() async {
     await store?.clearHistory();
+    try {
+      await gentleIntercept.clearMissedNotifications();
+    } on Object {
+      // The local Flutter history still clears on review builds.
+    }
     historyPlans = <Plan>[];
     historyGrants = <Grant>[];
     historyAttempts = <Attempt>[];
+    missedWhileHidden = <MissedWhileHiddenNotification>[];
     taskTraces = <TaskTrace>[];
     proofRecords = ProoflightRules.forgetWords(proofRecords);
     notifyListeners();
@@ -378,6 +574,7 @@ class CurreController extends ChangeNotifier {
     } else {
       grants = activeGrants;
     }
+    await _syncGentleInterceptPolicy();
     notifyListeners();
     unawaited(retryPendingProofs());
   }
@@ -539,6 +736,7 @@ class CurreController extends ChangeNotifier {
     ];
     await store?.saveTodayPlans(plans, now: now);
     await store?.appendPlanHistory(plan, now: now);
+    await _syncGentleInterceptPolicy();
     notifyListeners();
   }
 
@@ -931,6 +1129,9 @@ class CurreController extends ChangeNotifier {
     ];
     await store?.saveActiveGrants(grants, now: now);
     await store?.appendGrantHistory(grant, now: now);
+    // Update Android before opening the granted app, otherwise the usage
+    // event from that launch could race the new grant and reopen the gate.
+    await _syncGentleInterceptPolicy();
     try {
       await notifications?.startGrant(grant: grant, appLabel: appLabel);
     } on Object {
@@ -989,6 +1190,7 @@ class CurreController extends ChangeNotifier {
   @override
   void dispose() {
     api?.close();
+    unawaited(gentleIntercept.dispose());
     super.dispose();
   }
 }
