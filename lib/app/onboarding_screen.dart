@@ -660,6 +660,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           'The plan you type or say',
           'The names of your apps',
           'Your reason when you open a hidden app',
+          'A note you send after a task',
         ],
       ),
       const SizedBox(height: CurreSpace.s3),

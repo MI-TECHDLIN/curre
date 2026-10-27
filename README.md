@@ -42,10 +42,11 @@ to do.
   want in.
 - **Prooflight.** A completed task only counts if Curre watched you start
   it — through a Task Door or an explicit offline start. A completion note
-  then goes through the same Guard → Decide → Extract judgment. A specific,
-  traced completion raises a proof day; an honest check-off without a note
-  stays an honest check-off. The summary is rebuilt from records each time,
-  never stored as a counter.
+  then goes through Protect → Guard → Decide → Extract → Verify. Decide must
+  find a specific result and Verify must find no clear conflict with the
+  planned task. A specific, traced completion raises a proof day; an honest
+  check-off without a note stays an honest check-off. The summary is rebuilt
+  from records each time, never stored as a counter.
 - **Gentle intercept.** A small foreground service notices when a hidden
   app comes to the front — from the recent-apps list, a link, or a
   notification tap — and brings up Curre's "Why now?" gate instead of
@@ -76,8 +77,8 @@ shapes: [`server/README.md`](server/README.md).
 | Route | Clocked steps | What it decides |
 | --- | --- | --- |
 | `POST /v1/plan` | Fill → Extract | Which installed apps appear on the next Home, which shortcut each uses, and the exact search words/end time, as visible highlights. |
-| `POST /v1/unlock` | Guard → Decide → Extract | Whether a hidden app's "Why now?" reason is safe to act on, which of the five outcomes it gets, and (for `open`) the door and grant length. |
-| `POST /v1/proof` | Guard → Decide → Extract | Whether a completion note reports a specific result, and the exact span of what was completed or learned. |
+| `POST /v1/unlock` | Protect → Guard → Decide → Extract | Protect's spans replace personal details only in the copy saved to History. Guard can stop an instruction; Decide selects one of five outcomes and a door; Extract supplies the target, person and grant length. |
+| `POST /v1/proof` | Protect → Guard → Decide → Extract → Verify | Protect changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
 
 Measured against the real Clocked API, sequentially, 2026-10-25
 (`server/scripts/measure.py`; see `server/README.md` for the full table and
@@ -88,9 +89,11 @@ method):
 | `/v1/plan` | 10 | 5.30 (4–11) | 274 ms | 858 ms |
 | `/v1/unlock` | 25 | 4.76 (4–7) | 260 ms | 344 ms |
 
-`/v1/proof` shares `/v1/unlock`'s shape (Guard → Decide → Extract) and the
-one recorded real call used for its contract fixture cost 4 credits; it
-hasn't been through the same 10+ sample latency sweep yet.
+The current five-step `/v1/proof` pipeline has one sanitized real sample:
+**10 credits and 900 ms** client-observed round trip. It has not been through
+the same 10+ sample latency sweep yet. The added Protect step was also seen
+at 65–72 ms inside two real pipelines; see `server/README.md` for the exact
+measurement scope and credit budget.
 
 ## Architecture
 
@@ -108,7 +111,7 @@ flowchart LR
         Routes["/v1/plan · /v1/unlock · /v1/proof\n/healthz"]
     end
 
-    Clocked["Clocked API\nFill · Extract · Decide · Guard"]
+    Clocked["Clocked API\nFill · Extract · Decide · Guard · Protect · Verify"]
 
     UI <--> Store
     UI <--> Kotlin
@@ -132,6 +135,13 @@ of Curre's own plans, grants, attempts, and proof notes live only on the
 phone in local storage, age out automatically, and clear with History —
 but that local storage is not encrypted, so it isn't protected against a
 compromised or backed-up device.
+
+Before a judged unlock reason or proof note is written to History, Protect's
+source spans replace names, phone numbers, email addresses, addresses, card
+numbers and bank-account numbers with visible placeholders such as `[name]`
+and `[phone]`. The gate and completion sheet keep using the original words.
+If Protect does not answer, Curre keeps the words as typed and shows no false
+privacy marker.
 
 ## Build and run
 

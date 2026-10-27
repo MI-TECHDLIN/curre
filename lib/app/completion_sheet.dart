@@ -344,18 +344,25 @@ class CompletionSheetView extends StatelessWidget {
   Widget _followUp(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
-    final prompt = switch (submission?.kind) {
-      ProofKind.future => 'That sounds like what comes next. What changed, finished, or became clear?',
-      ProofKind.unrelated => 'Say how it connects to your plan. What changed, finished, or became clear?',
-      _ => 'A name, a number or a step is enough. What changed, finished, or became clear?',
-    };
+    final mismatch = submission?.mismatch?.trim();
+    final prompt = mismatch != null && mismatch.isNotEmpty
+        ? '“${_shortMismatch(mismatch)}” doesn’t match the task you planned. What changed, finished, or became clear?'
+        : switch (submission?.kind) {
+            ProofKind.future => 'That sounds like what comes next. What changed, finished, or became clear?',
+            ProofKind.unrelated => 'Say how it connects to your plan. What changed, finished, or became clear?',
+            _ => 'A name, a number or a step is enough. What changed, finished, or became clear?',
+          };
     return Column(
       key: const Key('proof-vague-follow-up'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Add one detail', style: type.title),
         const SizedBox(height: CurreSpace.s1),
-        Text(prompt, style: type.body.copyWith(color: colors.ink2)),
+        Text(
+          prompt,
+          key: mismatch == null ? null : const Key('proof-mismatch-reason'),
+          style: type.body.copyWith(color: colors.ink2),
+        ),
         const SizedBox(height: CurreSpace.s3),
         _field(context, hint: 'Add what changed'),
         ..._actions(context),
@@ -453,6 +460,13 @@ class CompletionSheetView extends StatelessWidget {
       CurrePrimaryButton(label: 'Done', onPressed: onClose),
     ],
   );
+}
+
+String _shortMismatch(String value) {
+  const limit = 80;
+  final points = value.runes.toList(growable: false);
+  if (points.length <= limit) return value;
+  return '${String.fromCharCodes(points.take(limit))}…';
 }
 
 /// A quiet card for a note that is kept but adds no proof day yet.

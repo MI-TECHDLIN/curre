@@ -1050,7 +1050,7 @@ class CurreController extends ChangeNotifier {
       response: response,
       trace: latestTraceFor(task),
     );
-    await _upsertProof(record);
+    await _upsertProof(record, redactions: response.redactions);
     final after = proofSummary;
     notifyListeners();
     return ProofSubmission(
@@ -1058,6 +1058,7 @@ class CurreController extends ChangeNotifier {
       before: before,
       after: after,
       kind: response.kind,
+      mismatch: response.mismatch,
     );
   }
 
@@ -1099,13 +1100,17 @@ class CurreController extends ChangeNotifier {
   static String _clip(String value, int maxRunes) =>
       String.fromCharCodes(value.runes.take(maxRunes));
 
-  Future<void> _upsertProof(ProofRecord record) async {
+  Future<void> _upsertProof(
+    ProofRecord record, {
+    List<Redaction>? redactions,
+  }) async {
+    final stored = redactedProofRecord(record, redactions);
     final previous = proofRecords
-        .where((item) => item.id == record.id)
+        .where((item) => item.id == stored.id)
         .firstOrNull;
-    final preferred = ProoflightRules.preferRecord(previous, record);
+    final preferred = ProoflightRules.preferRecord(previous, stored);
     proofRecords = <ProofRecord>[
-      ...proofRecords.where((item) => item.id != record.id),
+      ...proofRecords.where((item) => item.id != stored.id),
       preferred,
     ]..sort((a, b) => a.submittedAt.compareTo(b.submittedAt));
     await store?.upsertProofRecord(preferred, now: now);
@@ -1162,6 +1167,7 @@ class CurreController extends ChangeNotifier {
         }
         await _upsertProof(
           ProoflightRules.recordFromPending(pending: old, response: response),
+          redactions: response.redactions,
         );
         changed = true;
       }
@@ -1250,7 +1256,7 @@ class CurreController extends ChangeNotifier {
       now: now,
       fallbackUnlockMinutes: settings.unlockMinutes,
     );
-    if (grant != null) await _saveGrant(grant, app.label);
+    if (grant != null) await _saveGrant(grant, app.label, response);
     return _openUnlockDoor(app, response);
   }
 
@@ -1266,7 +1272,7 @@ class CurreController extends ChangeNotifier {
       finishedAt: now,
       fallbackUnlockMinutes: settings.unlockMinutes,
     );
-    await _saveGrant(grant, app.label);
+    await _saveGrant(grant, app.label, response);
     await _markLatestAttemptOverridden(
       app: app,
       reason: reason,
@@ -1301,7 +1307,16 @@ class CurreController extends ChangeNotifier {
     );
   }
 
-  Future<void> _saveGrant(Grant grant, String appLabel) async {
+  Future<void> _saveGrant(
+    Grant grant,
+    String appLabel,
+    UnlockResponse response,
+  ) async {
+    final historyGrant = redactedGrant(
+      grant,
+      response.redactions,
+      taskSpan: response.target ?? response.person,
+    );
     grants = <Grant>[
       ...grants.where((item) => item.packageName != grant.packageName),
       grant,
@@ -1312,10 +1327,10 @@ class CurreController extends ChangeNotifier {
             item.packageName != grant.packageName ||
             item.grantedAt != grant.grantedAt,
       ),
-      grant,
+      historyGrant,
     ];
     await store?.saveActiveGrants(grants, now: now);
-    await store?.appendGrantHistory(grant, now: now);
+    await store?.appendGrantHistory(historyGrant, now: now);
     // Update Android before opening the granted app, otherwise the usage
     // event from that launch could race the new grant and reopen the gate.
     await _syncGentleInterceptPolicy();
@@ -1342,15 +1357,18 @@ class CurreController extends ChangeNotifier {
       ?response.target,
       ?literalSpanInSource(reason, response.guard?.quote.text),
     ];
-    final attempt = Attempt(
-      at: now,
-      packageName: app.packageName,
-      outcome: response.outcome,
-      confidence: response.confidence,
-      overridden: overridden,
-      kind: response.kind,
-      reason: reason,
-      highlights: highlights,
+    final attempt = redactedAttempt(
+      Attempt(
+        at: now,
+        packageName: app.packageName,
+        outcome: response.outcome,
+        confidence: response.confidence,
+        overridden: overridden,
+        kind: response.kind,
+        reason: reason,
+        highlights: highlights,
+      ),
+      response.redactions,
     );
     historyAttempts = <Attempt>[...historyAttempts, attempt];
     await store?.appendAttempt(attempt, now: now);
@@ -1361,10 +1379,11 @@ class CurreController extends ChangeNotifier {
     required String reason,
     required UnlockResponse response,
   }) async {
+    final historyReason = redactedHistoryText(reason, response.redactions);
     final index = historyAttempts.lastIndexWhere(
       (attempt) =>
           attempt.packageName == app.packageName &&
-          attempt.reason == reason &&
+          attempt.reason == historyReason &&
           attempt.outcome == response.outcome &&
           !attempt.overridden,
     );

@@ -32,7 +32,7 @@ class PrivacyDetailsScreen extends StatelessWidget {
                 Text('What is read online', style: type.title),
                 const SizedBox(height: CurreSpace.s2),
                 Text(
-                  'Your plan, app names and the reason you give for opening a hidden app are read online so Curre can answer you.',
+                  'Your plan, app names, the reason you give for opening a hidden app and a note you send after a task are read online so Curre can answer you.',
                   style: type.body,
                 ),
                 const SizedBox(height: CurreSpace.s5),
@@ -47,6 +47,13 @@ class PrivacyDetailsScreen extends StatelessWidget {
                 const SizedBox(height: CurreSpace.s2),
                 Text(
                   'Your contacts, chat names, app use and history stay on this phone. You can clear plans, reasons and notes from Curre settings.',
+                  style: type.body,
+                ),
+                const SizedBox(height: CurreSpace.s5),
+                Text('What History hides', style: type.title),
+                const SizedBox(height: CurreSpace.s2),
+                Text(
+                  'Before History saves a checked reason or note, Curre looks for names, phone numbers, email and address or payment details. What it finds becomes a label such as [name] or [phone]. If that check isn’t available, your words stay as they are.',
                   style: type.body,
                 ),
                 const SizedBox(height: CurreSpace.s5),

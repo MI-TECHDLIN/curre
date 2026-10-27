@@ -1,0 +1,149 @@
+{
+  "metadata": {
+    "credits": 6,
+    "model_ms": 127.699841,
+    "recorded": true,
+    "recorded_at": "2026-10-26",
+    "why": "A real two-step pipeline (Protect, then Verify) over a note that contradicts its planned task, recorded while choosing the Verify wording. Its Verify instructions were an earlier draft of VERIFY_INSTRUCTIONS; the response keys are what the production parser reads. tests/test_proof.py splices these two real step results into the proof template to cover the contradicted case."
+  },
+  "response": {
+    "model": "clocked-1.0",
+    "steps": [
+      {
+        "endpoint": "pii",
+        "ms": 72,
+        "name": "private",
+        "result": {
+          "checks": {
+            "rejected": {},
+            "split": 0,
+            "trimmed": 0
+          },
+          "counts": {
+            "person": 1,
+            "phone": 1
+          },
+          "entities": [
+            {
+              "confidence": 1,
+              "end": 24,
+              "mentions": 1,
+              "source": "model",
+              "start": 21,
+              "type": "person",
+              "value": "Ada"
+            },
+            {
+              "confidence": 1,
+              "end": 81,
+              "mentions": 1,
+              "source": "model",
+              "start": 68,
+              "type": "phone",
+              "value": "0803 555 0142"
+            }
+          ],
+          "instructions_used": "default",
+          "mentions": {
+            "candidates": 0,
+            "ms": 0,
+            "occurrences": {
+              "kept": 0,
+              "read": 0
+            },
+            "reads": 0,
+            "rejected": {},
+            "spans": 0,
+            "variants": 0,
+            "verified": 0
+          },
+          "model": "clocked-1.0",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 71,
+            "total_ms": 72
+          }
+        },
+        "status": 200,
+        "step": 0
+      },
+      {
+        "endpoint": "grounding",
+        "ms": 66,
+        "name": "verify",
+        "result": {
+          "claims": [
+            {
+              "claim": "Skipped the G chord.",
+              "contradicted": 0.7919,
+              "counted": true,
+              "kind": "claim",
+              "not_a_claim": 0.0303,
+              "not_stated": 0.1495,
+              "source": null,
+              "sources": {
+                "plan": 1
+              },
+              "supported": 0.0283,
+              "verdict": "contradicted",
+              "weight": 0.2469
+            },
+            {
+              "claim": "Ada showed me the D chord instead, call her on 0803 555 0142.",
+              "contradicted": 0.4068,
+              "counted": true,
+              "kind": "claim",
+              "not_a_claim": 0.0277,
+              "not_stated": 0.5435,
+              "source": null,
+              "sources": {
+                "plan": 1
+              },
+              "supported": 0.0221,
+              "verdict": "not_stated",
+              "weight": 0.7531
+            }
+          ],
+          "documents": [
+            {
+              "claims": [],
+              "id": "plan",
+              "share": 1,
+              "share_of_answer": 0.0236
+            }
+          ],
+          "grounded": 0.0236,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "not_claims": [],
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 64,
+            "total_ms": 66
+          },
+          "ungrounded": 0.9764,
+          "unsupported_claims": [
+            0,
+            1
+          ],
+          "verdict": "contradicted",
+          "weakest_claim": {
+            "index": 1,
+            "supported": 0.0221
+          }
+        },
+        "status": 200,
+        "step": 1
+      }
+    ],
+    "stopped": null,
+    "timing": {
+      "model_ms": 0,
+      "total_ms": 139
+    }
+  },
+  "route_request": {
+    "note": "Skipped the G chord. Ada showed me the D chord instead, call her on 0803 555 0142.",
+    "task": "Learn the G chord on YouTube"
+  }
+}

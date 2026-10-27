@@ -62,7 +62,11 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Prooflight's evidence, Curre-day, streak and cloud-day rules live in
   `lib/core/proof.dart` (pure: the summary is rebuilt from records, never
   stored), the completion sheet and sunrise moment in
-  `lib/app/completion_sheet.dart`, and `/v1/proof` is the one-pipeline judge.
+  `lib/app/completion_sheet.dart`, and `/v1/proof` is the one-pipeline judge:
+  Decide still requires a specific completion, while Verify only vetoes a
+  clear contradiction (an ordinary new detail is `not_stated`). Protect spans
+  from unlock/proof are applied to History copies by `lib/core/redaction.dart`;
+  a missing or unusable Protect result deliberately keeps the original text.
   A note counts only with a `TaskTrace` recorded when its task started
   (`openPlanDoor`, `startOfflineTask`); pending notes keep their plan's day.
 - The check-in card's water is core `DayProgress` (`lib/core/progress.dart`),

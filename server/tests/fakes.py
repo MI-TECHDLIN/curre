@@ -135,3 +135,31 @@ def injection_result(
         "residual": 0.0,
         "residual_verdict": "benign",
     }
+
+
+def pii_result(*entities: tuple[str, str, int, int]) -> dict[str, Any]:
+    """A Protect result in the recorded shape: findings only (no
+    `anonymize`), each `(type, value, start, end)`."""
+    counts: dict[str, int] = {}
+    for kind, *_ in entities:
+        counts[kind] = counts.get(kind, 0) + 1
+    return {
+        "checks": {"rejected": {}, "split": 0, "trimmed": 0},
+        "counts": counts,
+        "entities": [
+            {
+                "confidence": 1,
+                "end": end,
+                "mentions": 1,
+                "source": "model",
+                "start": start,
+                "type": kind,
+                "value": value,
+            }
+            for kind, value, start, end in entities
+        ],
+        "instructions_used": "default",
+        "model": "clocked-fake",
+        "threshold": 0.5,
+        "timing": {"read_ms": 60, "total_ms": 61},
+    }

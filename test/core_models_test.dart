@@ -172,6 +172,39 @@ void main() {
         expect(sliceExtractSpan(source, span), literal);
       }
     });
+
+    test('parses Protect marks and a Verify mismatch', () {
+      final unlock = UnlockResponse.fromJson(<String, Object?>{
+        'outcome': 'open',
+        'redactions': <Object?>[
+          <String, Object?>{'kind': 'email', 'start': 5, 'end': 20},
+          <String, Object?>{'kind': 'credit_card', 'start': 25, 'end': 41},
+        ],
+      });
+      final proof = ProofResponse.fromJson(<String, Object?>{
+        'outcome': 'vague',
+        'mismatch': 'I did something else.',
+        'redactions': <Object?>[
+          <String, Object?>{'kind': 'bank_account', 'start': 3, 'end': 15},
+        ],
+      });
+
+      expect(unlock.redactions!.map((item) => item.kind), <PersonalDetailKind>[
+        PersonalDetailKind.email,
+        PersonalDetailKind.creditCard,
+      ]);
+      expect(proof.mismatch, 'I did something else.');
+      expect(proof.redactions!.single.kind, PersonalDetailKind.bankAccount);
+      expect(
+        () => UnlockResponse.fromJson(<String, Object?>{
+          'outcome': 'open',
+          'redactions': <Object?>[
+            <String, Object?>{'kind': 'person', 'start': 4, 'end': 4},
+          ],
+        }),
+        throwsFormatException,
+      );
+    });
   });
 }
 
