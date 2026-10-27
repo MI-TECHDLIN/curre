@@ -68,7 +68,7 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionHeading('Home, with a plan'),
           PhoneFramePair(builder: (context) => const HomePreviewScreen()),
           const _SectionGap(),
-          const _SectionHeading('Unlock gate, opens for a person'),
+          const _SectionHeading('Unlock gate, no matching chat'),
           PhoneFramePair(builder: (context) => const GatePreviewScreen()),
           const _SectionGap(),
           const _SectionHeading('Unlock gate, the 30-second wait'),
@@ -85,7 +85,7 @@ class DesignGalleryScreen extends StatelessWidget {
           const _SectionGap(),
           const _SectionHeading('Detail pass: 360 dp, a long plan'),
           const _Note(
-            'Four doors, long app names and long search words on a narrow phone.',
+            'Three allowlisted doors and long search words on a narrow phone.',
           ),
           PhoneFramePair(
             size: PhoneFrame.narrowSize,
@@ -474,7 +474,7 @@ class _TypeVoices extends StatelessWidget {
             const SizedBox(height: CurreSpace.s2),
             Text('OPEN INSTAGRAM', style: t.label),
             const SizedBox(height: CurreSpace.s2),
-            Text('Opens at Instagram → Messages', style: t.caption),
+            Text('Opens Instagram', style: t.caption),
             const SizedBox(height: CurreSpace.s2),
             Text('Hidden apps · 23', style: t.listItem),
             const SizedBox(height: CurreSpace.s2),
@@ -731,7 +731,7 @@ class _DoorRows extends StatelessWidget {
             const SizedBox(height: CurreSpace.s2),
             DoorRow(
               appName: 'Instagram',
-              destination: '→\u00A0Messages · Ada',
+              destination: '→\u00A0Open app',
               tint: c.outcome(Outcome.open, laterTarget: Session.evening),
               trailing: Text(
                 '3:12',

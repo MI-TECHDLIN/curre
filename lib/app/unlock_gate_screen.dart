@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/core.dart';
 import '../design/design.dart';
 import '../doors/door_models.dart';
+import '../doors/query_door_allowlist.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
@@ -45,6 +46,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   Duration _remaining = overrideWait;
   var _retryCount = 0;
   String? _firstReason;
+  DoorResolution? _resolvedDestination;
   var _overrideFinishing = false;
   var _leaving = false;
 
@@ -56,9 +58,13 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     if (widget.initialResponse != null) {
       _response = widget.initialResponse;
       _state = _GateState.result;
-      if (_response!.outcome == UnlockOutcome.unavailable) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _startOverride());
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_response!.outcome == UnlockOutcome.open) {
+          unawaited(_resolveDestination(_response!));
+        } else if (_response!.outcome == UnlockOutcome.unavailable) {
+          _startOverride();
+        }
+      });
     } else if (widget.autoJudge && _reason.text.trim().runes.length >= 8) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _judge());
     }
@@ -490,6 +496,10 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   }
 
   String _headline(UnlockResponse response) => switch (response.outcome) {
+    UnlockOutcome.open
+        when _resolvedDestination == null ||
+            _resolvedDestination!.kind == DoorResolutionKind.plain =>
+      'Opens ${widget.app.label}',
     UnlockOutcome.open => 'Opens at ${_destination(response)}',
     UnlockOutcome.later => 'Not now',
     UnlockOutcome.specify => 'What exactly will you do?',
@@ -499,9 +509,16 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
 
   String _body(UnlockResponse response) {
     final app = widget.app.label;
+    final minutes = grantMinutesFor(
+      response,
+      fallbackUnlockMinutes: controller.settings.unlockMinutes,
+    );
     return switch (response.outcome) {
-      UnlockOutcome.open =>
-        'You have ${grantMinutesFor(response, fallbackUnlockMinutes: controller.settings.unlockMinutes)} minutes.',
+      UnlockOutcome.open
+          when response.kind == ReasonKind.person &&
+              _resolvedDestination?.kind != DoorResolutionKind.conversation =>
+        'Curre didn’t find a matching chat on this phone, so it opens $app. You have $minutes minutes.',
+      UnlockOutcome.open => 'You have $minutes minutes.',
       UnlockOutcome.later =>
         'That sounds like browsing, so it can wait. If you still want $app now, it opens after you wait $overrideWaitWords.',
       UnlockOutcome.specify =>
@@ -513,19 +530,29 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     };
   }
 
-  String _destination(UnlockResponse response) {
-    if (response.kind == ReasonKind.person && response.person != null) {
-      return '${widget.app.label} → Messages · ${response.person!.text}';
-    }
-    if (response.target != null) {
-      return '${widget.app.label} → Search “${response.target!.text}”';
-    }
-    if (response.door != null) return '${widget.app.label} → ${response.door}';
-    return widget.app.label;
-  }
+  String _destination(UnlockResponse response) =>
+      switch (_resolvedDestination) {
+        DoorResolution(
+          kind: DoorResolutionKind.conversation,
+          value: final value?,
+        ) =>
+          '${widget.app.label} → Chat with $value',
+        DoorResolution(kind: DoorResolutionKind.query, value: final value?) =>
+          '${widget.app.label} → ${_queryAction()} “$value”',
+        DoorResolution(
+          kind: DoorResolutionKind.shortcut,
+          value: final value?,
+        ) =>
+          '${widget.app.label} → $value',
+        _ => widget.app.label,
+      };
 
   String _openLabel(UnlockResponse response) =>
       'Open ${_destination(response)}';
+
+  String _queryAction() =>
+      QueryDoorAllowlist.forPackage(widget.app.packageName)?.actionLabel ??
+      'Open app with';
 
   Future<void> _judge() async {
     FocusScope.of(context).unfocus();
@@ -540,12 +567,25 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       // Never strand the user: the override wait still opens the app.
       response = const UnlockResponse.unavailable();
     }
+    final destination = response.outcome == UnlockOutcome.open
+        ? await controller.unlockDestinationFor(widget.app, response)
+        : null;
     if (!mounted) return;
     setState(() {
       _response = response;
+      _resolvedDestination = destination;
       _state = _GateState.result;
     });
     if (response.outcome == UnlockOutcome.unavailable) _startOverride();
+  }
+
+  Future<void> _resolveDestination(UnlockResponse response) async {
+    final destination = await controller.unlockDestinationFor(
+      widget.app,
+      response,
+    );
+    if (!mounted || !identical(_response, response)) return;
+    setState(() => _resolvedDestination = destination);
   }
 
   void _retryUnavailable() {

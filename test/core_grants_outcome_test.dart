@@ -81,6 +81,21 @@ void main() {
       );
     });
 
+    test('a person grant keeps the person rather than the task topic', () {
+      final grant = grantFromUnlock(
+        response: open(
+          kind: ReasonKind.person,
+          person: const SourceSpan(text: 'Ada', start: 6, end: 9),
+          target: const SourceSpan(text: 'rehearsal', start: 16, end: 25),
+        ),
+        packageName: 'instagram',
+        reason: 'reply Ada about rehearsal',
+        now: DateTime.utc(2026, 10, 24, 8),
+      )!;
+
+      expect(grant.task, 'Ada');
+    });
+
     test('activeGrants drops grants exactly at expiry', () {
       final grant = Grant(
         packageName: 'maps',

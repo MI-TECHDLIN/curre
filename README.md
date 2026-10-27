@@ -5,9 +5,10 @@
 Curre is an Android launcher. You tell it what you're about to do — "learn
 the G chord on YouTube and find a music shop on Maps until 7" — and it
 builds you a small Home made only of the apps that task needs, each one
-landing on the actual search or chat instead of a feed. Apps you've chosen
-to keep off your Home stay hidden until you say, in your own words, why you
-need one right now.
+landing on an allowlisted search or a conversation shortcut the phone
+actually exposes instead of promising a path that may not exist. Apps you've
+chosen to keep off your Home stay hidden until you say, in your own words,
+why you need one right now.
 
 Built for the [Clocked Build Challenge](https://clocked.rezolve.ai/challenge),
 entering Best Overall and Best Use of Decide, Extract or Fill.
@@ -31,7 +32,13 @@ to do.
   The result: a Home row for YouTube lands on search results for "the G
   chord," not YouTube's front page. See `lib/doors/` for the pure routing
   policy and `MainActivity.kt` for how Android turns a door choice into a
-  shortcut launch, a query link, or a plain open.
+  shortcut launch, a query link, or a plain open. Fixed doors cover YouTube,
+  Google Maps, Spotify and Play Store searches, Gmail drafts, and Calendar
+  events; every pattern and fallback is listed in
+  [`docs/doors.md`](docs/doors.md). Spotify's documented URI scheme still
+  needs verification on the submission phone. A chat is named only after a
+  matching conversation shortcut is found on that phone; otherwise Curre
+  says it will open the app.
 - **"Why now?"** Apps you hide stay off Home. Opening one asks why, in your
   own words. Decide sorts that reason into `task`, `person`,
   `time_sensitive`, `browse`, or `unclear`; Guard screens the text first.

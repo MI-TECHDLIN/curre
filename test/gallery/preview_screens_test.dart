@@ -166,7 +166,8 @@ void main() {
       Brightness.dark,
     );
     expect(find.byType(PeekMascot), findsNothing);
-    expect(find.text('Open Instagram\u00A0→\u00A0Messages'), findsOneWidget);
+    expect(find.text('No matching chat found on this phone'), findsOneWidget);
+    expect(find.text('Open Instagram'), findsOneWidget);
     await _pumpScreen(
       tester,
       const WaitPreviewScreen(),

@@ -900,8 +900,58 @@ class CurreController extends ChangeNotifier {
   }
 
   String destinationFor(PlannedApp app, Plan plan) {
-    if (app.query case final query?) return 'Search “${query.text}”';
+    if (app.query case final query?) {
+      final action =
+          QueryDoorAllowlist.forPackage(app.packageName)?.actionLabel ??
+          'Open app with';
+      return '$action “${query.text}”';
+    }
     if (app.door case final door?) return door;
+    return 'Open app';
+  }
+
+  Future<DoorResolution> unlockDestinationFor(
+    LaunchableApp app,
+    UnlockResponse response,
+  ) async {
+    if (response.kind == ReasonKind.person && response.person != null) {
+      final conversations = await conversationShortcutsFor(app.packageName);
+      final match = matchConversationShortcut(
+        response.person!.text,
+        conversations,
+      );
+      return match == null
+          ? const DoorResolution.plain()
+          : DoorResolution.conversation(response.person!.text);
+    }
+    if (response.target != null &&
+        QueryDoorAllowlist.forPackage(app.packageName) != null) {
+      return DoorResolution.query(response.target!.text);
+    }
+    final shortcuts = await staticShortcutsFor(app.packageName);
+    final shortcutId = _shortcutIdForLabel(shortcuts, response.door);
+    if (shortcutId != null) {
+      return DoorResolution.shortcut(response.door!);
+    }
+    return const DoorResolution.plain();
+  }
+
+  String grantDestinationFor(Grant grant) {
+    final target = grant.task?.trim();
+    if (target == null || target.isEmpty) return 'Open app';
+    if (grant.kind == ReasonKind.person) {
+      final conversations =
+          _conversationShortcuts[grant.packageName] ?? const <AppShortcut>[];
+      return matchConversationShortcut(target, conversations) == null
+          ? 'Open app'
+          : 'Chat with $target';
+    }
+    final queryDoor = QueryDoorAllowlist.forPackage(grant.packageName);
+    if ((grant.kind == ReasonKind.task ||
+            grant.kind == ReasonKind.timeSensitive) &&
+        queryDoor != null) {
+      return '${queryDoor.actionLabel} “$target”';
+    }
     return 'Open app';
   }
 

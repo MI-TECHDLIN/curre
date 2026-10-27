@@ -147,7 +147,8 @@ def build_plan_steps(intention: str, candidates: list[Candidate]) -> list[dict[s
     query_candidates = [c for c in candidates if c.query_door][:MAX_QUERY_CANDIDATES]
     for c in query_candidates:
         extract_fields[f"q_{c.id}"] = (
-            f"what the user says they will search for, watch, play or find in {c.label}, as written"
+            f"what the user says they will search for, watch, play, find, write, send or create "
+            f"in {c.label}, as written"
         )
 
     return [
@@ -255,8 +256,8 @@ def build_unlock_steps(
                 "text": reason,
                 "fields": {
                     "target": (
-                        "the specific thing the user will search for, watch, read or open, "
-                        "as written"
+                        "the specific thing the user will search for, watch, read, open, write, "
+                        "send or create, as written"
                     ),
                     "person": (
                         "the name of the person or group the user will message or call, "

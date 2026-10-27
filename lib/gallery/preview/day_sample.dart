@@ -10,14 +10,19 @@ import 'plan_sample.dart';
 ///
 /// Chidi plans the morning at 05:13 (the G chord on YouTube, worship on
 /// Spotify, till 7) and goes through both doors; at 12:05 plans the
-/// afternoon (reply Ada on WhatsApp, read Romans 8 on YouVersion, till 3)
-/// and goes through one. Preview clocks read wall time as UTC.
+/// afternoon (find the rehearsal studio on Maps and watch a Romans 8 video
+/// on YouTube, till 3) and goes through one. Preview clocks read wall time as
+/// UTC.
 abstract final class SampleDay {
   static const _zone = FixedOffsetTimeZone(Duration.zero);
-  static final schedule = SessionSchedule.fromSettings(Settings(), timeZone: _zone);
+  static final schedule = SessionSchedule.fromSettings(
+    Settings(),
+    timeZone: _zone,
+  );
   static const date = LocalDate(2026, 10, 24);
 
-  static DateTime _at(int hour, int minute) => DateTime.utc(2026, 10, 24, hour, minute);
+  static DateTime _at(int hour, int minute) =>
+      DateTime.utc(2026, 10, 24, hour, minute);
 
   static final morning = Plan(
     id: 'sat-morning',
@@ -36,10 +41,10 @@ abstract final class SampleDay {
     id: 'sat-afternoon',
     session: SessionName.afternoon,
     date: date,
-    intention: 'Reply Ada about rehearsal on WhatsApp and read Romans 8 on YouVersion till 3',
+    intention: 'Find the rehearsal studio on Google Maps and watch Romans 8 on YouTube till 3',
     apps: const [
-      PlannedApp(packageName: 'com.whatsapp', door: 'chat'),
-      PlannedApp(packageName: 'com.sirma.mobile.bible.android', door: 'search'),
+      PlannedApp(packageName: 'com.google.android.apps.maps', door: 'search'),
+      PlannedApp(packageName: 'com.google.android.youtube', door: 'search'),
     ],
     endsAt: _at(15, 0),
     source: PlanSource.clocked,
@@ -52,7 +57,7 @@ abstract final class SampleDay {
   static final uses = [
     DoorUse.forPlan(morning, 'com.google.android.youtube', _at(5, 14)),
     DoorUse.forPlan(morning, 'com.spotify.music', _at(6, 31)),
-    DoorUse.forPlan(afternoon, 'com.whatsapp', _at(12, 40)),
+    DoorUse.forPlan(afternoon, 'com.google.android.apps.maps', _at(12, 40)),
   ];
 
   /// When each session's check-in opens in the previews.

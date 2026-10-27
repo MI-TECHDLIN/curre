@@ -65,7 +65,9 @@ Grant _createGrant({
   return Grant(
     packageName: packageName,
     reason: reason,
-    task: response.target?.text ?? response.person?.text,
+    task: response.kind == ReasonKind.person
+        ? response.person?.text ?? response.target?.text
+        : response.target?.text ?? response.person?.text,
     grantedAt: grantedAt,
     expiresAt: grantedAt.add(Duration(minutes: minutes)),
     source: source,

@@ -1990,14 +1990,14 @@ class AppsScene extends StatelessWidget {
   static const _tasks = <(String, String, String, CurreProp)>[
     ('com.google.android.youtube', 'YouTube', 'Learn the G chord', CurreProp.guitar),
     ('com.google.android.apps.maps', 'Maps', 'Find the studio', CurreProp.pin),
-    ('com.whatsapp', 'WhatsApp', 'Reply to Ada', CurreProp.speechBalloon),
+    ('com.spotify.music', 'Spotify', 'Play Sunday worship', CurreProp.musicalNotes),
   ];
 
   @override
   Widget build(BuildContext context) {
     return _Scene(
       label:
-          'Three small tasks, learn the G chord on YouTube, find the studio on Maps and reply to Ada on WhatsApp, heading for an open door.',
+          'Three small tasks, learn the G chord on YouTube, find the studio on Maps and play Sunday worship on Spotify, heading for an open door.',
       children: [
         _blob(palette, const Rect.fromLTWH(10, 8, 330, 222), seed: 21),
         Positioned(

@@ -4,7 +4,8 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 
 - The Android launcher channel contract lives in
   `android/app/src/main/kotlin/com/mitech/curre/MainActivity.kt`; its Dart
-  adapter and pure door-order policy live in `lib/doors/`.
+  adapter and pure door-order policy live in `lib/doors/`. The production
+  door inventory, fallbacks and phone-check matrix live in `docs/doors.md`.
 - The permanent Android namespace and application ID are `com.mitech.curre`.
 - Release signing reads `android/key.properties` (gitignored; never commit a
   keystore). Copy `android/key.properties.example` for the keytool command
