@@ -60,12 +60,11 @@ const demoPlan = PlanSample(
 /// for the detail pass at 360 dp.
 const longPlan = PlanSample(
   sentence:
-      'Pray, then learn how to play the G chord on an acoustic guitar for beginners on YouTube Music, '
-      'play the Sunday worship playlist on Spotify, check the 7:40 bus to church on Google Maps '
-      'and reply Ada on WhatsApp Business about rehearsal till 8',
+      'Pray, then learn how to play the G chord on an acoustic guitar for beginners on YouTube, '
+      'play the Sunday worship playlist on Spotify and find the rehearsal studio on Google Maps till 8',
   doors: [
     DoorSample(
-      app: 'YouTube Music',
+      app: 'YouTube',
       destination: 'Search',
       words: 'how to play the G chord on an acoustic guitar for beginners',
       icon: SolarIconsBold.playCircle,
@@ -78,11 +77,10 @@ const longPlan = PlanSample(
     ),
     DoorSample(
       app: 'Google Maps',
-      destination: 'Directions',
-      words: '7:40 bus to church',
+      destination: 'Search',
+      words: 'rehearsal studio',
       icon: SolarIconsBold.mapPoint,
     ),
-    DoorSample(app: 'WhatsApp Business', destination: 'Chat', words: 'Ada', icon: SolarIconsBold.chatRound),
   ],
   endPhrase: 'till 8',
   startedAt: '05:13',

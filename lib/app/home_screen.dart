@@ -967,7 +967,7 @@ class _GrantDoor extends StatelessWidget {
     final tint = colors.outcome(Outcome.open, laterTarget: Session.evening);
     return DoorRow(
       appName: entry?.label ?? grant.packageName,
-      destination: '→ ${grant.task ?? grant.reason}',
+      destination: '→ ${controller.grantDestinationFor(grant)}',
       appIcon: InstalledAppIcon(
         controller: controller,
         packageName: grant.packageName,

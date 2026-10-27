@@ -56,7 +56,7 @@ class DoorRouter {
 
   Future<DoorLaunchResult> open(DoorRequest request) async {
     if (request.kind == ReasonKind.person && _hasText(request.person)) {
-      final match = _matchConversation(
+      final match = matchConversationShortcut(
         request.person!,
         request.conversationShortcuts,
       );
@@ -71,6 +71,7 @@ class DoorRouter {
         }
         return _fallback(request);
       }
+      return _fallback(request);
     }
 
     if (_hasText(request.target) &&
@@ -105,6 +106,11 @@ class DoorRouter {
       return _fallback(request);
     }
 
+    // A target without a fixed app-specific door never becomes a guessed
+    // link. Use the app's own published Search shortcut when it has one;
+    // otherwise copy the words and open the app.
+    if (_hasText(request.target)) return _fallback(request);
+
     final launched = await _attempt(() => platform.launch(request.packageName));
     return DoorLaunchResult(
       launched ? DoorLaunchKind.plainLaunch : DoorLaunchKind.failed,
@@ -112,7 +118,12 @@ class DoorRouter {
   }
 
   Future<DoorLaunchResult> _fallback(DoorRequest request) async {
-    if (_hasText(request.target)) await copyTarget(request.target!);
+    final fallbackTarget = _hasText(request.target)
+        ? request.target
+        : request.kind == ReasonKind.person && _hasText(request.person)
+        ? request.person
+        : null;
+    if (fallbackTarget != null) await copyTarget(fallbackTarget);
 
     AppShortcut? search;
     for (final shortcut in request.staticShortcuts) {
@@ -138,23 +149,6 @@ class DoorRouter {
     return const DoorLaunchResult(DoorLaunchKind.failed);
   }
 
-  AppShortcut? _matchConversation(String person, List<AppShortcut> shortcuts) {
-    final wanted = _normalise(person);
-    AppShortcut? partial;
-    for (final shortcut in shortcuts) {
-      for (final label in shortcut.matchLabels) {
-        final candidate = _normalise(label);
-        if (candidate == wanted) return shortcut;
-        if (candidate.contains(wanted) || wanted.contains(candidate)) {
-          partial ??= shortcut;
-        }
-      }
-    }
-    return partial;
-  }
-
-  String _normalise(String value) =>
-      value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   Future<bool> _attempt(Future<bool> Function() action) async {
@@ -165,3 +159,38 @@ class DoorRouter {
     }
   }
 }
+
+/// Finds a conversation only when the extracted person is a complete name or
+/// phrase in a shortcut label or Android [AppShortcut.personNames] entry.
+///
+/// Whole-phrase matching still accepts a label such as "Chat with Ada" for
+/// the extracted value "Ada", while avoiding optimistic partials such as
+/// "Ada" matching "Adaeze" or "Ada family" matching a shortcut for "Ada".
+AppShortcut? matchConversationShortcut(
+  String person,
+  Iterable<AppShortcut> shortcuts,
+) {
+  final wanted = _normaliseConversationText(person);
+  if (wanted.length < 2) return null;
+  for (final shortcut in shortcuts.where((item) => item.isConversation)) {
+    for (final label in shortcut.matchLabels) {
+      final candidate = _normaliseConversationText(label);
+      if (candidate == wanted || _containsWholePhrase(candidate, wanted)) {
+        return shortcut;
+      }
+    }
+  }
+  return null;
+}
+
+String _normaliseConversationText(String value) => value
+    .trim()
+    .toLowerCase()
+    .replaceAll(RegExp(r'[\s\-_.:,;|/\\()\[\]{}]+'), ' ')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
+bool _containsWholePhrase(String text, String phrase) =>
+    text.startsWith('$phrase ') ||
+    text.endsWith(' $phrase') ||
+    text.contains(' $phrase ');

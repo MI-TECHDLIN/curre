@@ -18,10 +18,29 @@ class _DoorLabScreenState extends State<DoorLabScreen>
   static const DoorPlatform _platform = LauncherChannel();
   static const List<_LabApp> _labApps = <_LabApp>[
     _LabApp('YouTube', 'com.google.android.youtube', queryDoorId: 'youtube'),
+    _LabApp('Google', 'com.google.android.googlequicksearchbox'),
+    _LabApp('Chrome', 'com.android.chrome'),
+    _LabApp('Play Store', 'com.android.vending', queryDoorId: 'play_store'),
+    _LabApp('Gmail', 'com.google.android.gm', queryDoorId: 'gmail_compose'),
     _LabApp('Instagram', 'com.instagram.android'),
     _LabApp('WhatsApp', 'com.whatsapp'),
-    _LabApp('Spotify', 'com.spotify.music'),
+    _LabApp('Telegram', 'org.telegram.messenger'),
+    _LabApp('Spotify', 'com.spotify.music', queryDoorId: 'spotify'),
     _LabApp('Google Maps', 'com.google.android.apps.maps', queryDoorId: 'maps'),
+    _LabApp('TikTok', 'com.zhiliaoapp.musically'),
+    _LabApp('X', 'com.twitter.android'),
+    _LabApp('Reddit', 'com.reddit.frontpage'),
+    _LabApp('Netflix', 'com.netflix.mediaclient'),
+    _LabApp('Amazon', 'com.amazon.mShop.android.shopping'),
+    _LabApp('Duolingo', 'com.duolingo'),
+    _LabApp(
+      'Google Calendar',
+      'com.google.android.calendar',
+      queryDoorId: 'calendar_event',
+    ),
+    _LabApp('Google Keep', 'com.google.android.keep'),
+    _LabApp('Phone', 'com.google.android.dialer'),
+    _LabApp('Messages', 'com.google.android.apps.messaging'),
   ];
 
   final TextEditingController _targetController = TextEditingController(
@@ -249,15 +268,6 @@ class _DoorLabScreenState extends State<DoorLabScreen>
     });
   }
 
-  Future<void> _fireWebSearch() async {
-    final target = _target;
-    if (target == null) return;
-    await _fire('System', 'query link: web', target, () async {
-      final ok = await _platform.launchQueryDoor('web', target);
-      return ok ? 'launch requested' : 'launch rejected';
-    });
-  }
-
   Future<void> _fireFallback(_LabApp app) async {
     final target = _target;
     if (target == null) return;
@@ -386,13 +396,6 @@ class _DoorLabScreenState extends State<DoorLabScreen>
               ..._attempts.map(_attemptCard),
               const Divider(height: 32),
             ],
-            Text('Web search', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _fireWebSearch,
-              child: const Text('Open web search query door'),
-            ),
-            const Divider(height: 32),
             ..._labApps.map(_appCard),
           ],
         ),

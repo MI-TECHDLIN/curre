@@ -2,12 +2,14 @@ class QueryDoorTemplate {
   const QueryDoorTemplate({
     required this.id,
     required this.label,
+    required this.actionLabel,
     required this.packageName,
     required this.buildUri,
   });
 
   final String id;
   final String label;
+  final String actionLabel;
   final String? packageName;
   final String Function(String query) buildUri;
 }
@@ -18,6 +20,7 @@ abstract final class QueryDoorAllowlist {
         'youtube': QueryDoorTemplate(
           id: 'youtube',
           label: 'YouTube search',
+          actionLabel: 'Search',
           packageName: 'com.google.android.youtube',
           buildUri: (query) => Uri.https(
             'www.youtube.com',
@@ -28,6 +31,7 @@ abstract final class QueryDoorAllowlist {
         'maps': QueryDoorTemplate(
           id: 'maps',
           label: 'Google Maps search',
+          actionLabel: 'Search',
           packageName: 'com.google.android.apps.maps',
           buildUri: (query) => Uri(
             scheme: 'geo',
@@ -35,14 +39,44 @@ abstract final class QueryDoorAllowlist {
             queryParameters: <String, String>{'q': query},
           ).toString(),
         ),
-        'web': QueryDoorTemplate(
-          id: 'web',
-          label: 'Web search',
-          packageName: null,
+        'spotify': QueryDoorTemplate(
+          id: 'spotify',
+          label: 'Spotify search',
+          actionLabel: 'Search',
+          packageName: 'com.spotify.music',
+          buildUri: (query) => 'spotify:search:${Uri.encodeComponent(query)}',
+        ),
+        'play_store': QueryDoorTemplate(
+          id: 'play_store',
+          label: 'Play Store search',
+          actionLabel: 'Search',
+          packageName: 'com.android.vending',
           buildUri: (query) => Uri.https(
-            'www.google.com',
-            '/search',
-            <String, String>{'q': query},
+            'play.google.com',
+            '/store/search',
+            <String, String>{'q': query, 'c': 'apps'},
+          ).toString(),
+        ),
+        'gmail_compose': QueryDoorTemplate(
+          id: 'gmail_compose',
+          label: 'Gmail draft',
+          actionLabel: 'Draft',
+          packageName: 'com.google.android.gm',
+          buildUri: (query) => Uri(
+            scheme: 'mailto',
+            queryParameters: <String, String>{'subject': query},
+          ).toString(),
+        ),
+        'calendar_event': QueryDoorTemplate(
+          id: 'calendar_event',
+          label: 'Google Calendar event',
+          actionLabel: 'New event',
+          packageName: 'com.google.android.calendar',
+          buildUri: (query) => Uri(
+            scheme: 'content',
+            host: 'com.android.calendar',
+            path: '/events',
+            queryParameters: <String, String>{'title': query},
           ).toString(),
         ),
       });

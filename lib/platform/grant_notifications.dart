@@ -77,12 +77,12 @@ class GrantNotificationService {
       return;
     }
 
-    final target = _targetWords(grant);
     final minutes = grant.expiresAt.difference(grant.grantedAt).inMinutes;
     final notice = GrantNotificationNotice(
       id: id,
-      ongoingTitle: '$appLabel → $target',
-      ongoingBody: 'Back for now. It hides again when the time is up.',
+      ongoingTitle: '$appLabel is back for now',
+      ongoingBody:
+          '${_targetWords(grant)} · It hides again when the time is up.',
       expiryTitle: '$appLabel is hidden again',
       expiryBody: 'Your $minutes min for ${grant.reason.trim()} are up.',
       expiresAt: grant.expiresAt,

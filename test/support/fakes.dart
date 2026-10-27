@@ -13,12 +13,16 @@ import 'voice_fakes.dart';
 class FakeDoorPlatform implements DoorPlatform {
   FakeDoorPlatform({
     List<LaunchableApp>? apps,
+    this.staticShortcuts = const <AppShortcut>[],
+    this.conversationShortcuts = const <AppShortcut>[],
     this.grantHome = true,
     this.launchWorks = true,
     this.home,
   }) : apps = apps ?? CurreController.fallbackApps;
 
   final List<LaunchableApp> apps;
+  final List<AppShortcut> staticShortcuts;
+  final List<AppShortcut> conversationShortcuts;
 
   /// Whether Android's home screen request ends with Curre as Home.
   bool grantHome;
@@ -35,11 +39,15 @@ class FakeDoorPlatform implements DoorPlatform {
   @override
   Future<List<AppShortcut>> getConversationShortcuts(
     String packageName,
-  ) async => <AppShortcut>[];
+  ) async => conversationShortcuts
+      .where((shortcut) => shortcut.packageName == packageName)
+      .toList(growable: false);
 
   @override
   Future<List<AppShortcut>> getStaticShortcuts(String packageName) async =>
-      <AppShortcut>[];
+      staticShortcuts
+          .where((shortcut) => shortcut.packageName == packageName)
+          .toList(growable: false);
 
   @override
   Future<bool> hasShortcutHostPermission() async => false;

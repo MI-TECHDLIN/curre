@@ -236,7 +236,48 @@ void main() {
     expect(find.text('Instagram is back for now'), findsOneWidget);
     expect(find.text('Ada'), findsWidgets);
     expect(find.text('1 ready'), findsOneWidget);
-    expect(find.text('→ Ada'), findsOneWidget);
+    expect(find.text('→ Open app'), findsOneWidget);
+  });
+
+  testWidgets('Home names a chat only after a local conversation matches', (
+    tester,
+  ) async {
+    await phone(tester);
+    final platform = _FakeDoorPlatform(
+      CurreController.fallbackApps,
+      conversations: const <AppShortcut>[
+        AppShortcut(
+          packageName: 'com.instagram.android',
+          id: 'chat-ada',
+          shortLabel: 'Recent conversation',
+          isConversation: true,
+          personNames: <String>['Ada'],
+        ),
+      ],
+    );
+    final controller = _controller(platform: platform);
+    await controller.conversationShortcutsFor('com.instagram.android');
+    controller.grants = <Grant>[
+      Grant(
+        packageName: 'com.instagram.android',
+        reason: 'reply to Ada',
+        task: 'Ada',
+        grantedAt: DateTime.utc(2026, 10, 24, 5, 25),
+        expiresAt: DateTime.utc(2026, 10, 24, 5, 40),
+        source: GrantSource.clocked,
+        kind: ReasonKind.person,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: HomeScreen(controller: controller),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('→ Chat with Ada'), findsOneWidget);
   });
 
   testWidgets('Home opens check-in and offline planning becomes a checklist', (
@@ -751,6 +792,63 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text(item.$2), findsWidgets);
     }
+  });
+
+  testWidgets('person result promises only a conversation found on the phone', (
+    tester,
+  ) async {
+    await phone(tester);
+    const response = UnlockResponse(
+      outcome: UnlockOutcome.open,
+      kind: ReasonKind.person,
+      confidence: .94,
+      person: SourceSpan(text: 'Ada', start: 6, end: 9),
+      minutes: 5,
+    );
+
+    Future<void> show(_FakeDoorPlatform platform) async {
+      final controller = _controller(platform: platform);
+      final app = controller.apps.firstWhere(
+        (item) => item.label == 'Instagram',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: curreTheme(Brightness.light),
+          home: UnlockGateScreen(
+            key: UniqueKey(),
+            controller: controller,
+            app: app,
+            initialReason: 'reply Ada',
+            initialResponse: response,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await show(_FakeDoorPlatform(CurreController.fallbackApps));
+    expect(find.text('Opens Instagram'), findsOneWidget);
+    expect(find.text('Open Instagram'), findsOneWidget);
+    expect(find.textContaining('didn’t find a matching chat'), findsOneWidget);
+
+    await show(
+      _FakeDoorPlatform(
+        CurreController.fallbackApps,
+        conversations: const <AppShortcut>[
+          AppShortcut(
+            packageName: 'com.instagram.android',
+            id: 'chat-ada',
+            shortLabel: 'Recent conversation',
+            isConversation: true,
+            personNames: <String>['Ada'],
+          ),
+        ],
+      ),
+    );
+    expect(find.text('Opens at Instagram → Chat with Ada'), findsOneWidget);
+    expect(find.text('Open Instagram → Chat with Ada'), findsOneWidget);
+    expect(find.textContaining('didn’t find a matching chat'), findsNothing);
   });
 
   testWidgets('leaving the gate cancels a running override', (tester) async {
@@ -1436,9 +1534,10 @@ class _FakeHomePlatform implements HomePlatformGateway {
 }
 
 class _FakeDoorPlatform implements DoorPlatform {
-  _FakeDoorPlatform(this.apps);
+  _FakeDoorPlatform(this.apps, {this.conversations = const <AppShortcut>[]});
 
   final List<LaunchableApp> apps;
+  final List<AppShortcut> conversations;
   int launches = 0;
 
   @override
@@ -1447,7 +1546,9 @@ class _FakeDoorPlatform implements DoorPlatform {
   @override
   Future<List<AppShortcut>> getConversationShortcuts(
     String packageName,
-  ) async => <AppShortcut>[];
+  ) async => conversations
+      .where((shortcut) => shortcut.packageName == packageName)
+      .toList(growable: false);
 
   @override
   Future<List<AppShortcut>> getStaticShortcuts(String packageName) async =>

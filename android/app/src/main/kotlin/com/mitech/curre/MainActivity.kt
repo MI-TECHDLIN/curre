@@ -2,7 +2,6 @@ package com.mitech.curre
 
 import android.app.AppOpsManager
 import android.app.NotificationManager
-import android.app.SearchManager
 import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
@@ -17,6 +16,7 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Process
+import android.provider.CalendarContract
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
@@ -444,8 +444,8 @@ class MainActivity : FlutterActivity() {
             .setPackage(packageName)
             .setQueryFlags(flags)
         val shortcuts = launcherApps.getShortcuts(query, Process.myUserHandle()).orEmpty()
-        // ShortcutInfo does not expose Person metadata through the public SDK.
-        // These labels stay local and Dart matches the requested person on-device.
+        // Shortcut labels and Person names stay local. Dart uses them only to
+        // decide whether it can honestly promise a specific conversation.
         return shortcuts
             .map { shortcutMap(it, conversationsOnly) }
     }
@@ -468,7 +468,10 @@ class MainActivity : FlutterActivity() {
         "shortLabel" to shortcut.shortLabel.toString(),
         "longLabel" to shortcut.longLabel?.toString(),
         "isConversation" to isConversationCandidate,
-        "personNames" to emptyList<String>(),
+        "personNames" to shortcut.persons
+            .orEmpty()
+            .mapNotNull { it.name?.toString() }
+            .filter { it.isNotBlank() },
     )
 
     private fun startShortcut(packageName: String, shortcutId: String): Boolean {
@@ -501,8 +504,33 @@ class MainActivity : FlutterActivity() {
                     .appendQueryParameter("q", query)
                     .build(),
             ).setPackage(MAPS_PACKAGE)
-            "web" -> Intent(Intent.ACTION_WEB_SEARCH)
-                .putExtra(SearchManager.QUERY, query)
+            "spotify" -> Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("spotify:search:${Uri.encode(query)}"),
+            ).setPackage(SPOTIFY_PACKAGE)
+            "play_store" -> Intent(
+                Intent.ACTION_VIEW,
+                Uri.Builder()
+                    .scheme("https")
+                    .authority("play.google.com")
+                    .appendPath("store")
+                    .appendPath("search")
+                    .appendQueryParameter("q", query)
+                    .appendQueryParameter("c", "apps")
+                    .build(),
+            ).setPackage(PLAY_STORE_PACKAGE)
+            "gmail_compose" -> Intent(
+                Intent.ACTION_SENDTO,
+                Uri.parse("mailto:"),
+            )
+                .putExtra(Intent.EXTRA_SUBJECT, query)
+                .setPackage(GMAIL_PACKAGE)
+            "calendar_event" -> Intent(
+                Intent.ACTION_INSERT,
+                CalendarContract.Events.CONTENT_URI,
+            )
+                .putExtra(CalendarContract.Events.TITLE, query)
+                .setPackage(CALENDAR_PACKAGE)
             else -> return false
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -518,5 +546,9 @@ class MainActivity : FlutterActivity() {
         private const val NOTHING_OPENED = "none"
         private const val YOUTUBE_PACKAGE = "com.google.android.youtube"
         private const val MAPS_PACKAGE = "com.google.android.apps.maps"
+        private const val SPOTIFY_PACKAGE = "com.spotify.music"
+        private const val PLAY_STORE_PACKAGE = "com.android.vending"
+        private const val GMAIL_PACKAGE = "com.google.android.gm"
+        private const val CALENDAR_PACKAGE = "com.google.android.calendar"
     }
 }

@@ -25,7 +25,8 @@ void main() {
     final shown = gateway.shown.single;
     final scheduled = gateway.scheduled.single;
     expect(shown.id, notificationIdForPackage(grant.packageName));
-    expect(shown.ongoingTitle, 'Instagram → Ada');
+    expect(shown.ongoingTitle, 'Instagram is back for now');
+    expect(shown.ongoingBody, startsWith('Ada ·'));
     expect(shown.ongoingBody, contains('time is up'));
     expect(shown.expiresAt, grant.expiresAt);
     expect(shown.remaining, const Duration(minutes: 5));

@@ -70,14 +70,11 @@ class HomePreviewScreen extends StatelessWidget {
                   const SizedBox(height: CurreSpace.s2),
                   DoorRow(
                     appName: 'Instagram',
-                    destination: '→\u00A0Messages · Ada',
-                    destinationHighlights: [
-                      SpanHighlight(13, 16, style: t.youSmall.copyWith(fontSize: 16, color: open.fg)),
-                    ],
+                    destination: '→\u00A0Open app',
                     appIcon: const AppIconStandIn(icon: SolarIconsBold.chatRoundLine, ring: .64),
                     tint: open,
                     trailing: _TimeLeft(text: '3:12', color: open.fg),
-                    semanticLabel: 'Instagram, opens your chat with Ada, 3 minutes 12 seconds left',
+                    semanticLabel: 'Instagram, opens the app, 3 minutes 12 seconds left',
                   ),
                 ],
                 const SizedBox(height: CurreSpace.s3),

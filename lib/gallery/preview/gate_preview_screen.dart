@@ -3,14 +3,9 @@ import 'package:flutter/material.dart';
 import '../../design/design.dart';
 import 'parts.dart';
 
-/// The unlock gate, judged "open" for a person (design report 4.6; demo
-/// beat 1:15). It keeps the check-in's language (one big question, one
-/// card, one action) on the sunk surface below the line, and stays serious:
-/// no Peek, no sky, no celebration. The reason card shows what Clocked
-/// read ("Ada" is the link to the door, "rehearsal" what the grant is
-/// for), the kind chip shows the verdict with its confidence, the outcome
-/// card says where the tap lands, and the one action names that place.
-/// For the review only.
+/// The unlock gate, judged "open" for a person when the phone exposes no
+/// matching conversation shortcut. The person reading is still shown, but
+/// the action honestly promises only the app. For the review only.
 class GatePreviewScreen extends StatelessWidget {
   const GatePreviewScreen({
     super.key,
@@ -82,7 +77,7 @@ class GatePreviewScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: CurreSpace.s2),
                         Text(
-                          'Ada\u00A0→ matched a chat on this phone',
+                          'No matching chat found on this phone',
                           style: t.caption.copyWith(color: c.ink3),
                         ),
                       ],
@@ -96,8 +91,8 @@ class GatePreviewScreen extends StatelessWidget {
                   const SizedBox(height: CurreSpace.s3),
                   OutcomeCard(
                     outcome: Outcome.open,
-                    headline: 'Opens at $app\u00A0→\u00A0Messages',
-                    body: 'Your chat with Ada · 5 minutes',
+                    headline: 'Opens $app',
+                    body: 'No matching chat found · 5 minutes',
                   ),
                 ],
               ),
@@ -112,10 +107,7 @@ class GatePreviewScreen extends StatelessWidget {
             ),
             child: Column(
               children: [
-                PrimaryPill(
-                  label: 'Open $app\u00A0→\u00A0Messages',
-                  glyph: CurreGlyphKind.door,
-                ),
+                PrimaryPill(label: 'Open $app', glyph: CurreGlyphKind.door),
                 const SizedBox(height: CurreSpace.s2),
                 Text(
                   '5 minutes · long-press opens $app normally',

@@ -52,6 +52,88 @@ void main() {
     },
   );
 
+  test('conversation matching uses Android person names conservatively', () {
+    const shortcut = AppShortcut(
+      packageName: packageName,
+      id: 'conversation-42',
+      shortLabel: 'Recent conversation',
+      isConversation: true,
+      personNames: <String>['Ada'],
+    );
+    const similar = AppShortcut(
+      packageName: packageName,
+      id: 'conversation-43',
+      shortLabel: 'Adaeze',
+      isConversation: true,
+    );
+
+    expect(matchConversationShortcut('Ada', <AppShortcut>[shortcut]), shortcut);
+    expect(matchConversationShortcut('Ada', <AppShortcut>[similar]), isNull);
+    expect(
+      matchConversationShortcut('Ada family', <AppShortcut>[shortcut]),
+      isNull,
+    );
+    expect(
+      matchConversationShortcut('Ada', const <AppShortcut>[
+        AppShortcut(
+          packageName: packageName,
+          id: 'chat-with-ada',
+          shortLabel: 'Chat with Ada',
+          isConversation: true,
+        ),
+      ]),
+      isNotNull,
+    );
+    expect(
+      matchConversationShortcut('Ada', const <AppShortcut>[
+        AppShortcut(
+          packageName: packageName,
+          id: 'not-a-conversation',
+          shortLabel: 'Ada',
+        ),
+      ]),
+      isNull,
+    );
+  });
+
+  test('unmatched person uses the honest search fallback', () async {
+    const similar = AppShortcut(
+      packageName: packageName,
+      id: 'chat-adaeze',
+      shortLabel: 'Adaeze',
+      isConversation: true,
+    );
+
+    final result = await router.open(
+      const DoorRequest(
+        packageName: packageName,
+        kind: ReasonKind.person,
+        person: 'Ada',
+        conversationShortcuts: <AppShortcut>[similar],
+        staticShortcuts: <AppShortcut>[search],
+      ),
+    );
+
+    expect(result.kind, DoorLaunchKind.fallbackSearch);
+    expect(copied, <String>['Ada']);
+    expect(platform.calls, <String>['shortcut:$packageName:search']);
+  });
+
+  test('Spotify uses its package-bound query door', () async {
+    final result = await router.open(
+      const DoorRequest(
+        packageName: 'com.spotify.music',
+        kind: ReasonKind.task,
+        target: 'Sunday worship',
+        queryDoorId: 'spotify',
+      ),
+    );
+
+    expect(result.kind, DoorLaunchKind.queryLink);
+    expect(platform.calls, <String>['query:spotify:Sunday worship']);
+    expect(result.detail, 'spotify:search:Sunday%20worship');
+  });
+
   test(
     'target plus verified query door resolves to an encoded link door',
     () async {
@@ -95,6 +177,27 @@ void main() {
 
     expect(result.kind, DoorLaunchKind.plainLaunch);
     expect(platform.calls, <String>['launch:$packageName']);
+  });
+
+  test('target without an app door uses Search and copied words', () async {
+    final result = await router.open(
+      const DoorRequest(
+        packageName: 'com.instagram.android',
+        kind: ReasonKind.task,
+        target: 'Sunday rehearsal',
+        staticShortcuts: <AppShortcut>[
+          AppShortcut(
+            packageName: 'com.instagram.android',
+            id: 'search',
+            shortLabel: 'Search',
+          ),
+        ],
+      ),
+    );
+
+    expect(result.kind, DoorLaunchKind.fallbackSearch);
+    expect(copied, <String>['Sunday rehearsal']);
+    expect(platform.calls, <String>['shortcut:com.instagram.android:search']);
   });
 
   test('failed door copies target and opens Search shortcut', () async {

@@ -1048,7 +1048,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final type = Theme.of(context).extension<CurreType>()!;
     const examples = <String>[
       'Learn the G chord on YouTube till 7',
-      'Reply to Ada on WhatsApp',
+      'Play the Sunday worship playlist on Spotify',
       'Find the way to the studio on Maps',
     ];
     return [
