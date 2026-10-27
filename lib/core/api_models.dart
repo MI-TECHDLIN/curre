@@ -150,6 +150,58 @@ class UnlockRequest {
   };
 }
 
+/// A kind of personal detail the reader looks for before a reason or note
+/// is kept in History.
+enum PersonalDetailKind {
+  person,
+  phone,
+  email,
+  address,
+  creditCard,
+  bankAccount,
+}
+
+extension PersonalDetailKindWire on PersonalDetailKind {
+  static PersonalDetailKind fromWireValue(String value) => switch (value) {
+    'person' => PersonalDetailKind.person,
+    'phone' => PersonalDetailKind.phone,
+    'email' => PersonalDetailKind.email,
+    'address' => PersonalDetailKind.address,
+    'credit_card' => PersonalDetailKind.creditCard,
+    'bank_account' => PersonalDetailKind.bankAccount,
+    _ => throw FormatException('Unknown personal detail: $value'),
+  };
+}
+
+/// A personal detail found in the reason or note the phone sent, as
+/// code-point offsets into that text. It carries no copy of the words.
+class Redaction {
+  const Redaction({required this.kind, required this.start, required this.end});
+
+  factory Redaction.fromJson(Map<String, Object?> json) {
+    final start = _integer(json['start'], 'start');
+    final end = _integer(json['end'], 'end');
+    if (start < 0 || end <= start) {
+      throw FormatException('Invalid redaction [$start, $end)');
+    }
+    return Redaction(
+      kind: PersonalDetailKindWire.fromWireValue(_string(json['kind'], 'kind')),
+      start: start,
+      end: end,
+    );
+  }
+
+  final PersonalDetailKind kind;
+  final int start;
+  final int end;
+}
+
+List<Redaction>? _redactions(Object? value) => value == null
+    ? null
+    : _list(value, 'redactions')
+          .map((item) => Redaction.fromJson(_map(item, 'redactions[]')))
+          .toList(growable: false);
+
 class GuardInfo {
   const GuardInfo({required this.category, required this.quote});
 
@@ -175,6 +227,7 @@ class UnlockResponse {
     this.person,
     this.minutes,
     this.guard,
+    this.redactions,
     this.usage,
   });
 
@@ -201,6 +254,7 @@ class UnlockResponse {
     guard: json['guard'] == null
         ? null
         : GuardInfo.fromJson(_map(json['guard'], 'guard')),
+    redactions: _redactions(json['redactions']),
     usage: json['usage'] == null
         ? null
         : ApiUsage.fromJson(_map(json['usage'], 'usage')),
@@ -215,6 +269,7 @@ class UnlockResponse {
       person = null,
       minutes = null,
       guard = null,
+      redactions = null,
       usage = null;
 
   final UnlockOutcome outcome;
@@ -225,6 +280,10 @@ class UnlockResponse {
   final SourceSpan? person;
   final int? minutes;
   final GuardInfo? guard;
+
+  /// Personal details in the reason, for the copy History keeps; null when
+  /// they could not be looked for, and the reason is kept as typed.
+  final List<Redaction>? redactions;
   final ApiUsage? usage;
 
   String? targetTextFromReason(String reason) =>
@@ -287,6 +346,8 @@ class ProofResponse {
     this.specificCompletion,
     this.result,
     this.learning,
+    this.mismatch,
+    this.redactions,
     this.usage,
   });
 
@@ -312,6 +373,8 @@ class ProofResponse {
     learning: json['learning'] == null
         ? null
         : SourceSpan.fromJson(_map(json['learning'], 'learning')),
+    mismatch: _nullableString(json['mismatch'], 'mismatch'),
+    redactions: _redactions(json['redactions']),
     usage: json['usage'] == null
         ? null
         : ApiUsage.fromJson(_map(json['usage'], 'usage')),
@@ -323,6 +386,8 @@ class ProofResponse {
       specificCompletion = null,
       result = null,
       learning = null,
+      mismatch = null,
+      redactions = null,
       usage = null;
 
   final ProofOutcome outcome;
@@ -337,6 +402,14 @@ class ProofResponse {
   /// Spans Extract copied from the note; offsets index the note itself.
   final SourceSpan? result;
   final SourceSpan? learning;
+
+  /// The note's own words that say something other than the planned task
+  /// happened, when they kept the note from counting.
+  final String? mismatch;
+
+  /// Personal details in the note, for the copy History keeps; null when
+  /// they could not be looked for, and the note is kept as typed.
+  final List<Redaction>? redactions;
   final ApiUsage? usage;
 }
 

@@ -932,6 +932,59 @@ void main() {
     },
   );
 
+  test(
+    'History redacts an unlock while its active grant keeps the live words',
+    () async {
+      const reason = 'reply Ada on 0803 555';
+      final api = CurreApiClient(
+        baseUrl: Uri.parse('https://curre.test'),
+        appKey: 'test-key',
+        httpClient: MockClient((_) async {
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'outcome': 'open',
+              'kind': 'person',
+              'confidence': .94,
+              'person': <String, Object?>{'text': 'Ada', 'start': 6, 'end': 9},
+              'minutes': 5,
+              'redactions': <Object?>[
+                <String, Object?>{'kind': 'person', 'start': 6, 'end': 9},
+                <String, Object?>{'kind': 'phone', 'start': 13, 'end': 21},
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+      final platform = _FakeDoorPlatform(CurreController.fallbackApps);
+      final controller = _controller(platform: platform, api: api);
+      addTearDown(controller.dispose);
+      final app = controller.apps.firstWhere(
+        (item) => item.label == 'Instagram',
+      );
+
+      final response = await controller.judgeUnlock(app: app, reason: reason);
+      await controller.grantAndOpen(
+        app: app,
+        reason: reason,
+        response: response,
+      );
+
+      expect(
+        controller.historyAttempts.single.reason,
+        'reply [name] on [phone]',
+      );
+      expect(
+        controller.historyAttempts.single.highlights.single.text,
+        '[name]',
+      );
+      expect(controller.historyGrants.single.reason, 'reply [name] on [phone]');
+      expect(controller.historyGrants.single.task, '[name]');
+      expect(controller.grants.single.reason, reason);
+      expect(controller.grants.single.task, 'Ada');
+    },
+  );
+
   testWidgets('an open result grants, launches and returns from the gate', (
     tester,
   ) async {
@@ -1129,6 +1182,43 @@ void main() {
     expect(find.text('Waited 30 seconds'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Instagram came back'), 300);
     expect(find.text('Instagram came back'), findsOneWidget);
+  });
+
+  testWidgets('History visibly marks hidden personal details', (tester) async {
+    await phone(tester);
+    final controller = _controller();
+    controller.historyAttempts = <Attempt>[
+      Attempt(
+        at: DateTime.utc(2026, 10, 24, 5, 20),
+        packageName: 'com.instagram.android',
+        outcome: UnlockOutcome.open,
+        confidence: .94,
+        overridden: false,
+        kind: ReasonKind.person,
+        reason: 'reply [name] on [phone]',
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: HistoryScreen(controller: controller),
+      ),
+    );
+
+    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+    final marked = tester.widget<SpanText>(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SpanText && widget.text == 'reply [name] on [phone]',
+      ),
+    );
+    expect(
+      marked.highlights.where(
+        (item) => item.semanticsLabel == 'Personal detail hidden',
+      ),
+      hasLength(2),
+    );
   });
 
   testWidgets('Clear history in settings empties the History screen', (

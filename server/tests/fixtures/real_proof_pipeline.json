@@ -1,98 +1,146 @@
 {
   "metadata": {
-    "credits": 4,
-    "model_ms": 98.736128,
-    "recorded_at": "2026-10-26"
-  },
-  "route_request": {
-    "note": "I can now change cleanly from G to C four times.",
-    "task": "Learn the G chord on YouTube"
+    "credits": 10,
+    "model_ms": 237.341858,
+    "recorded_at": "2026-10-26",
+    "round_trip_ms": 899.7
   },
   "response": {
     "model": "clocked-1.0",
     "steps": [
       {
-        "endpoint": "injection",
-        "ms": 24,
-        "name": "guard",
+        "endpoint": "pii",
+        "ms": 65,
+        "name": "private",
         "result": {
-          "categories": {
-            "benign": 0.9954232266552642,
-            "instruction override": 0.0008115567056961754,
-            "obfuscated or encoded payload": 0.0006720381996792162,
-            "role-play or persona jailbreak": 0.0006851402607342484,
-            "social engineering": 0.0009259039173147396,
-            "system prompt or secret extraction": 0.0007368692639431351,
-            "tool misuse or data exfiltration": 0.0007452649973683143
+          "checks": {
+            "rejected": {},
+            "split": 0,
+            "trimmed": 0
           },
-          "category": "benign",
-          "evidence": [],
-          "injection": 0.001237578353196933,
-          "instructions_used": "custom",
+          "counts": {
+            "person": 1
+          },
+          "entities": [
+            {
+              "confidence": 1,
+              "end": 53,
+              "mentions": 1,
+              "source": "model",
+              "start": 50,
+              "type": "person",
+              "value": "Ada"
+            }
+          ],
+          "instructions_used": "default",
+          "mentions": {
+            "candidates": 0,
+            "ms": 0,
+            "occurrences": {
+              "kept": 0,
+              "read": 0
+            },
+            "reads": 0,
+            "rejected": {},
+            "spans": 0,
+            "variants": 0,
+            "verified": 0
+          },
           "model": "clocked-1.0",
-          "severities": {
-            "critical": 0.0012549317029774511,
-            "high": 0.001653650382609032,
-            "low": 0.0021399900211332384,
-            "medium": 0.001501067048505385,
-            "none": 0.9934503608447749
-          },
-          "severity": "none",
-          "severity_expected": 1.015,
-          "source": "user",
           "threshold": 0.5,
           "timing": {
-            "read_ms": 24,
-            "total_ms": 24
-          },
-          "verdict": "benign"
+            "read_ms": 64,
+            "total_ms": 65
+          }
         },
         "status": 200,
         "step": 0
       },
       {
+        "endpoint": "injection",
+        "ms": 28,
+        "name": "guard",
+        "result": {
+          "categories": {
+            "benign": 0.9951056428247282,
+            "instruction override": 0.000960650685509898,
+            "obfuscated or encoded payload": 0.0007049923856141495,
+            "role-play or persona jailbreak": 0.0007418419324889586,
+            "social engineering": 0.0009022312948663284,
+            "system prompt or secret extraction": 0.0007815510874549299,
+            "tool misuse or data exfiltration": 0.0008030897893374927
+          },
+          "category": "benign",
+          "evidence": [],
+          "injection": 0.0011799642463318216,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "severities": {
+            "critical": 0.001158831356307794,
+            "high": 0.0017628521361412934,
+            "low": 0.0024780125456828374,
+            "medium": 0.0018394227058031998,
+            "none": 0.9927608812560649
+          },
+          "severity": "none",
+          "severity_expected": 1.016,
+          "source": "user",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 27,
+            "total_ms": 28
+          },
+          "verdict": "benign"
+        },
+        "status": 200,
+        "step": 1
+      },
+      {
         "endpoint": "decide",
-        "ms": 22,
+        "ms": 28,
         "name": "proof",
         "result": {
           "answers": {
             "proof": {
               "choice": "specific_completion",
-              "confidence": 0.992,
+              "confidence": 0.9904,
               "probabilities": {
                 "future": 0.0019,
-                "specific_completion": 0.994,
-                "unrelated": 0.0018,
-                "vague": 0.0024
+                "specific_completion": 0.9928,
+                "unrelated": 0.0026,
+                "vague": 0.0027
               },
               "type": "choice"
             }
           },
           "model": "clocked-1.0",
           "usage": {
-            "input_tokens": 61,
+            "input_tokens": 67,
             "output_tokens": 4
           }
         },
         "status": 200,
-        "step": 1
+        "step": 2
       },
       {
         "endpoint": "extract",
-        "ms": 64,
+        "ms": 80,
         "name": "caption",
         "result": {
           "fields": {
             "learning": {
-              "confidence": 0.9999997626475297,
+              "confidence": 0.9999987799225322,
               "end": 48,
-              "p_verify": 0.9999997626475297,
+              "p_verify": 0.9999987799225322,
               "start": 0,
-              "value": "I can now change cleanly from G to C four times."
+              "value": "I can now switch from G to C four times in a row"
             },
             "result": {
-              "confidence": 1,
-              "value": null
+              "confidence": 0.9999808370968399,
+              "end": 48,
+              "p_verify": 0.9999808370968399,
+              "start": 10,
+              "value": "switch from G to C four times in a row"
             }
           },
           "model": "clocked-1.0",
@@ -100,33 +148,89 @@
             "forwards": {
               "fields": [
                 5,
-                0
+                1
               ]
             },
-            "read_ms": 61,
-            "server_ms": 64,
+            "read_ms": 77,
+            "server_ms": 80,
             "stages": {
               "fields": {
                 "assemble": 0,
-                "branches": 1,
-                "doc": 0,
-                "generate": 47,
+                "branches": 0,
+                "doc": 1,
+                "generate": 59,
                 "locate": 0,
                 "reader": "recognition",
-                "verify": 12
+                "verify": 14
               }
             },
-            "total_ms": 61
+            "total_ms": 77
           }
         },
         "status": 200,
-        "step": 2
+        "step": 3
+      },
+      {
+        "endpoint": "grounding",
+        "ms": 56,
+        "name": "verify",
+        "result": {
+          "claims": [
+            {
+              "claim": "I can now switch from G to C four times in a row; Ada timed me.",
+              "contradicted": 0.0049,
+              "counted": true,
+              "kind": "claim",
+              "not_a_claim": 0.0078,
+              "not_stated": 0.9831,
+              "source": null,
+              "sources": {
+                "plan": 1
+              },
+              "supported": 0.0042,
+              "verdict": "not_stated",
+              "weight": 1
+            }
+          ],
+          "documents": [
+            {
+              "claims": [],
+              "id": "plan",
+              "share": 0,
+              "share_of_answer": 0.0042
+            }
+          ],
+          "grounded": 0.0042,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "not_claims": [],
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 54,
+            "total_ms": 56
+          },
+          "ungrounded": 0.9958,
+          "unsupported_claims": [
+            0
+          ],
+          "verdict": "ungrounded",
+          "weakest_claim": {
+            "index": 0,
+            "supported": 0.0042
+          }
+        },
+        "status": 200,
+        "step": 4
       }
     ],
     "stopped": null,
     "timing": {
-      "model_ms": 79,
-      "total_ms": 112
+      "model_ms": 102,
+      "total_ms": 324
     }
+  },
+  "route_request": {
+    "note": "I can now switch from G to C four times in a row; Ada timed me.",
+    "task": "Learn the G chord on YouTube"
   }
 }

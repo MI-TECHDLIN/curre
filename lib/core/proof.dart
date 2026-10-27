@@ -309,6 +309,7 @@ class ProofSubmission {
     required this.before,
     required this.after,
     this.kind,
+    this.mismatch,
   });
 
   final ProofRecord record;
@@ -317,6 +318,10 @@ class ProofSubmission {
 
   /// How the reader classed the note, when it answered.
   final ProofKind? kind;
+
+  /// The note's own claim that did not match the planned task, when Verify
+  /// found a clear contradiction.
+  final String? mismatch;
 
   bool get supported => record.countsForProoflight;
 

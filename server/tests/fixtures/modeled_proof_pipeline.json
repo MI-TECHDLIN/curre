@@ -1,17 +1,54 @@
 {
   "metadata": {
-    "credits": 4,
-    "model_ms": 81.5,
+    "credits": 9,
+    "model_ms": 191.5,
     "modeled_on": [
+      "real_proof_pipeline.json",
       "real_unlock_pipeline.json",
       "real_plan_pipeline.json"
     ],
     "recorded": false,
-    "why": "A template shape for fake-client proof test cases (tests/test_proof.py), covering a result-span case the recorded real_proof_pipeline.json fixture does not. The envelope, guard step, and Decide/Extract result keys are copied from the recorded unlock response; only the labels, numbers and note differ. A real /v1/proof response is recorded separately in real_proof_pipeline.json."
+    "why": "A template shape for fake-client proof test cases (tests/test_proof.py), covering a result-span case the recorded real_proof_pipeline.json fixture does not. The envelope and every step's result keys (Protect, Guard, Decide, Extract, Verify) are copied from recorded responses; only the labels, numbers and note differ. A real /v1/proof response is recorded separately in real_proof_pipeline.json."
   },
   "response": {
     "model": "clocked-1.0",
     "steps": [
+      {
+        "endpoint": "pii",
+        "ms": 58,
+        "name": "private",
+        "result": {
+          "checks": {
+            "rejected": {},
+            "split": 0,
+            "trimmed": 0
+          },
+          "counts": {},
+          "entities": [],
+          "instructions_used": "default",
+          "mentions": {
+            "candidates": 0,
+            "ms": 0,
+            "occurrences": {
+              "kept": 0,
+              "read": 0
+            },
+            "reads": 0,
+            "rejected": {},
+            "spans": 0,
+            "variants": 0,
+            "verified": 0
+          },
+          "model": "clocked-1.0",
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 57,
+            "total_ms": 58
+          }
+        },
+        "status": 200,
+        "step": 0
+      },
       {
         "endpoint": "injection",
         "ms": 23,
@@ -49,7 +86,7 @@
           "verdict": "benign"
         },
         "status": 200,
-        "step": 0
+        "step": 1
       },
       {
         "endpoint": "decide",
@@ -76,7 +113,7 @@
           }
         },
         "status": 200,
-        "step": 1
+        "step": 2
       },
       {
         "endpoint": "extract",
@@ -121,13 +158,65 @@
           }
         },
         "status": 200,
-        "step": 2
+        "step": 3
+      },
+      {
+        "endpoint": "grounding",
+        "ms": 52,
+        "name": "verify",
+        "result": {
+          "claims": [
+            {
+              "claim": "I switched from G to C without looking",
+              "contradicted": 0.0061,
+              "counted": true,
+              "kind": "claim",
+              "not_a_claim": 0.0094,
+              "not_stated": 0.9797,
+              "source": null,
+              "sources": {
+                "plan": 1
+              },
+              "supported": 0.0048,
+              "verdict": "not_stated",
+              "weight": 1
+            }
+          ],
+          "documents": [
+            {
+              "claims": [],
+              "id": "plan",
+              "share": 0,
+              "share_of_answer": 0.0042
+            }
+          ],
+          "grounded": 0.0048,
+          "instructions_used": "custom",
+          "model": "clocked-1.0",
+          "not_claims": [],
+          "threshold": 0.5,
+          "timing": {
+            "read_ms": 51,
+            "total_ms": 52
+          },
+          "ungrounded": 0.9952,
+          "unsupported_claims": [
+            0
+          ],
+          "verdict": "ungrounded",
+          "weakest_claim": {
+            "index": 0,
+            "supported": 0.0048
+          }
+        },
+        "status": 200,
+        "step": 4
       }
     ],
     "stopped": null,
     "timing": {
-      "model_ms": 66,
-      "total_ms": 97
+      "model_ms": 175,
+      "total_ms": 214
     }
   },
   "route_request": {

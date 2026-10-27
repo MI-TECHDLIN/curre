@@ -420,6 +420,46 @@ void main() {
       expect(find.byType(CompletionSheet), findsNothing);
     });
 
+    testWidgets('a plan mismatch explains the follow-up and redacts History', (
+      tester,
+    ) async {
+      const note = 'Skipped it. Ada helped.';
+      final controller = _controller(
+        api: _api(
+          (_) => <String, Object?>{
+            'outcome': 'vague',
+            'kind': 'specific_completion',
+            'specific_completion': .96,
+            'mismatch': 'Skipped it.',
+            'redactions': <Object?>[
+              <String, Object?>{'kind': 'person', 'start': 12, 'end': 15},
+            ],
+          },
+        ),
+      );
+      final task = await _openDoor(controller);
+      await _openSheet(tester, controller, task);
+
+      await tester.enterText(find.byKey(const Key('completion-note')), note);
+      await tester.pump();
+      await tester.tap(find.text('Add proof'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('proof-vague-follow-up')), findsOneWidget);
+      expect(
+        find.text(
+          '“Skipped it.” doesn’t match the task you planned. What changed, finished, or became clear?',
+        ),
+        findsOneWidget,
+      );
+      final field = tester.widget<TextField>(
+        find.byKey(const Key('completion-note')),
+      );
+      expect(field.controller!.text, note);
+      expect(controller.proofRecords.single.note, 'Skipped it. [name] helped.');
+    });
+
     testWidgets('a second vague note is kept as done, never asked again', (
       tester,
     ) async {

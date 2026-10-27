@@ -12,6 +12,7 @@ from tests.fakes import (
     injection_result,
     make_pipeline_result,
     ok_step,
+    pii_result,
     skipped_step,
 )
 
@@ -340,3 +341,177 @@ def test_unlock_requires_app_key(make_client):
     client.headers.pop("X-App-Key")
     resp = client.post("/v1/unlock", json=_unlock_payload())
     assert resp.status_code == 401
+
+
+REASON_WITH_DETAILS = "reply Ada on 0803 555 0142 about rehearsal"
+
+
+def _private_step() -> dict:
+    return ok_step(
+        "private",
+        "pii",
+        pii_result(("person", "Ada", 6, 9), ("phone", "0803 555 0142", 13, 26)),
+    )
+
+
+def test_unlock_runs_protect_first_on_the_reason_alone(make_client):
+    async def handler(*, text, steps, **kwargs):
+        decide_fields = {"kind": decide_choice("person", 0.9)}
+        extract_fields = {"person": extract_field("Ada", start=6, end=9)}
+        return make_pipeline_result(
+            [
+                _private_step(),
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": decide_fields}),
+                ok_step("task", "extract", {"fields": extract_fields}),
+            ]
+        )
+
+    client = make_client(handler)
+    body = client.post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS)).json()
+
+    (call,) = client.fake.calls
+    private = call["steps"][0]
+    assert [step["name"] for step in call["steps"]] == ["private", "guard", "gate", "task"]
+    # Its own text, so the offsets index the reason the phone keeps, not
+    # the composed App/Plan/Reason text the other steps read.
+    assert private["pii"]["text"] == REASON_WITH_DETAILS
+    assert set(private["pii"]["entities"]) == set(clocked_pipeline.PERSONAL_DETAIL_TYPES)
+    assert "stop" not in private and "anonymize" not in private["pii"]
+
+    assert body["outcome"] == "open"
+    assert body["person"] == {"text": "Ada", "start": 6, "end": 9}
+    assert body["redactions"] == [
+        {"kind": "person", "start": 6, "end": 9},
+        {"kind": "phone", "start": 13, "end": 26},
+    ]
+    assert REASON_WITH_DETAILS[13:26] == "0803 555 0142"
+
+
+def test_unlock_reports_redactions_for_every_judged_outcome(make_client):
+    flagged = injection_result("injection", 0.97, category="instruction override")
+    skip = "stopped after steps[1].injection (flagged)"
+    replies = iter(
+        [
+            make_pipeline_result(
+                [
+                    _private_step(),
+                    ok_step("guard", "injection", flagged),
+                    skipped_step("gate", "decide", skip),
+                    skipped_step("task", "extract", skip),
+                ],
+                stopped={"step": 1, "endpoint": "injection", "reason": "flagged"},
+            ),
+            make_pipeline_result(
+                [
+                    _private_step(),
+                    _benign_guard_step(),
+                    ok_step("gate", "decide", {"answers": {"kind": decide_choice("browse", 0.9)}}),
+                    ok_step("task", "extract", {"fields": {}}),
+                ]
+            ),
+            make_pipeline_result(
+                [
+                    _private_step(),
+                    _benign_guard_step(),
+                    error_step("gate", "decide"),
+                    ok_step("task", "extract", {"fields": {}}),
+                ]
+            ),
+        ]
+    )
+
+    async def handler(*, text, steps, **kwargs):
+        return next(replies)
+
+    client = make_client(handler)
+    bodies = [
+        client.post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS)).json()
+        for _ in range(3)
+    ]
+
+    assert [body["outcome"] for body in bodies] == ["flagged", "later", "unavailable"]
+    assert all(len(body["redactions"]) == 2 for body in bodies)
+
+
+def test_unlock_without_protect_keeps_the_reason_unmarked(make_client):
+    replies = iter(
+        [
+            make_pipeline_result(
+                [
+                    error_step("private", "pii"),
+                    _benign_guard_step(),
+                    ok_step("gate", "decide", {"answers": {"kind": decide_choice("task", 0.9)}}),
+                    ok_step("task", "extract", {"fields": {}}),
+                ]
+            ),
+            make_pipeline_result(
+                [
+                    ok_step("private", "pii", {"entities": [{"type": "person", "start": 6}]}),
+                    _benign_guard_step(),
+                    ok_step("gate", "decide", {"answers": {"kind": decide_choice("task", 0.9)}}),
+                    ok_step("task", "extract", {"fields": {}}),
+                ]
+            ),
+            make_pipeline_result(
+                [
+                    ok_step("private", "pii", pii_result(("person", "Ada", 6, 99))),
+                    _benign_guard_step(),
+                    ok_step("gate", "decide", {"answers": {"kind": decide_choice("task", 0.9)}}),
+                    ok_step("task", "extract", {"fields": {}}),
+                ]
+            ),
+        ]
+    )
+
+    async def handler(*, text, steps, **kwargs):
+        return next(replies)
+
+    client = make_client(handler)
+    bodies = [
+        client.post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS)).json()
+        for _ in range(3)
+    ]
+
+    # An error, a malformed finding or one outside the reason: the phone
+    # keeps the reason as typed and marks nothing. The outcome stands.
+    assert [(body["outcome"], body["redactions"]) for body in bodies] == [("open", None)] * 3
+
+
+def test_unlock_merges_overlapping_findings_and_ignores_other_kinds(make_client):
+    async def handler(*, text, steps, **kwargs):
+        found = pii_result(
+            ("person", "Ada", 6, 9),
+            ("phone", "0803 555 0142", 13, 26),
+            ("ip_address", "555", 18, 21),
+            ("phone", "555 0142", 18, 26),
+            ("organization", "rehearsal", 33, 42),
+        )
+        return make_pipeline_result(
+            [
+                ok_step("private", "pii", found),
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": {"kind": decide_choice("task", 0.9)}}),
+                ok_step("task", "extract", {"fields": {}}),
+            ]
+        )
+
+    body = (
+        make_client(handler)
+        .post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS))
+        .json()
+    )
+
+    assert body["redactions"] == [
+        {"kind": "person", "start": 6, "end": 9},
+        {"kind": "phone", "start": 13, "end": 26},
+    ]
+
+
+def test_unlock_unavailable_without_an_answer_has_no_redactions(make_client):
+    async def handler(*, text, steps, **kwargs):
+        raise RateLimitError("too many requests", status=429)
+
+    body = make_client(handler).post("/v1/unlock", json=_unlock_payload()).json()
+    assert body["outcome"] == "unavailable"
+    assert body["redactions"] is None

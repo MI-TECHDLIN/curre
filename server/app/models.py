@@ -13,6 +13,7 @@ Kind = Literal["task", "person", "time_sensitive", "browse", "unclear"]
 Outcome = Literal["open", "later", "specify", "flagged", "unavailable"]
 ProofOutcome = Literal["accepted", "vague", "pending"]
 ProofKind = Literal["specific_completion", "vague", "future", "unrelated"]
+PersonalDetail = Literal["person", "phone", "email", "address", "credit_card", "bank_account"]
 
 MAX_LABEL_LEN = 60
 MAX_CANDIDATES = 30
@@ -24,6 +25,15 @@ MAX_PROOF_NOTE_LEN = 300
 
 class Span(BaseModel):
     text: str
+    start: int
+    end: int
+
+
+class Redaction(BaseModel):
+    """A personal detail Protect found in the reason or note the phone sent,
+    as code-point offsets into that text. It carries no copy of the words."""
+
+    kind: PersonalDetail
     start: int
     end: int
 
@@ -110,6 +120,8 @@ class UnlockResponse(BaseModel):
     person: Span | None = None
     minutes: int | None = None
     guard: GuardInfo | None = None
+    # None when Protect did not answer: the phone then keeps the reason as is.
+    redactions: list[Redaction] | None = None
     usage: Usage | None = None
 
 
@@ -124,4 +136,9 @@ class ProofResponse(BaseModel):
     specific_completion: float | None = None
     result: Span | None = None
     learning: Span | None = None
+    # The note's own claim Verify found contradicting the planned task, when
+    # that contradiction kept the note from counting.
+    mismatch: str | None = None
+    # None when Protect did not answer: the phone then keeps the note as is.
+    redactions: list[Redaction] | None = None
     usage: Usage | None = None

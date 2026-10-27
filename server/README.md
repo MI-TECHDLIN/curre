@@ -35,7 +35,9 @@ fake Clocked client in `tests/fakes.py`; `tests/test_contract.py` also feeds
 one recorded real pipeline response per route -- `real_plan_pipeline.json`,
 `real_unlock_pipeline.json`, `real_proof_pipeline.json` (sample task/note
 only, no key) -- from `tests/fixtures/` through the production parsers and
-validates the resulting Pydantic response types. `modeled_proof_pipeline.json`
+validates the resulting Pydantic response types. A second sanitized fixture,
+`real_verify_contradiction_steps.json`, records the Protect and Verify shapes
+for a note that conflicts with its plan. `modeled_proof_pipeline.json`
 (marked `"recorded": false`) is a separate template `tests/test_proof.py`
 reuses to build fake-client proof cases a single recorded response doesn't
 cover; it is not a claim that no real `/v1/proof` call has been made.
@@ -57,8 +59,8 @@ cover; it is not a claim that no real `/v1/proof` call has been made.
 | --- | --- | --- |
 | `GET /healthz` | none | `{"status": "ok"}` |
 | `POST /v1/plan` | Fill (`apps` multiselect + up to 8 `door_<id>` choice fields) -> Extract (`ends` + up to 6 `q_<id>` fields) | Selected `apps` labels map back to candidate ids; a step error on Fill is `503`. An Extract step error still returns the apps Fill chose, without spans. |
-| `POST /v1/unlock` | Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Guard stop (flagged verdict) -> `flagged`. `kind` in task/person/time_sensitive at or above the threshold -> `open` (grant = Extract `minutes` clamped 1-30, else 10 for task / 5 for person or time-sensitive). `browse` at or above the threshold -> `later`. `unclear`, or below the threshold -> `specify`. Any step error, the total timeout (6 s), or a Clocked error surviving the SDK's own retries -> `unavailable`. |
-| `POST /v1/proof` | Guard (`injection`, `stop: true`) -> Decide (`proof` choice) -> Extract (`result`, `learning` on the note alone) | `specific_completion` at probability `>= 0.75` plus at least one extracted span -> `accepted`. A judged vague, future, unrelated, or guarded note -> `vague`. A step error, malformed result, total timeout (6 s), or Clocked error after retries -> `pending`. |
+| `POST /v1/unlock` | Protect (`pii` on the reason alone) -> Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Protect returns source spans that make the phone's History copy show `[name]`, `[phone]`, and similar placeholders; it never changes the live gate or outcome. Guard stop -> `flagged`. A confident task/person/time_sensitive -> `open`; `browse` -> `later`; unclear or below threshold -> `specify`. A required-step error or timeout -> `unavailable`. |
+| `POST /v1/proof` | Protect (`pii` on the note alone) -> Guard (`injection`, `stop: true`) -> Decide (`proof` choice) -> Extract (`result`, `learning` on the note alone) -> Verify (`grounding`, plan as document and note as answer) | Protect changes only the History copy. Decide must return `specific_completion` at `>= 0.75` and Extract must return a result or learning span. Verify then vetoes only a claim with `contradicted >= 0.6`; `not_stated` does not veto it. The response carries that claim as the plain follow-up reason. A judged vague, future, unrelated, guarded, or contradicted note -> `vague`; an unanswered required step -> `pending`. |
 
 Credits and model time (`usage.credits`, `usage.model_ms`) come straight
 from `Result.credits` / `Result.model_ms` on the pipeline call. Logs carry
@@ -133,6 +135,29 @@ The measurement suite used 172 credits. Capturing the two real contract
 fixtures used 9 more, and the initial key verification used 1, for an exact
 task total of **182 credits**. No rejected-key attempt was billed.
 
+### Protect and Verify measurements (2026-10-26)
+
+This change used **16 credits**, below its 20-credit cap. Both inputs are
+fictional and saved in `tests/fixtures/`; neither fixture contains a key.
+
+| Call | Samples | Credits | Client round trip | Pipeline total | Relevant step times |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Current `/v1/proof` pipeline (Protect, Guard, Decide, Extract, Verify) | 1 | 10 | 899.7 ms | 324 ms | Protect 65 ms; Verify 56 ms |
+| Contradiction calibration (Protect, Verify) | 1 | 6 | not recorded | 139 ms | Protect 72 ms; Verify 66 ms |
+
+The existing 25-call `/v1/unlock` baseline above predates Protect. The
+current unlock route adds the same Protect request body used by `/v1/proof`
+inside its one pipeline call; the two real observations put that step at
+65–72 ms. Pipeline credits are billed as one total, so there is no honest
+per-step credit to add to the 4.76-credit baseline. A further full-route
+sample was deliberately not spent after the two calls reached 16 credits.
+
+Compare and Inspect are not called. Compare would duplicate the plan-versus-
+note decision Verify already makes, while Inspect reviews scripts rather than
+these short user notes. Neither has a separate output that could truthfully
+change Curre's behavior or UI. `grounding` is the SDK/API name of Verify, not
+an additional endpoint.
+
 ### SDK response notes
 
 The real responses matched the production parser: Decide choices are under
@@ -167,6 +192,10 @@ host's job, not the container's.
   the task's original day. A note Guard stops is a judgement and comes back
   `vague`. `result`/`learning` offsets index the note alone, which is
   Extract's own `text`.
+- Protect also receives the bare reason or note as step-local `text`, so its
+  code-point offsets index exactly the copy the phone may keep. A missing,
+  failed, malformed, overlapping or out-of-range Protect result changes
+  nothing; Curre stores the original and does not claim it was redacted.
 - `/v1/plan` has no `outcome` field, so a pipeline-level failure (the Fill
   step erroring, a timeout, or a Clocked error surviving retries) comes
   back as HTTP `503`, which the phone's existing "no network at check-in"

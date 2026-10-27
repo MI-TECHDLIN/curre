@@ -444,20 +444,14 @@ class _AttemptHistoryCard extends StatelessWidget {
               SpanText(
                 reason,
                 style: type.youSmall,
-                highlights: [
-                  for (final span in attempt.highlights)
-                    SpanHighlight(
-                      span.start,
-                      span.end,
-                      style: type.youSmall.copyWith(
-                        backgroundColor:
-                            attempt.outcome == UnlockOutcome.flagged
-                            ? colors.guardMark
-                            : colors.marker,
-                        color: colors.markInk,
-                      ),
-                    ),
-                ],
+                highlights: _historyHighlights(
+                  context,
+                  reason,
+                  attempt.highlights,
+                  ordinaryMark: attempt.outcome == UnlockOutcome.flagged
+                      ? colors.guardMark
+                      : colors.marker,
+                ),
               ),
           ],
         ),
@@ -499,7 +493,15 @@ class _GrantHistoryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: CurreSpace.s2),
-            Text(grant.reason, style: type.youSmall.copyWith(color: open.fg)),
+            SpanText(
+              grant.reason,
+              style: type.youSmall.copyWith(color: open.fg),
+              highlights: _historyHighlights(
+                context,
+                grant.reason,
+                const <SourceSpan>[],
+              ),
+            ),
             if (grant.source == GrantSource.override) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
@@ -577,23 +579,52 @@ class _ProofHistoryCard extends StatelessWidget {
               SpanText(
                 record.note,
                 style: type.youSmall,
-                highlights: [
-                  for (final span in [?record.result, ?record.learning])
-                    SpanHighlight(
-                      span.start,
-                      span.end,
-                      style: type.youSmall.copyWith(
-                        backgroundColor: colors.marker,
-                        color: colors.markInk,
-                      ),
-                    ),
-                ],
+                highlights: _historyHighlights(
+                  context,
+                  record.note,
+                  <SourceSpan>[?record.result, ?record.learning],
+                ),
               ),
           ],
         ),
       ),
     );
   }
+}
+
+List<SpanHighlight> _historyHighlights(
+  BuildContext context,
+  String text,
+  Iterable<SourceSpan> ordinary, {
+  Color? ordinaryMark,
+}) {
+  final colors = Theme.of(context).extension<CurreColors>()!;
+  final type = Theme.of(context).extension<CurreType>()!;
+  final hidden = personalDetailPlaceholdersIn(text);
+  bool touchesHidden(SourceSpan span) =>
+      hidden.any((item) => span.start < item.end && item.start < span.end);
+  return <SpanHighlight>[
+    for (final span in ordinary)
+      if (!touchesHidden(span))
+        SpanHighlight(
+          span.start,
+          span.end,
+          style: type.youSmall.copyWith(
+            backgroundColor: ordinaryMark ?? colors.marker,
+            color: colors.markInk,
+          ),
+        ),
+    for (final span in hidden)
+      SpanHighlight(
+        span.start,
+        span.end,
+        semanticsLabel: 'Personal detail hidden',
+        style: type.youSmall.copyWith(
+          backgroundColor: colors.guardMark,
+          color: colors.markInk,
+        ),
+      ),
+  ];
 }
 
 class _OutcomePill extends StatelessWidget {

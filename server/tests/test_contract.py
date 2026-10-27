@@ -1,6 +1,7 @@
 """Checks route responses against the SDD contract types, including exact
-Clocked pipeline responses recorded from both real routes on 2026-10-25 and
-a proof response modeled on their shapes (no real proof call has been made)."""
+Clocked pipeline responses recorded from the real plan and unlock routes on
+2026-10-25 and the real proof route (with Protect and Verify) on 2026-10-26,
+plus a proof response modeled on their shapes."""
 
 from __future__ import annotations
 
@@ -142,6 +143,8 @@ def test_recorded_real_unlock_pipeline_response_matches_contract(make_client):
     assert body.person is not None
     assert body.person.model_dump() == {"text": "Ada", "start": 6, "end": 9}
     assert body.minutes == 5
+    # Recorded before the reason went through Protect: no step, no marks.
+    assert body.redactions is None
     assert body.usage is not None
     assert body.usage.credits == 4
 
@@ -159,13 +162,22 @@ def test_recorded_real_proof_pipeline_response_matches_contract(make_client):
     body = ProofResponse.model_validate(resp.json())
     assert body.outcome == "accepted"
     assert body.kind == "specific_completion"
-    assert body.specific_completion == 0.994
-    assert body.result is None
+    assert body.specific_completion == 0.9928
     note = fixture["route_request"]["note"]
-    assert body.learning is not None
-    assert note[body.learning.start : body.learning.end] == body.learning.text
+    for span in (body.result, body.learning):
+        assert span is not None
+        assert note[span.start : span.end] == span.text
+    # Verify read the plan and found nothing in the note contradicting it.
+    assert body.mismatch is None
+    # Protect found the one name, and only by position: the words stay on
+    # the phone.
+    assert body.redactions is not None
+    assert [r.model_dump() for r in body.redactions] == [
+        {"kind": "person", "start": 50, "end": 53}
+    ]
+    assert note[50:53] == "Ada"
     assert body.usage is not None
-    assert body.usage.credits == 4
+    assert body.usage.credits == 10
 
 
 def test_modeled_proof_pipeline_response_matches_contract(make_client):
@@ -187,5 +199,6 @@ def test_modeled_proof_pipeline_response_matches_contract(make_client):
     note = fixture["route_request"]["note"]
     assert note[body.result.start : body.result.end] == body.result.text
     assert body.learning is None
+    assert body.redactions == []
     assert body.usage is not None
-    assert body.usage.credits == 4
+    assert body.usage.credits == 9
