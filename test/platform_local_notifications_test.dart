@@ -76,6 +76,22 @@ void main() {
         expect(gateway.scheduled, isEmpty);
       },
     );
+
+    test(
+      'saved check-in choice cancels each alarm without replacing it',
+      () async {
+        final gateway = _FakeReminderGateway();
+        final service = LocalReminderService(
+          gateway,
+          now: () => DateTime(2026, 10, 26, 8),
+        );
+
+        await service.scheduleSessionReminders(Settings(checkInNudges: false));
+
+        expect(gateway.cancelled, <int>[1101, 1102, 1103]);
+        expect(gateway.scheduled, isEmpty);
+      },
+    );
   });
 
   group('plan reminders', () {
@@ -118,6 +134,24 @@ void main() {
       expect(gateway.cancelled, hasLength(2));
       expect(gateway.scheduled, isEmpty);
     });
+
+    test(
+      'saved plan choices cancel both kinds and schedule only enabled ones',
+      () async {
+        final gateway = _FakeReminderGateway();
+        final now = DateTime.utc(2026, 10, 26, 12);
+        final service = LocalReminderService(gateway, now: () => now);
+
+        await service.schedulePlanReminders(
+          _plan(DateTime.utc(2026, 10, 26, 13)),
+          settings: Settings(planEndingNudges: false, proofNudges: true),
+        );
+
+        expect(gateway.cancelled, hasLength(2));
+        expect(gateway.scheduled, hasLength(1));
+        expect(gateway.scheduled.single.type, CurreNotificationType.proof);
+      },
+    );
   });
 
   test('payload round-trips deep link, action, reference and proof note', () {

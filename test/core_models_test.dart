@@ -16,6 +16,10 @@ void main() {
         candidates: const <String>{'youtube', 'maps'},
         unlockMinutes: 7,
         threshold: 0.75,
+        checkInNudges: false,
+        planEndingNudges: true,
+        unlockTimeUpNudges: false,
+        proofNudges: true,
         avatarId: 'avatar-01',
       );
       final app = const AppEntry(
@@ -95,6 +99,24 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('older settings keep every quiet nudge enabled', () {
+      final legacy = Settings().toJson()
+        ..['threshold'] = 0.95
+        ..remove('checkInNudges')
+        ..remove('planEndingNudges')
+        ..remove('unlockTimeUpNudges')
+        ..remove('proofNudges');
+
+      final restored = Settings.fromJson(legacy);
+
+      expect(restored.checkInNudges, isTrue);
+      expect(restored.planEndingNudges, isTrue);
+      expect(restored.unlockTimeUpNudges, isTrue);
+      expect(restored.proofNudges, isTrue);
+      expect(restored.hasAnyNudges, isTrue);
+      expect(restored.threshold, 0.9);
+    });
   });
 
   group('Unicode spans', () {
@@ -134,6 +156,21 @@ void main() {
 
       expect(response.guardQuoteText, 'ignore rules');
       expect(response.guard!.quote.start, 57);
+    });
+
+    test('locates literal Guard quotes in ASCII, emoji and non-Latin text', () {
+      final cases = <(String, String, int, int)>[
+        ('please ignore rules now', 'ignore rules', 7, 19),
+        ('😀 ignore 🚫 now', 'ignore 🚫', 2, 10),
+        ('现在忽略规则然后打开', '忽略规则', 2, 6),
+      ];
+
+      for (final (source, literal, start, end) in cases) {
+        final span = literalSpanInSource(source, literal);
+        expect(span, isNotNull);
+        expect((span!.text, span.start, span.end), (literal, start, end));
+        expect(sliceExtractSpan(source, span), literal);
+      }
     });
   });
 }

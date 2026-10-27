@@ -178,6 +178,10 @@ class Settings {
     this.threshold = 0.7,
     this.askWhyOnHiddenAppOpen = true,
     this.quietNotificationsFromHiddenApps = true,
+    this.checkInNudges = true,
+    this.planEndingNudges = true,
+    this.unlockTimeUpNudges = true,
+    this.proofNudges = true,
     String? displayName,
     String? avatarId,
   }) : displayName = normalizeDisplayName(displayName),
@@ -208,7 +212,13 @@ class Settings {
       essentials: _stringSet(json['essentials'], 'essentials'),
       candidates: _stringSet(json['candidates'], 'candidates'),
       unlockMinutes: _int(json['unlockMinutes'], 'unlockMinutes'),
-      threshold: _number(json['threshold'], 'threshold').toDouble(),
+      // Older builds allowed the slider to reach 0.95 and accepted values
+      // outside the useful range. Preserve the rest of those settings while
+      // bringing strictness into the current 0.5-0.9 contract.
+      threshold: _number(
+        json['threshold'],
+        'threshold',
+      ).toDouble().clamp(0.5, 0.9).toDouble(),
       // Settings saved before the gentle intercept existed opt in when the
       // user grants Android Usage access.
       askWhyOnHiddenAppOpen: json.containsKey('askWhyOnHiddenAppOpen')
@@ -220,6 +230,20 @@ class Settings {
               json['quietNotificationsFromHiddenApps'],
               'quietNotificationsFromHiddenApps',
             )
+          : true,
+      // Settings saved before reminder controls existed preserve the old
+      // behavior: every quiet nudge remains enabled until the user changes it.
+      checkInNudges: json.containsKey('checkInNudges')
+          ? _bool(json['checkInNudges'], 'checkInNudges')
+          : true,
+      planEndingNudges: json.containsKey('planEndingNudges')
+          ? _bool(json['planEndingNudges'], 'planEndingNudges')
+          : true,
+      unlockTimeUpNudges: json.containsKey('unlockTimeUpNudges')
+          ? _bool(json['unlockTimeUpNudges'], 'unlockTimeUpNudges')
+          : true,
+      proofNudges: json.containsKey('proofNudges')
+          ? _bool(json['proofNudges'], 'proofNudges')
           : true,
       // Absent in settings saved before names existed, which still load.
       displayName: _nullableString(json['displayName'], 'displayName'),
@@ -235,6 +259,13 @@ class Settings {
   final double threshold;
   final bool askWhyOnHiddenAppOpen;
   final bool quietNotificationsFromHiddenApps;
+  final bool checkInNudges;
+  final bool planEndingNudges;
+  final bool unlockTimeUpNudges;
+  final bool proofNudges;
+
+  bool get hasAnyNudges =>
+      checkInNudges || planEndingNudges || unlockTimeUpNudges || proofNudges;
 
   /// What the greeting calls the user ("Good morning, Chidi"), or null when
   /// they have not given a name. Onboarding will ask for it; until then the
@@ -253,6 +284,10 @@ class Settings {
     double? threshold,
     bool? askWhyOnHiddenAppOpen,
     bool? quietNotificationsFromHiddenApps,
+    bool? checkInNudges,
+    bool? planEndingNudges,
+    bool? unlockTimeUpNudges,
+    bool? proofNudges,
     String? displayName,
     bool clearDisplayName = false,
     String? avatarId,
@@ -267,6 +302,10 @@ class Settings {
     quietNotificationsFromHiddenApps:
         quietNotificationsFromHiddenApps ??
         this.quietNotificationsFromHiddenApps,
+    checkInNudges: checkInNudges ?? this.checkInNudges,
+    planEndingNudges: planEndingNudges ?? this.planEndingNudges,
+    unlockTimeUpNudges: unlockTimeUpNudges ?? this.unlockTimeUpNudges,
+    proofNudges: proofNudges ?? this.proofNudges,
     displayName: clearDisplayName ? null : displayName ?? this.displayName,
     avatarId: clearAvatarId ? null : avatarId ?? this.avatarId,
   );
@@ -300,8 +339,12 @@ class Settings {
     if (unlockMinutes < 1 || unlockMinutes > 30) {
       throw RangeError.range(unlockMinutes, 1, 30, 'unlockMinutes');
     }
-    if (!threshold.isFinite || threshold < 0 || threshold > 1) {
-      throw RangeError.range(threshold, 0, 1, 'threshold');
+    if (!threshold.isFinite || threshold < 0.5 || threshold > 0.9) {
+      throw RangeError.value(
+        threshold,
+        'threshold',
+        'must be between 0.5 and 0.9',
+      );
     }
   }
 
@@ -316,6 +359,10 @@ class Settings {
     'threshold': threshold,
     'askWhyOnHiddenAppOpen': askWhyOnHiddenAppOpen,
     'quietNotificationsFromHiddenApps': quietNotificationsFromHiddenApps,
+    'checkInNudges': checkInNudges,
+    'planEndingNudges': planEndingNudges,
+    'unlockTimeUpNudges': unlockTimeUpNudges,
+    'proofNudges': proofNudges,
     if (displayName != null) 'displayName': displayName,
     if (avatarId != null) 'avatarId': avatarId,
   };

@@ -121,6 +121,7 @@ class UnlockRequest {
     required this.appLabel,
     required this.reason,
     this.planIntention,
+    this.threshold = 0.7,
     List<String> shortcutLabels = const <String>[],
   }) : shortcutLabels = List.unmodifiable(shortcutLabels) {
     _checkLength(appLabel, 'appLabel', minimum: 1, maximum: 60);
@@ -129,18 +130,23 @@ class UnlockRequest {
     }
     _checkLength(reason, 'reason', minimum: 8, maximum: 300);
     _checkLabels(shortcutLabels, 'shortcutLabels');
+    if (!threshold.isFinite) {
+      throw ArgumentError.value(threshold, 'threshold', 'must be finite');
+    }
   }
 
   final String appLabel;
   final String? planIntention;
   final String reason;
   final List<String> shortcutLabels;
+  final double threshold;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'app_label': appLabel,
     if (planIntention != null) 'plan_intention': planIntention,
     'reason': reason,
     'shortcut_labels': shortcutLabels,
+    'threshold': threshold,
   };
 }
 

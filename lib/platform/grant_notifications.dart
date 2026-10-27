@@ -45,11 +45,14 @@ class GrantNotificationService {
     DateTime Function()? now,
     CurreNotificationPolicy? policy,
   }) : _now = now ?? DateTime.now,
-       policy = policy ?? CurreNotificationPolicy();
+       _policyOverride = policy;
 
   final GrantNotificationGateway _gateway;
   final DateTime Function() _now;
-  final CurreNotificationPolicy policy;
+  final CurreNotificationPolicy? _policyOverride;
+
+  CurreNotificationPolicy get policy =>
+      _policyOverride ?? CurreNotificationPolicy();
 
   Future<bool> requestPermission() async {
     await _gateway.initialize();
@@ -59,14 +62,18 @@ class GrantNotificationService {
   Future<void> startGrant({
     required Grant grant,
     required String appLabel,
+    Settings? settings,
   }) async {
     await _gateway.initialize();
     final id = notificationIdForPackage(grant.packageName);
     await _gateway.cancel(id);
 
     final now = _now().toUtc();
+    final activePolicy = settings == null
+        ? policy
+        : _policyOverride ?? CurreNotificationPolicy.fromSettings(settings);
     if (!grant.isActiveAt(now) ||
-        !policy.allows(CurreNotificationType.unlockTimeUp)) {
+        !activePolicy.allows(CurreNotificationType.unlockTimeUp)) {
       return;
     }
 

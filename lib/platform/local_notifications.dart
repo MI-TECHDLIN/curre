@@ -49,6 +49,16 @@ class CurreNotificationPolicy {
          enabled ?? CurreNotificationType.values.toSet(),
        );
 
+  factory CurreNotificationPolicy.fromSettings(Settings settings) =>
+      CurreNotificationPolicy(
+        enabled: <CurreNotificationType>{
+          if (settings.checkInNudges) CurreNotificationType.checkIn,
+          if (settings.planEndingNudges) CurreNotificationType.planEnding,
+          if (settings.unlockTimeUpNudges) CurreNotificationType.unlockTimeUp,
+          if (settings.proofNudges) CurreNotificationType.proof,
+        },
+      );
+
   final Set<CurreNotificationType> enabled;
   final LocalTime quietStarts;
   final LocalTime quietEnds;
@@ -184,7 +194,7 @@ class LocalReminderService {
     DateTime Function()? now,
     CurreNotificationPolicy? policy,
   }) : _now = now ?? DateTime.now,
-       policy = policy ?? CurreNotificationPolicy();
+       _policyOverride = policy;
 
   static const int _morningId = 1101;
   static const int _afternoonId = 1102;
@@ -194,15 +204,22 @@ class LocalReminderService {
 
   final ReminderNotificationGateway _gateway;
   final DateTime Function() _now;
-  final CurreNotificationPolicy policy;
+  final CurreNotificationPolicy? _policyOverride;
+
+  CurreNotificationPolicy get policy =>
+      _policyOverride ?? CurreNotificationPolicy();
+
+  CurreNotificationPolicy _policyFor(Settings settings) =>
+      _policyOverride ?? CurreNotificationPolicy.fromSettings(settings);
 
   Future<void> scheduleSessionReminders(Settings settings) async {
     await _gateway.initialize();
     final now = _now();
+    final activePolicy = _policyFor(settings);
     for (final session in SessionName.values) {
       final id = _sessionId(session);
       await _gateway.cancelReminder(id);
-      if (!policy.allows(CurreNotificationType.checkIn)) continue;
+      if (!activePolicy.allows(CurreNotificationType.checkIn)) continue;
       final start = settings.sessionStarts[session]!;
       var scheduled = DateTime(
         now.year,
@@ -214,7 +231,7 @@ class LocalReminderService {
       if (!scheduled.isAfter(now)) {
         scheduled = scheduled.add(const Duration(days: 1));
       }
-      scheduled = policy.nextAllowed(scheduled);
+      scheduled = activePolicy.nextAllowed(scheduled);
       await _gateway.scheduleReminder(
         CurreReminder(
           id: id,
@@ -233,8 +250,9 @@ class LocalReminderService {
     }
   }
 
-  Future<void> schedulePlanReminders(Plan plan) async {
+  Future<void> schedulePlanReminders(Plan plan, {Settings? settings}) async {
     await _gateway.initialize();
+    final activePolicy = settings == null ? policy : _policyFor(settings);
     final seed = _stableId(plan.id);
     final headsUpId = 200000 + seed;
     final proofId = 400000 + seed;
@@ -243,7 +261,7 @@ class LocalReminderService {
 
     final now = _now();
     final localEnd = plan.endsAt.toLocal();
-    if (policy.allows(CurreNotificationType.planEnding)) {
+    if (activePolicy.allows(CurreNotificationType.planEnding)) {
       final proposed = localEnd.subtract(planHeadsUp);
       if (proposed.isAfter(now)) {
         await _gateway.scheduleReminder(
@@ -252,7 +270,7 @@ class LocalReminderService {
             type: CurreNotificationType.planEnding,
             title: 'Your ${plan.session.name} is almost done',
             body: 'Your plan ends in 10 minutes. Choose what comes next.',
-            scheduledAt: policy.nextAllowed(proposed),
+            scheduledAt: activePolicy.nextAllowed(proposed),
             destination: CurreNotificationDestination.checkIn,
             actions: const <CurreNotificationAction>[
               CurreNotificationAction.startCheckIn,
@@ -264,7 +282,7 @@ class LocalReminderService {
       }
     }
 
-    if (policy.allows(CurreNotificationType.proof)) {
+    if (activePolicy.allows(CurreNotificationType.proof)) {
       final proposed = localEnd.add(proofDelay);
       if (proposed.isAfter(now)) {
         await _gateway.scheduleReminder(
@@ -273,7 +291,7 @@ class LocalReminderService {
             type: CurreNotificationType.proof,
             title: 'Add your proof',
             body: 'A short note about what you got done counts as proof.',
-            scheduledAt: policy.nextAllowed(proposed),
+            scheduledAt: activePolicy.nextAllowed(proposed),
             destination: CurreNotificationDestination.proof,
             actions: const <CurreNotificationAction>[
               CurreNotificationAction.addProof,

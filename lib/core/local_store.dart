@@ -248,11 +248,22 @@ class CurreLocalStore {
 
   Future<void> appendAttempt(Attempt attempt, {required DateTime now}) async {
     final attempts = await loadAttempts(now: now);
+    await saveAttempts(<Attempt>[...attempts, attempt], now: now);
+  }
+
+  /// Rewrites the small, 30-day attempt log. Used when a completed wait turns
+  /// an existing attempt into an overridden one rather than creating a second
+  /// History event for the same action.
+  Future<void> saveAttempts(
+    Iterable<Attempt> attempts, {
+    required DateTime now,
+  }) async {
     final cutoff = now.toUtc().subtract(historyRetention);
-    final updated = <Attempt>[
-      ...attempts,
-      if (!attempt.at.isBefore(cutoff)) attempt,
-    ]..sort((a, b) => a.at.compareTo(b.at));
+    final updated =
+        attempts
+            .where((attempt) => !attempt.at.isBefore(cutoff))
+            .toList(growable: false)
+          ..sort((a, b) => a.at.compareTo(b.at));
     await _writeAttempts(updated);
   }
 

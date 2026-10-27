@@ -83,6 +83,7 @@ class UnlockRequest(BaseModel):
     plan_intention: str | None = Field(default=None, max_length=MAX_INTENTION_LEN)
     reason: str = Field(min_length=MIN_REASON_LEN, max_length=MAX_REASON_LEN)
     shortcut_labels: list[str] = Field(default_factory=list)
+    threshold: float | None = None
 
     @field_validator("shortcut_labels")
     @classmethod

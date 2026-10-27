@@ -25,6 +25,7 @@ void main() {
     appLabel: 'YouTube',
     planIntention: 'learn guitar',
     reason: '15 min to watch 😀 guitar',
+    threshold: 0.85,
     shortcutLabels: const <String>['Search'],
   );
 
@@ -47,6 +48,16 @@ void main() {
     unlockTimeout: timeout,
     proofTimeout: timeout,
   );
+
+  test('unlock sends the saved strictness threshold', () async {
+    final transport = MockClient((request) async {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      expect(body['threshold'], 0.85);
+      return _jsonResponse(<String, Object?>{'outcome': 'unavailable'});
+    });
+
+    await client(transport).unlock(unlockRequest());
+  });
 
   test('plan sends the exact backend shape and parses spans', () async {
     final transport = MockClient((request) async {
@@ -271,6 +282,7 @@ void main() {
           'plan_intention': 'learn guitar',
           'reason': '15 min to watch 😀 guitar',
           'shortcut_labels': <String>['Search'],
+          'threshold': 0.85,
         });
         return _jsonResponse(<String, Object?>{
           'outcome': 'open',

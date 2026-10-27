@@ -68,6 +68,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final _appsRemoved = <String>{};
   late final Set<String> _essentials;
   late LocalTime _morning;
+  late bool _nudgesEnabled;
 
   var _step = _Step.story;
   String? _avatarId;
@@ -97,6 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _name.text = settings.displayName ?? '';
     _avatarId = settings.avatarId;
     _morning = settings.sessionStarts[SessionName.morning]!;
+    _nudgesEnabled = settings.hasAnyNudges;
     _essentials = settings.essentials.isEmpty
         ? controller.suggestedEssentials
         : settings.essentials.toSet();
@@ -329,13 +331,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     setState(() => _working = true);
     final allowed = await controller.requestNotifications();
     if (!mounted) return;
-    setState(() => _working = false);
+    setState(() {
+      _working = false;
+      _nudgesEnabled = allowed;
+    });
     if (!allowed) {
       showCurreSnack(
         context,
         'No problem. You can turn quiet nudges on later in Curre settings.',
       );
     }
+    _next();
+  }
+
+  void _declineNudges() {
+    setState(() => _nudgesEnabled = false);
     _next();
   }
 
@@ -352,6 +362,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         essentials: _essentials,
         candidates: _apps,
         morningStart: _morning,
+        nudgesEnabled: _nudgesEnabled,
         firstIntention: withPlan ? _plan.text : null,
       );
     } on Object {
@@ -644,7 +655,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       const SizedBox(height: CurreSpace.s3),
       const _PromiseCard(
         prop: CurreProp.cloud,
-        title: 'Read online, then forgotten',
+        title: 'Read online for a short time',
         lines: [
           'The plan you type or say',
           'The names of your apps',
@@ -653,7 +664,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ),
       const SizedBox(height: CurreSpace.s3),
       Text(
-        'Curre reads these to understand you. Nothing you type is stored online.',
+        'Curre keeps no online copy. The AI service that reads your words may keep a copy for about a day so retries work, then deletes it. Your history stays on this phone.',
         style: type.caption.copyWith(color: colors.ink3),
         textAlign: TextAlign.center,
       ),
@@ -1245,7 +1256,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case _Step.nudges:
         return (
           _Action('Yes, nudge me', _allowNudges, CurreGlyphKind.notify),
-          _Action('Not now', _next),
+          _Action('Not now', _declineNudges),
         );
       case _Step.apps:
         final count = _apps.length;
