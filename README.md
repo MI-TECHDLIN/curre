@@ -47,6 +47,11 @@ to do.
   every outcome except a flagged one still has an escape: "Not now," with
   the app opening anyway after a visible **30-second wait** if you still
   want in.
+- **Saved for later.** A browsing reason can stay on the phone for up to
+  seven days instead of disappearing. After the next plan, Rerank reads that
+  plan against the saved reasons; Curre shows up to three matching items in
+  Rerank's order as doors at the saved words. If that call fails, the newest
+  items appear first without interrupting the check-in.
 - **Prooflight.** A completed task only counts if Curre watched you start
   it — through a Task Door or an explicit offline start. A completion note
   then goes through Protect → Guard → Decide → Extract → Verify. Decide must
@@ -76,9 +81,10 @@ Dark-theme counterparts: `onboarding-dark.jpg`, `home-dark.png`,
 
 ## How Clocked powers Curre
 
-Three routes, one `clocked-sdk` `pipeline()` call each. The phone owns all
-state; the backend stores nothing and logs only route/status/latency/credits
-— never the intention, reason, or note text. Full contract and response
+Four routes: three make one `clocked-sdk` `pipeline()` call each, and the
+Later shelf makes one `rerank()` call. The phone owns all state; the backend
+stores nothing and logs only route/status/latency/credits — never the
+intention, reason, saved item, or note text. Full contract and response
 shapes: [`server/README.md`](server/README.md).
 
 | Route | Clocked steps | What it decides |
@@ -86,6 +92,7 @@ shapes: [`server/README.md`](server/README.md).
 | `POST /v1/plan` | Fill → Extract | Which installed apps appear on the next Home, which shortcut each uses, and the exact search words/end time, as visible highlights. |
 | `POST /v1/unlock` | Protect → Guard → Decide → Extract | Protect's spans replace personal details only in the copy saved to History. Guard can stop an instruction; Decide selects one of five outcomes and a door; Extract supplies the target, person and grant length. |
 | `POST /v1/proof` | Protect → Guard → Decide → Extract → Verify | Protect changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
+| `POST /v1/later` | Rerank | Orders up to 20 phone-saved browsing reasons against the new plan. Only results with Rerank's `use` action become doors, capped at three; `skip` and `expand` stay saved for another plan. |
 
 Measured against the real Clocked API, sequentially, 2026-10-25
 (`server/scripts/measure.py`; see `server/README.md` for the full table and
@@ -102,29 +109,33 @@ the same 10+ sample latency sweep yet. The added Protect step was also seen
 at 65–72 ms inside two real pipelines; see `server/README.md` for the exact
 measurement scope and credit budget.
 
+The Later shelf's sanitized real Rerank fixture used **2 credits** and
+reported **38.3 ms** of billable model time for six saved items. This was a
+single contract sample, not a latency sweep.
+
 ## Architecture
 
 ```mermaid
 flowchart LR
     subgraph Phone["Android phone"]
         UI["Flutter UI & local controller\n(lib/app, lib/core)"]
-        Store["Local store\nplans · grants · history · proof\n(SharedPreferences)"]
+        Store["Local store\nplans · grants · saved items · history · proof\n(SharedPreferences)"]
         Kotlin["Kotlin platform channel\n(MainActivity, GentleInterceptService,\nQuietNotificationListenerService)"]
     end
 
     Android["Android OS\nHome role · LauncherApps shortcuts ·\nUsageEvents · NotificationListener"]
 
     subgraph Backend["Curre backend (FastAPI, stateless)"]
-        Routes["/v1/plan · /v1/unlock · /v1/proof\n/healthz"]
+        Routes["/v1/plan · /v1/unlock · /v1/proof · /v1/later\n/healthz"]
     end
 
-    Clocked["Clocked API\nFill · Extract · Decide · Guard · Protect · Verify"]
+    Clocked["Clocked API\nFill · Extract · Decide · Guard · Protect · Verify · Rerank"]
 
     UI <--> Store
     UI <--> Kotlin
     Kotlin <--> Android
     UI -- "HTTPS, X-App-Key" --> Routes
-    Routes -- "one pipeline() call per route" --> Clocked
+    Routes -- "one Clocked call per route" --> Clocked
 ```
 
 The backend is the only thing that holds the Clocked API key — a key inside
@@ -132,15 +143,17 @@ the APK could be extracted, so the phone never calls Clocked directly.
 
 ## Privacy
 
-Curre's own backend stores no plan, reason, or note text; it logs route,
-status, latency, and credits only. Clocked, the processor that judges that
-text, documents that it retains successful response bodies for idempotent
-retries and clears them on a scheduled maintenance window after they're
-older than 24 hours; usage/account records persist longer. ([Clocked
-security page](https://clocked.rezolve.ai/security), read 2026-10-26.) All
-of Curre's own plans, grants, attempts, and proof notes live only on the
-phone in local storage, age out automatically, and clear with History —
-but that local storage is not encrypted, so it isn't protected against a
+Curre's own backend stores no plan, reason, saved item, or note text; it logs
+route, status, latency, and credits only. For Later ordering, the new plan,
+app label and saved reason are sent again; no package name leaves the phone.
+Clocked, the processor that judges that text, documents that it retains
+successful response bodies for idempotent retries and clears them on a
+scheduled maintenance window after they're older than 24 hours;
+usage/account records persist longer. ([Clocked security
+page](https://clocked.rezolve.ai/security), read 2026-10-26.) All of Curre's
+own plans, grants, attempts, saved reasons, and proof notes live only on the
+phone in local storage, age out automatically, and clear with History — but
+that local storage is not encrypted, so it isn't protected against a
 compromised or backed-up device.
 
 Before a judged unlock reason or proof note is written to History, Protect's

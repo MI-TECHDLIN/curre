@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'grants.dart';
+import 'later.dart';
 import 'models.dart';
 import 'proof.dart';
 import 'sessions.dart';
@@ -22,6 +23,8 @@ class CurreLocalStore {
   static const String _taskTracesKey = 'curre.taskTraces.v1';
   static const String _proofRecordsKey = 'curre.proofRecords.v1';
   static const String _hiddenAppsTipKey = 'curre.hiddenAppsTip.v1';
+  static const String _laterKey = 'curre.later.v1';
+  static const String _laterDismissedKey = 'curre.laterDismissed.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -33,6 +36,7 @@ class CurreLocalStore {
     await store.loadGrantHistory(now: instant);
     store.loadTaskTraces(now: instant);
     store.loadProofRecords(now: instant);
+    store.loadLaterItems(now: instant);
     return store;
   }
 
@@ -182,6 +186,49 @@ class CurreLocalStore {
     return records;
   }
 
+  /// Keeps a "Not now" reason for a later plan (see [LaterShelfRules.add]).
+  Future<List<LaterItem>> saveLaterItem(
+    LaterItem item, {
+    required DateTime now,
+  }) async {
+    final updated = LaterShelfRules.add(loadLaterItems(now: now), item, now);
+    await _writeLaterItems(updated);
+    return updated;
+  }
+
+  Future<List<LaterItem>> removeLaterItem(
+    String id, {
+    required DateTime now,
+  }) async {
+    final updated = loadLaterItems(now: now)
+      ..removeWhere((item) => item.id == id);
+    await _writeLaterItems(updated);
+    return updated;
+  }
+
+  /// Saved reasons still kept, oldest first; past
+  /// [LaterShelfRules.keepFor] they are gone.
+  List<LaterItem> loadLaterItems({required DateTime now}) {
+    final all = _readEach(_laterKey, LaterItem.fromJson);
+    final current = LaterShelfRules.current(all, now);
+    if (current.length != all.length) unawaited(_writeLaterItems(current));
+    return current;
+  }
+
+  /// The Curre day "Not today" put the Later shelf away for, if any.
+  LocalDate? get laterShelfDismissedOn {
+    final encoded = _preferences.getString(_laterDismissedKey);
+    if (encoded == null) return null;
+    try {
+      return LocalDate.fromJson(encoded);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> dismissLaterShelf(LocalDate day) =>
+      _preferences.setString(_laterDismissedKey, day.toJson());
+
   Future<void> saveActiveGrants(
     Iterable<Grant> grants, {
     required DateTime now,
@@ -280,8 +327,9 @@ class CurreLocalStore {
   }
 
   /// Clears private history without disrupting today's plan or an active
-  /// unlock grant. Every word written after a task goes too; proof days
-  /// stay, as dates and levels only (see [ProoflightRules.forgetWords]).
+  /// unlock grant. Every word written after a task goes too, and so does
+  /// everything saved for later; proof days stay, as dates and levels only
+  /// (see [ProoflightRules.forgetWords]).
   Future<void> clearHistory() async {
     final proofDays = ProoflightRules.forgetWords(
       _readEach(_proofRecordsKey, ProofRecord.fromJson),
@@ -291,6 +339,8 @@ class CurreLocalStore {
       _preferences.remove(_planHistoryKey),
       _preferences.remove(_grantHistoryKey),
       _preferences.remove(_taskTracesKey),
+      _preferences.remove(_laterKey),
+      _preferences.remove(_laterDismissedKey),
     ]);
     await _writeProofRecords(proofDays);
   }
@@ -316,6 +366,13 @@ class CurreLocalStore {
     await _preferences.setString(
       _proofRecordsKey,
       jsonEncode(records.map((record) => record.toJson()).toList()),
+    );
+  }
+
+  Future<void> _writeLaterItems(List<LaterItem> items) async {
+    await _preferences.setString(
+      _laterKey,
+      jsonEncode(items.map((item) => item.toJson()).toList()),
     );
   }
 

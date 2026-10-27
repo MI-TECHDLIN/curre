@@ -1,7 +1,7 @@
 """Checks route responses against the SDD contract types, including exact
-Clocked pipeline responses recorded from the real plan and unlock routes on
-2026-10-25 and the real proof route (with Protect and Verify) on 2026-10-26,
-plus a proof response modeled on their shapes."""
+Clocked responses recorded from the real routes: plan and unlock pipelines
+on 2026-10-25, proof with Protect and Verify plus Later's Rerank call on
+2026-10-26, and a proof response modeled on their shapes."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from clocked_sdk import Result
 
-from app.models import PlanResponse, ProofResponse, UnlockResponse
+from app.models import LaterResponse, PlanResponse, ProofResponse, UnlockResponse
 from tests.fakes import (
     decide_choice,
     extract_field,
@@ -202,3 +202,31 @@ def test_modeled_proof_pipeline_response_matches_contract(make_client):
     assert body.redactions == []
     assert body.usage is not None
     assert body.usage.credits == 9
+
+
+def test_recorded_real_later_rerank_response_matches_contract(make_client):
+    fixture = json.loads((FIXTURE_DIR / "real_later_rerank.json").read_text())
+
+    async def no_pipeline(*, text, steps, **kwargs):
+        raise AssertionError("/v1/later must not run a pipeline")
+
+    async def rerank(*, query, documents, **kwargs):
+        return _recorded_result(fixture)
+
+    client = make_client(no_pipeline, rerank=rerank)
+    resp = client.post("/v1/later", json=fixture["route_request"])
+
+    assert resp.status_code == 200
+    body = LaterResponse.model_validate(resp.json())
+    assert [item.id for item in body.items] == [
+        "later-5",
+        "later-4",
+        "later-2",
+        "later-1",
+        "later-3",
+        "later-6",
+    ]
+    assert body.items[0].score == 0.986
+    assert [item.fits for item in body.items] == [True, False, False, False, False, False]
+    assert body.usage.credits == 2
+    assert client.fake.rerank_calls[0]["query"] == fixture["route_request"]["plan"]

@@ -12,12 +12,15 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 
 from app.clocked_pipeline import (
     PipelineUnavailable,
+    run_later_rerank,
     run_plan_pipeline,
     run_proof_pipeline,
     run_unlock_pipeline,
 )
 from app.config import Settings, get_settings
 from app.models import (
+    LaterRequest,
+    LaterResponse,
     PlanRequest,
     PlanResponse,
     ProofRequest,
@@ -48,6 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.plan_limiter = RateLimiter(settings.plan_rate_limit_per_hour)
     app.state.unlock_limiter = RateLimiter(settings.unlock_rate_limit_per_hour)
     app.state.proof_limiter = RateLimiter(settings.proof_rate_limit_per_hour)
+    app.state.later_limiter = RateLimiter(settings.later_rate_limit_per_hour)
     try:
         yield
     finally:
@@ -71,6 +75,10 @@ def get_unlock_limiter(request: Request) -> RateLimiter:
 
 def get_proof_limiter(request: Request) -> RateLimiter:
     return request.app.state.proof_limiter
+
+
+def get_later_limiter(request: Request) -> RateLimiter:
+    return request.app.state.later_limiter
 
 
 def require_app_key(
@@ -152,4 +160,24 @@ async def proof(
     latency_ms = (time.monotonic() - start) * 1000
     credits = response.usage.credits if response.usage else None
     _log_call("proof", 200, latency_ms, credits)
+    return response
+
+
+@app.post("/v1/later", response_model=LaterResponse, dependencies=[Depends(require_app_key)])
+async def later(
+    req: LaterRequest,
+    request: Request,
+    clocked: AsyncClocked = Depends(get_clocked_client),
+    limiter: RateLimiter = Depends(get_later_limiter),
+) -> LaterResponse:
+    limiter.check(client_ip(request))
+    start = time.monotonic()
+    try:
+        response = await run_later_rerank(clocked, req.plan, req.items)
+    except PipelineUnavailable:
+        latency_ms = (time.monotonic() - start) * 1000
+        _log_call("later", 503, latency_ms, None)
+        raise HTTPException(status_code=503, detail="later unavailable") from None
+    latency_ms = (time.monotonic() - start) * 1000
+    _log_call("later", 200, latency_ms, response.usage.credits)
     return response

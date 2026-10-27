@@ -1,11 +1,13 @@
 # Curre backend
 
-FastAPI service implementing `POST /v1/plan`, `POST /v1/unlock`, and
-`POST /v1/proof` per the Curre contracts, over one `clocked-sdk` (0.7.0)
-`AsyncClocked.pipeline(...)` call per route. The phone owns all state; this
-server turns plan, unlock, and completion text into structured decisions and
-stores nothing. It also holds the Clocked API key, since a key inside the APK
-could be extracted.
+FastAPI service implementing `POST /v1/plan`, `POST /v1/unlock`,
+`POST /v1/proof`, and `POST /v1/later` per the Curre contracts. Plan,
+unlock, and proof each make one `clocked-sdk` 0.7.0
+`AsyncClocked.pipeline(...)` call; Later makes one
+`AsyncClocked.rerank(...)` call. The phone owns all state; this server turns
+plan, unlock, completion, and saved-reason text into structured decisions
+and stores nothing. It also holds the Clocked API key, since a key inside the
+APK could be extracted.
 
 ## Run locally
 
@@ -21,7 +23,8 @@ uvicorn app.main:app --reload
 `CLOCKED_API_KEY` must be a non-empty string for the server to start (the
 SDK checks this at construction), but it does not need to be a real key to
 run locally against the fake-client test suite below -- it only needs to be
-real for actual `/v1/plan`, `/v1/unlock`, and `/v1/proof` calls to Clocked.
+real for actual `/v1/plan`, `/v1/unlock`, `/v1/proof`, and `/v1/later`
+calls to Clocked.
 
 ## Test
 
@@ -32,10 +35,11 @@ ruff check .
 
 All tests run without network calls or credit spend. Most route cases use the
 fake Clocked client in `tests/fakes.py`; `tests/test_contract.py` also feeds
-one recorded real pipeline response per route -- `real_plan_pipeline.json`,
-`real_unlock_pipeline.json`, `real_proof_pipeline.json` (sample task/note
-only, no key) -- from `tests/fixtures/` through the production parsers and
-validates the resulting Pydantic response types. A second sanitized fixture,
+one recorded real response per route -- `real_plan_pipeline.json`,
+`real_unlock_pipeline.json`, `real_proof_pipeline.json`, and
+`real_later_rerank.json` (fictional sample text only, no key) -- from
+`tests/fixtures/` through the production parsers and validates the resulting
+Pydantic response types. A second sanitized fixture,
 `real_verify_contradiction_steps.json`, records the Protect and Verify shapes
 for a note that conflicts with its plan. `modeled_proof_pipeline.json`
 (marked `"recorded": false`) is a separate template `tests/test_proof.py`
@@ -52,20 +56,22 @@ cover; it is not a claim that no real `/v1/proof` call has been made.
 | `PLAN_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/plan` (default `20`). |
 | `UNLOCK_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/unlock` (default `30`). |
 | `PROOF_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/proof` (default `30`). |
+| `LATER_RATE_LIMIT_PER_HOUR` | Per-IP cap on `/v1/later` (default `20`). |
 
 ## Endpoint map
 
-| Route | Clocked steps (one pipeline call) | Outcome mapping |
+| Route | Clocked call | Outcome mapping |
 | --- | --- | --- |
 | `GET /healthz` | none | `{"status": "ok"}` |
 | `POST /v1/plan` | Fill (`apps` multiselect + up to 8 `door_<id>` choice fields) -> Extract (`ends` + up to 6 `q_<id>` fields) | Selected `apps` labels map back to candidate ids; a step error on Fill is `503`. An Extract step error still returns the apps Fill chose, without spans. |
 | `POST /v1/unlock` | Protect (`pii` on the reason alone) -> Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Protect returns source spans that make the phone's History copy show `[name]`, `[phone]`, and similar placeholders; it never changes the live gate or outcome. Guard stop -> `flagged`. A confident task/person/time_sensitive -> `open`; `browse` -> `later`; unclear or below threshold -> `specify`. A required-step error or timeout -> `unavailable`. |
 | `POST /v1/proof` | Protect (`pii` on the note alone) -> Guard (`injection`, `stop: true`) -> Decide (`proof` choice) -> Extract (`result`, `learning` on the note alone) -> Verify (`grounding`, plan as document and note as answer) | Protect changes only the History copy. Decide must return `specific_completion` at `>= 0.75` and Extract must return a result or learning span. Verify then vetoes only a claim with `contradicted >= 0.6`; `not_stated` does not veto it. The response carries that claim as the plain follow-up reason. A judged vague, future, unrelated, guarded, or contradicted note -> `vague`; an unanswered required step -> `pending`. |
+| `POST /v1/later` | One Rerank call (`query` is the new plan; 1–20 documents carry opaque id, app label as title, and saved reason as text) | Returns every known id in descending `relevance_score`. `fits` is true only for Rerank's `use` action; the phone shows at most three fitting items. A timeout, Clocked error, empty result, or malformed result is `503`, and the phone quietly falls back to newest first. |
 
 Credits and model time (`usage.credits`, `usage.model_ms`) come straight
-from `Result.credits` / `Result.model_ms` on the pipeline call. Logs carry
-route, status, latency and credits only -- never the intention, reason, task,
-or completion note text.
+from `Result.credits` / `Result.model_ms` on the Clocked call. Logs carry
+route, status, latency and credits only -- never the intention, reason,
+saved item, task, or completion note text.
 
 The app starts a non-blocking `GET /healthz` when it boots and whenever a
 check-in opens, so a sleeping deployment can wake while the user types. A plan
@@ -157,6 +163,14 @@ note decision Verify already makes, while Inspect reviews scripts rather than
 these short user notes. Neither has a separate output that could truthfully
 change Curre's behavior or UI. `grounding` is the SDK/API name of Verify, not
 an additional endpoint.
+
+### Rerank measurement (2026-10-26)
+
+The sanitized real response in `tests/fixtures/real_later_rerank.json`
+ranked six fictional saved reasons against one plan. It cost **2 credits**
+and the SDK reported **38.3 ms** of billable model time; the response's own
+timing reported 119 ms total. This was one contract-shape sample, not a
+latency distribution. No key or real personal text is in the fixture.
 
 ### SDK response notes
 

@@ -7,6 +7,7 @@ import '../design/design.dart';
 import '../platform/speech_input.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
+import 'later_shelf_card.dart';
 
 enum _CheckinState { compose, thinking, manual, confirmation }
 
@@ -25,6 +26,10 @@ class _CheckinScreenState extends State<CheckinScreen> {
   var _state = _CheckinState.compose;
   String? _message;
   Plan? _plan;
+
+  /// What was saved with "Not now", arranged for the plan being made.
+  LaterShelf? _shelf;
+  Future<LaterShelf>? _pendingShelf;
 
   /// Why the plan couldn't be made for the user (null when it wasn't
   /// tried, or when it threw before saying).
@@ -405,6 +410,15 @@ class _CheckinScreenState extends State<CheckinScreen> {
                   link: index + 1,
                 ),
               ],
+              if (_shelf case final shelf? when !shelf.isEmpty) ...[
+                const SizedBox(height: CurreSpace.s6),
+                LaterShelfCard(
+                  controller: controller,
+                  shelf: shelf,
+                  onOpen: _openLater,
+                  onDismiss: _dismissLater,
+                ),
+              ],
             ],
           ),
         ),
@@ -454,6 +468,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _state = _CheckinState.thinking;
       _message = null;
     });
+    _arrangeShelf(_intention.text.trim());
     PlanBuildResult result;
     try {
       result = await controller.buildPlan(_intention.text.trim());
@@ -490,6 +505,39 @@ class _CheckinScreenState extends State<CheckinScreen> {
       _plan = plan;
       _state = _CheckinState.confirmation;
     });
+  }
+
+  /// Ranks the saved items against this plan while the plan itself is
+  /// read; the shelf appears under the plan once both are ready.
+  void _arrangeShelf(String intention) {
+    _shelf = null;
+    final pending = controller
+        .arrangeLaterShelf(intention)
+        .catchError((Object _) => LaterShelf.empty);
+    _pendingShelf = pending;
+    pending.then((shelf) {
+      if (mounted && identical(_pendingShelf, pending)) {
+        setState(() => _shelf = shelf);
+      }
+    });
+  }
+
+  Future<void> _openLater(LaterItem item) async {
+    final result = await controller.openLaterItem(item);
+    if (!mounted) return;
+    if (!result.succeeded) {
+      showCurreSnack(
+        context,
+        '${item.appLabel} didn’t open. It’s still saved for later.',
+      );
+      return;
+    }
+    setState(() => _shelf = _shelf?.without(item.id));
+  }
+
+  Future<void> _dismissLater() async {
+    setState(() => _shelf = null);
+    await controller.dismissLaterShelf();
   }
 
   /// What went wrong, in words a person would use, then what to do.

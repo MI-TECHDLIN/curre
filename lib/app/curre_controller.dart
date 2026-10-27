@@ -66,6 +66,7 @@ class CurreController extends ChangeNotifier {
     List<Grant> historyGrants = const <Grant>[],
     List<Attempt> historyAttempts = const <Attempt>[],
     this.appInventoryState = AppInventoryState.ready,
+    List<LaterItem> laterItems = const <LaterItem>[],
     this.onboardingComplete = false,
     this.hiddenAppsTipDismissed = false,
     DateTime Function()? now,
@@ -80,6 +81,7 @@ class CurreController extends ChangeNotifier {
        historyPlans = List<Plan>.of(historyPlans),
        historyGrants = List<Grant>.of(historyGrants),
        historyAttempts = List<Attempt>.of(historyAttempts),
+       laterItems = List<LaterItem>.of(laterItems),
        _now = now ?? DateTime.now;
 
   static Future<CurreController> bootstrap() async {
@@ -126,6 +128,7 @@ class CurreController extends ChangeNotifier {
     final historyPlans = await store?.loadPlanHistory(now: now) ?? <Plan>[];
     final historyGrants = await store?.loadGrantHistory(now: now) ?? <Grant>[];
     final historyAttempts = await store?.loadAttempts(now: now) ?? <Attempt>[];
+    final laterItems = store?.loadLaterItems(now: now) ?? <LaterItem>[];
 
     final GentleInterceptGateway gentleIntercept =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android
@@ -150,6 +153,7 @@ class CurreController extends ChangeNotifier {
       historyGrants: historyGrants,
       historyAttempts: historyAttempts,
       appInventoryState: appInventoryState,
+      laterItems: laterItems,
       onboardingComplete: store?.isOnboardingComplete ?? false,
       hiddenAppsTipDismissed: store?.isHiddenAppsTipDismissed ?? false,
     );
@@ -215,6 +219,9 @@ class CurreController extends ChangeNotifier {
   List<Grant> historyGrants;
   List<Attempt> historyAttempts;
   AppInventoryState appInventoryState;
+
+  /// "Not now" reasons saved for a later plan, oldest first.
+  List<LaterItem> laterItems;
   bool onboardingComplete;
 
   /// Whether the Hidden apps explainer has been put away for good.
@@ -222,6 +229,7 @@ class CurreController extends ChangeNotifier {
   CallReceipt? lastPlanCall;
   CallReceipt? lastUnlockCall;
   CallReceipt? lastProofCall;
+  CallReceipt? lastLaterCall;
   bool _firstCheckinRequested = false;
   bool _hasUsageAccess = false;
   bool _hasNotificationAccess = false;
@@ -613,6 +621,7 @@ class CurreController extends ChangeNotifier {
     historyPlans = <Plan>[];
     historyGrants = <Grant>[];
     historyAttempts = <Attempt>[];
+    laterItems = <LaterItem>[];
     missedWhileHidden = <MissedWhileHiddenNotification>[];
     taskTraces = <TaskTrace>[];
     proofRecords = ProoflightRules.forgetWords(proofRecords);
@@ -696,6 +705,7 @@ class CurreController extends ChangeNotifier {
       doorUses = await store!.loadTodayDoorUses(now: instant);
       taskTraces = store!.loadTaskTraces(now: instant);
       proofRecords = store!.loadProofRecords(now: instant);
+      laterItems = store!.loadLaterItems(now: instant);
     } else {
       grants = activeGrants;
     }
@@ -1227,6 +1237,131 @@ class CurreController extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
+  /// Keeps a "Not now" reason for the next plan, with the words Extract
+  /// picked out of it, so it can open there when it comes back.
+  Future<LaterItem> saveForLater({
+    required LaunchableApp app,
+    required String reason,
+    required UnlockResponse response,
+  }) async {
+    final instant = now;
+    final item = LaterItem(
+      id: 'later-${instant.toUtc().microsecondsSinceEpoch}',
+      packageName: app.packageName,
+      appLabel: app.label,
+      reason: reason,
+      target: response.target,
+      redactions: response.redactions,
+      savedAt: instant,
+    );
+    laterItems =
+        await store?.saveLaterItem(item, now: instant) ??
+        LaterShelfRules.add(laterItems, item, instant);
+    notifyListeners();
+    return item;
+  }
+
+  /// Whether "Not today" put the Later shelf away for this Curre day.
+  bool get laterShelfDismissedToday =>
+      store?.laterShelfDismissedOn == currentSession.localStartDate ||
+      _laterDismissedOn == currentSession.localStartDate;
+  LocalDate? _laterDismissedOn;
+
+  Future<void> dismissLaterShelf() async {
+    _laterDismissedOn = currentSession.localStartDate;
+    notifyListeners();
+    try {
+      await store?.dismissLaterShelf(_laterDismissedOn!);
+    } on Object {
+      // Seeing the shelf once more today is harmless.
+    }
+  }
+
+  /// What the Later shelf offers for [intention]: saved items that fit the
+  /// plan, best first, as ranked from the plan's words. Offline, or when
+  /// ranking fails, the newest come first instead, quietly.
+  Future<LaterShelf> arrangeLaterShelf(String intention) async {
+    final items = LaterShelfRules.current(laterItems, now);
+    if (items.isEmpty || laterShelfDismissedToday) return LaterShelf.empty;
+    final client = api;
+    if (client == null) return LaterShelfRules.arrange(items);
+    final ranked = items.reversed
+        .take(LaterShelfRules.maxItems)
+        .toList(growable: false);
+    final stopwatch = Stopwatch()..start();
+    final response = await client.later(
+      LaterRequest(
+        plan: _clip(intention, 500),
+        items: <LaterRequestItem>[
+          for (final item in ranked)
+            LaterRequestItem(
+              id: item.id,
+              appLabel: _clip(item.appLabel, 60),
+              text: _clip(item.reason, 300),
+            ),
+        ],
+      ),
+    );
+    stopwatch.stop();
+    lastLaterCall = CallReceipt(
+      endpoint: '/v1/later',
+      elapsed: stopwatch.elapsed,
+      usage: response?.usage,
+    );
+    return LaterShelfRules.arrange(items, ranks: response?.items);
+  }
+
+  /// Opens a saved item at its words. Its app gets the usual time, and the
+  /// item leaves the shelf once the app opens.
+  Future<DoorLaunchResult> openLaterItem(LaterItem item) async {
+    final instant = now.toUtc();
+    final grant = Grant(
+      packageName: item.packageName,
+      reason: item.reason,
+      task: item.target?.text,
+      grantedAt: instant,
+      expiresAt: instant.add(
+        Duration(minutes: settings.unlockMinutes.clamp(1, 30)),
+      ),
+      source: GrantSource.later,
+      kind: ReasonKind.browse,
+    );
+    await _saveGrant(
+      grant,
+      appFor(item.packageName)?.label ?? item.appLabel,
+      redactions: item.redactions,
+      taskSpan: item.target,
+    );
+    final staticShortcuts = await staticShortcutsFor(item.packageName);
+    final router = DoorRouter(launcher, copyTarget: _copyTarget);
+    final result = await router.open(
+      DoorRequest(
+        packageName: item.packageName,
+        kind: ReasonKind.browse,
+        target: item.target?.text,
+        queryDoorId: QueryDoorAllowlist.forPackage(item.packageName)?.id,
+        staticShortcuts: staticShortcuts,
+      ),
+    );
+    if (result.succeeded) {
+      laterItems =
+          await store?.removeLaterItem(item.id, now: now) ??
+          laterItems.where((saved) => saved.id != item.id).toList();
+      notifyListeners();
+    }
+    return result;
+  }
+
+  /// Where a saved item's door lands, in the words the user wrote.
+  String laterDestination(LaterItem item) {
+    final target = item.target?.text;
+    if (target == null || target.trim().isEmpty) return item.reason;
+    if (QueryDoorAllowlist.forPackage(item.packageName) != null) {
+      return 'Search “$target”';
+    }
+    return target;
+  }
+
   Future<bool> plainLaunch(String packageName) async {
     try {
       return await launcher.launch(packageName);
@@ -1306,7 +1441,14 @@ class CurreController extends ChangeNotifier {
       now: now,
       fallbackUnlockMinutes: settings.unlockMinutes,
     );
-    if (grant != null) await _saveGrant(grant, app.label, response);
+    if (grant != null) {
+      await _saveGrant(
+        grant,
+        app.label,
+        redactions: response.redactions,
+        taskSpan: response.target ?? response.person,
+      );
+    }
     return _openUnlockDoor(app, response);
   }
 
@@ -1322,7 +1464,12 @@ class CurreController extends ChangeNotifier {
       finishedAt: now,
       fallbackUnlockMinutes: settings.unlockMinutes,
     );
-    await _saveGrant(grant, app.label, response);
+    await _saveGrant(
+      grant,
+      app.label,
+      redactions: response.redactions,
+      taskSpan: response.target ?? response.person,
+    );
     await _markLatestAttemptOverridden(
       app: app,
       reason: reason,
@@ -1359,14 +1506,11 @@ class CurreController extends ChangeNotifier {
 
   Future<void> _saveGrant(
     Grant grant,
-    String appLabel,
-    UnlockResponse response,
-  ) async {
-    final historyGrant = redactedGrant(
-      grant,
-      response.redactions,
-      taskSpan: response.target ?? response.person,
-    );
+    String appLabel, {
+    List<Redaction>? redactions,
+    SourceSpan? taskSpan,
+  }) async {
+    final historyGrant = redactedGrant(grant, redactions, taskSpan: taskSpan);
     grants = <Grant>[
       ...grants.where((item) => item.packageName != grant.packageName),
       grant,

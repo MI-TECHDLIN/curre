@@ -202,6 +202,7 @@ CurreController fakeController({
   SpeechInputService? speech,
   DateTime? now,
   AppInventoryState appInventoryState = AppInventoryState.ready,
+  List<LaterItem> laterItems = const <LaterItem>[],
 }) {
   final homePlatform = home ?? FakeHomePlatform();
   final launcher = platform ?? FakeDoorPlatform();
@@ -237,6 +238,7 @@ CurreController fakeController({
         ),
     apps: launcher.apps,
     appInventoryState: appInventoryState,
+    laterItems: laterItems,
     onboardingComplete: onboardingComplete,
     now: () => now ?? DateTime(2026, 10, 26, 6, 40),
   );

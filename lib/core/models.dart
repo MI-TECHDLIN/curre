@@ -7,7 +7,9 @@ enum SessionName { morning, afternoon, evening }
 
 enum PlanSource { clocked, manual }
 
-enum GrantSource { clocked, override }
+/// Where a grant came from: a reason that was read and opened, the wait
+/// sat out, or a reason saved for later and opened from a plan.
+enum GrantSource { clocked, override, later }
 
 enum UnlockOutcome { open, later, specify, flagged, unavailable }
 

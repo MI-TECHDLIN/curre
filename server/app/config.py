@@ -15,6 +15,7 @@ class Settings:
     plan_rate_limit_per_hour: int
     unlock_rate_limit_per_hour: int
     proof_rate_limit_per_hour: int = 30
+    later_rate_limit_per_hour: int = 20
 
 
 @lru_cache
@@ -26,4 +27,5 @@ def get_settings() -> Settings:
         plan_rate_limit_per_hour=int(os.environ.get("PLAN_RATE_LIMIT_PER_HOUR", "20")),
         unlock_rate_limit_per_hour=int(os.environ.get("UNLOCK_RATE_LIMIT_PER_HOUR", "30")),
         proof_rate_limit_per_hour=int(os.environ.get("PROOF_RATE_LIMIT_PER_HOUR", "30")),
+        later_rate_limit_per_hour=int(os.environ.get("LATER_RATE_LIMIT_PER_HOUR", "20")),
     )

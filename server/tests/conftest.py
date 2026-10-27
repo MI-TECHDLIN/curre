@@ -12,6 +12,7 @@ from app.config import Settings, get_settings
 from app.main import (
     app,
     get_clocked_client,
+    get_later_limiter,
     get_plan_limiter,
     get_proof_limiter,
     get_unlock_limiter,
@@ -33,8 +34,10 @@ def make_client():
         plan_limit: int = 20,
         unlock_limit: int = 30,
         proof_limit: int = 30,
+        later_limit: int = 20,
+        rerank=None,
     ):
-        fake = FakeAsyncClocked(handler)
+        fake = FakeAsyncClocked(handler, rerank)
         settings = Settings(
             clocked_api_key="unused",
             app_key=APP_KEY,
@@ -42,15 +45,18 @@ def make_client():
             plan_rate_limit_per_hour=plan_limit,
             unlock_rate_limit_per_hour=unlock_limit,
             proof_rate_limit_per_hour=proof_limit,
+            later_rate_limit_per_hour=later_limit,
         )
         plan_limiter = RateLimiter(plan_limit)
         unlock_limiter = RateLimiter(unlock_limit)
         proof_limiter = RateLimiter(proof_limit)
+        later_limiter = RateLimiter(later_limit)
         app.dependency_overrides[get_clocked_client] = lambda: fake
         app.dependency_overrides[get_settings] = lambda: settings
         app.dependency_overrides[get_plan_limiter] = lambda: plan_limiter
         app.dependency_overrides[get_unlock_limiter] = lambda: unlock_limiter
         app.dependency_overrides[get_proof_limiter] = lambda: proof_limiter
+        app.dependency_overrides[get_later_limiter] = lambda: later_limiter
         client = TestClient(app, headers={"X-App-Key": APP_KEY})
         client.fake = fake
         created.append(client)

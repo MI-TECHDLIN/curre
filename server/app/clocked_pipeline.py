@@ -1,5 +1,7 @@
-"""Builds the Plan, Unlock and Proof Clocked Pipeline calls and maps their
-results onto the Curre contracts. One `client.pipeline(...)` call per route.
+"""Builds the Plan, Unlock and Proof Clocked Pipeline calls and the Later
+Rerank call, and maps their results onto the Curre contracts. One
+`client.pipeline(...)` call per route, except Later, which is one
+`client.rerank(...)` call.
 
 Response shapes (recorded in the differentiator report, section 4, and the
 clocked-sdk 0.7.0 README) that this module relies on:
@@ -31,6 +33,12 @@ clocked-sdk 0.7.0 README) that this module relies on:
   verdict flags the text sets `reason: "flagged"`; a step that merely raises
   under the default `on_error="continue"` reports its error in place instead
   and does not stop the pipeline.
+- `rerank()` returns `{"model", "results", "usage", "timing"}` with no step
+  wrapper. `results` holds every document, best `relevance_score` first;
+  each carries the document's `index`, its `id`, an `action` (`use`,
+  `expand`, or `skip` with a `reason` such as `unrelated`), the
+  `relevance_score` (equal to `levels["answers"]`), a `document_score` and
+  `levels`.
 """
 
 from __future__ import annotations
@@ -44,6 +52,9 @@ from clocked_sdk import AsyncClocked, ClockedError
 from app.models import (
     Candidate,
     GuardInfo,
+    LaterItem,
+    LaterRank,
+    LaterResponse,
     PlanApp,
     PlanResponse,
     ProofResponse,
@@ -59,6 +70,9 @@ UNLOCK_MAX_ATTEMPTS = 2
 PROOF_TIMEOUT_SECONDS = 6.0
 PROOF_MAX_ATTEMPTS = 2
 PROOF_THRESHOLD = 0.75
+LATER_TIMEOUT_SECONDS = 5.0
+LATER_MAX_ATTEMPTS = 2
+LATER_FITTING_ACTIONS = frozenset({"use"})
 
 MAX_DOOR_CANDIDATES = 8
 MAX_QUERY_CANDIDATES = 6
@@ -451,11 +465,14 @@ async def run_unlock_pipeline(
             usage=_usage_from_result(result),
         )
     if kind == "browse" and above_threshold:
+        # The target is what the phone saves for later, so a saved reason
+        # can open at those words when it comes back.
         return UnlockResponse(
             outcome="later",
             kind=kind,
             confidence=confidence,
             redactions=redactions,
+            target=_span_from_field(extract_fields.get("target")),
             usage=_usage_from_result(result),
         )
     return UnlockResponse(
@@ -610,3 +627,64 @@ async def run_proof_pipeline(client: AsyncClocked, task: str, note: str) -> Proo
         redactions=redactions,
         usage=usage,
     )
+
+
+# ---------------------------------------------------------------------------
+# Later
+# ---------------------------------------------------------------------------
+
+LATER_INSTRUCTIONS = (
+    "The query is a plan a person just wrote for the next few hours. Each document is "
+    "something they wanted to do on their phone earlier and saved for later: the app, "
+    "then what they said. A document answers the query when doing it now fits that plan."
+)
+
+
+def build_later_documents(items: list[LaterItem]) -> list[dict[str, str]]:
+    return [{"id": item.id, "title": item.app_label, "text": item.text} for item in items]
+
+
+async def run_later_rerank(
+    client: AsyncClocked, plan: str, items: list[LaterItem]
+) -> LaterResponse:
+    try:
+        result = await asyncio.wait_for(
+            client.rerank(
+                query=plan,
+                documents=build_later_documents(items),
+                instructions=LATER_INSTRUCTIONS,
+                max_attempts=LATER_MAX_ATTEMPTS,
+            ),
+            timeout=LATER_TIMEOUT_SECONDS,
+        )
+    except (TimeoutError, ClockedError) as exc:
+        raise PipelineUnavailable(str(exc)) from exc
+
+    ids = [item.id for item in items]
+    ranked: list[LaterRank] = []
+    seen: set[str] = set()
+    try:
+        for entry in result["results"]:
+            item_id = entry.get("id")
+            if item_id is None:
+                index = entry.get("index")
+                item_id = ids[index] if isinstance(index, int) and 0 <= index < len(ids) else None
+            if item_id not in ids or item_id in seen:
+                continue
+            seen.add(item_id)
+            ranked.append(
+                LaterRank(
+                    id=item_id,
+                    score=float(entry["relevance_score"]),
+                    fits=entry.get("action") in LATER_FITTING_ACTIONS,
+                )
+            )
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise PipelineUnavailable("malformed rerank result") from exc
+    if not ranked:
+        raise PipelineUnavailable("rerank returned no known items")
+    # Rerank reads every document, so a missing one is unexpected; keep it,
+    # last and not fitting, rather than silently dropping something saved.
+    ranked.extend(LaterRank(id=i, score=0.0, fits=False) for i in ids if i not in seen)
+    ranked.sort(key=lambda rank: rank.score, reverse=True)
+    return LaterResponse(items=ranked, usage=_usage_from_result(result))

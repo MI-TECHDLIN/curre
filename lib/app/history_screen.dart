@@ -509,6 +509,13 @@ class _GrantHistoryCard extends StatelessWidget {
                 style: type.caption.copyWith(color: open.fg),
               ),
             ],
+            if (grant.source == GrantSource.later) ...[
+              const SizedBox(height: CurreSpace.s2),
+              Text(
+                'Saved for later, then opened from a plan',
+                style: type.caption.copyWith(color: open.fg),
+              ),
+            ],
           ],
         ),
       ),

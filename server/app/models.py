@@ -21,6 +21,8 @@ MAX_INTENTION_LEN = 500
 MIN_REASON_LEN = 8
 MAX_REASON_LEN = 300
 MAX_PROOF_NOTE_LEN = 300
+MAX_LATER_ITEMS = 20
+MAX_LATER_ID_LEN = 64
 
 
 class Span(BaseModel):
@@ -142,3 +144,32 @@ class ProofResponse(BaseModel):
     # None when Protect did not answer: the phone then keeps the note as is.
     redactions: list[Redaction] | None = None
     usage: Usage | None = None
+
+
+class LaterItem(BaseModel):
+    id: str = Field(min_length=1, max_length=MAX_LATER_ID_LEN)
+    app_label: str = Field(min_length=1, max_length=MAX_LABEL_LEN)
+    text: str = Field(min_length=1, max_length=MAX_REASON_LEN)
+
+
+class LaterRequest(BaseModel):
+    plan: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
+    items: list[LaterItem] = Field(min_length=1, max_length=MAX_LATER_ITEMS)
+
+    @model_validator(mode="after")
+    def _check_unique_ids(self) -> LaterRequest:
+        ids = [item.id for item in self.items]
+        if len(ids) != len(set(ids)):
+            raise ValueError("item ids must be unique")
+        return self
+
+
+class LaterRank(BaseModel):
+    id: str
+    score: float = Field(ge=0.0, le=1.0)
+    fits: bool
+
+
+class LaterResponse(BaseModel):
+    items: list[LaterRank]
+    usage: Usage

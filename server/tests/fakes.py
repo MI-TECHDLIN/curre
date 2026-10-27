@@ -12,18 +12,29 @@ from typing import Any
 from clocked_sdk import Result
 
 PipelineHandler = Callable[..., Awaitable[Result]]
+RerankHandler = Callable[..., Awaitable[Result]]
 
 
 class FakeAsyncClocked:
-    def __init__(self, handler: PipelineHandler) -> None:
+    def __init__(
+        self, handler: PipelineHandler, rerank_handler: RerankHandler | None = None
+    ) -> None:
         self._handler = handler
+        self._rerank_handler = rerank_handler
         self.calls: list[dict[str, Any]] = []
+        self.rerank_calls: list[dict[str, Any]] = []
 
     async def pipeline(
         self, *, text: str | None = None, steps: Any = None, **kwargs: Any
     ) -> Result:
         self.calls.append({"text": text, "steps": steps, **kwargs})
         return await self._handler(text=text, steps=steps, **kwargs)
+
+    async def rerank(self, *, query: str, documents: Any, **kwargs: Any) -> Result:
+        self.rerank_calls.append({"query": query, "documents": documents, **kwargs})
+        if self._rerank_handler is None:
+            raise AssertionError("this test did not expect a rerank call")
+        return await self._rerank_handler(query=query, documents=documents, **kwargs)
 
     async def aclose(self) -> None:
         pass
@@ -163,3 +174,46 @@ def pii_result(*entities: tuple[str, str, int, int]) -> dict[str, Any]:
         "threshold": 0.5,
         "timing": {"read_ms": 60, "total_ms": 61},
     }
+
+
+def rerank_entry(
+    index: int,
+    item_id: str | None,
+    relevance: float,
+    action: str = "use",
+    reason: str | None = None,
+) -> dict[str, Any]:
+    entry: dict[str, Any] = {
+        "index": index,
+        "action": action,
+        "relevance_score": relevance,
+        "document_score": min(1.0, relevance + 0.01),
+        "levels": {
+            "answers": relevance,
+            "elsewhere": 0.01,
+            "different_case": 0.0,
+            "unrelated": round(max(0.0, 0.99 - relevance), 4),
+        },
+    }
+    if item_id is not None:
+        entry["id"] = item_id
+    if reason is not None:
+        entry["reason"] = reason
+    return entry
+
+
+def make_rerank_result(
+    results: list[dict[str, Any]], credits: int = 2, model_ms: float = 38.0
+) -> Result:
+    return Result(
+        {
+            "model": "clocked-fake",
+            "results": results,
+            "usage": {"input_tokens": 400},
+            "timing": {"total_ms": model_ms + 4, "model_ms": model_ms},
+        },
+        model_ms=model_ms,
+        credits=credits,
+        cost_usd=round(credits * 0.001, 5),
+        cost_basis="reference",
+    )

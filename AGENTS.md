@@ -60,6 +60,9 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Phone-owned models, sessions, visibility, grants, the typed backend client
   and local persistence live in `lib/core/`; its client reads
   `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`.
+- Seven-day, phone-owned Later items and their ordering policy live in
+  `lib/core/later.dart`; `lib/app/later_shelf_card.dart` renders them after a
+  plan, and `/v1/later` makes one Rerank call with newest-first fallback.
 - Prooflight's evidence, Curre-day, streak and cloud-day rules live in
   `lib/core/proof.dart` (pure: the summary is rebuilt from records, never
   stored), the completion sheet and sunrise moment in

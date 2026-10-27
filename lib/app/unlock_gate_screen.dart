@@ -49,6 +49,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   DoorResolution? _resolvedDestination;
   var _overrideFinishing = false;
   var _leaving = false;
+  var _saving = false;
 
   CurreController get controller => widget.controller;
 
@@ -346,7 +347,27 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
           ),
         ],
       ),
-      UnlockOutcome.later || UnlockOutcome.flagged => Column(
+      UnlockOutcome.later => Column(
+        children: [
+          CurrePrimaryButton(
+            label: 'Save for later',
+            glyph: CurreGlyphKind.later,
+            onPressed: _saving ? null : _saveForLater,
+          ),
+          const SizedBox(height: CurreSpace.s2),
+          CurreSecondaryButton(
+            label: 'Open after $overrideWaitWords',
+            glyph: CurreGlyphKind.overrideWait,
+            onPressed: _startOverride,
+          ),
+          const SizedBox(height: CurreSpace.s2),
+          CurreSecondaryButton(
+            label: 'Back',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+      UnlockOutcome.flagged => Column(
         children: [
           CurreSecondaryButton(
             label: 'Open after $overrideWaitWords',
@@ -520,7 +541,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         'Curre didn’t find a matching chat on this phone, so it opens $app. You have $minutes minutes.',
       UnlockOutcome.open => 'You have $minutes minutes.',
       UnlockOutcome.later =>
-        'That sounds like browsing, so it can wait. If you still want $app now, it opens after you wait $overrideWaitWords.',
+        'That sounds like browsing, so it can wait. Save it for later and it comes back when you next plan, or wait $overrideWaitWords to open $app now.',
       UnlockOutcome.specify =>
         'Say a bit more about what you’ll do, or wait $overrideWaitWords to open $app.',
       UnlockOutcome.flagged =>
@@ -609,6 +630,28 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         setState(() => _remaining = left);
       }
     });
+  }
+
+  Future<void> _saveForLater() async {
+    setState(() => _saving = true);
+    try {
+      await controller.saveForLater(
+        app: widget.app,
+        reason: _reason.text.trim(),
+        response: _response!,
+      );
+    } on Object {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showCurreSnack(
+        context,
+        'Curre couldn’t save that on this phone. Please try again.',
+      );
+      return;
+    }
+    if (!mounted) return;
+    showCurreSnack(context, 'Saved. It comes back when you next plan.');
+    Navigator.of(context).pop();
   }
 
   Future<void> _openGranted() async {
