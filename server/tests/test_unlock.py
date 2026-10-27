@@ -154,6 +154,31 @@ def test_unlock_later_for_browse(make_client):
     body = resp.json()
     assert body["outcome"] == "later"
     assert body["kind"] == "browse"
+    assert body["target"] is None
+
+
+def test_unlock_later_carries_target_for_saving(make_client):
+    async def handler(*, text, steps, **kwargs):
+        decide_fields = {"kind": decide_choice("browse", 0.86)}
+        extract_fields = {
+            "target": extract_field("what Tolu posted", start=4, end=20),
+            "minutes": extract_field("ten minutes", start=0, end=11, normalized=10),
+        }
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": decide_fields}),
+                ok_step("task", "extract", {"fields": extract_fields}),
+            ]
+        )
+
+    client = make_client(handler)
+    resp = client.post("/v1/unlock", json=_unlock_payload("see what Tolu posted today"))
+    body = resp.json()
+    assert body["outcome"] == "later"
+    assert body["target"] == {"text": "what Tolu posted", "start": 4, "end": 20}
+    # Browsing is never granted time.
+    assert body["minutes"] is None
 
 
 def test_unlock_specify_for_unclear(make_client):

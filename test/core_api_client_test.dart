@@ -29,6 +29,22 @@ void main() {
     shortcutLabels: const <String>['Search'],
   );
 
+  LaterRequest laterRequest() => LaterRequest(
+    plan: 'practice guitar before dinner',
+    items: <LaterRequestItem>[
+      LaterRequestItem(
+        id: 'saved-guitar',
+        appLabel: 'YouTube',
+        text: 'find the fingerpicking lesson',
+      ),
+      LaterRequestItem(
+        id: 'saved-shoes',
+        appLabel: 'Browser',
+        text: 'look at walking shoes',
+      ),
+    ],
+  );
+
   CurreApiClient client(
     http.Client transport, {
     Duration timeout = const Duration(milliseconds: 100),
@@ -47,6 +63,7 @@ void main() {
     localTestingHeaders: localTestingHeaders,
     unlockTimeout: timeout,
     proofTimeout: timeout,
+    laterTimeout: timeout,
   );
 
   test('unlock sends the saved strictness threshold', () async {
@@ -387,7 +404,66 @@ void main() {
     },
   );
 
-  test('production timeout defaults are 8, 12, and 8 seconds', () {
+  test('later sends exact fields and parses the ordered response', () async {
+    final transport = MockClient((request) async {
+      expect(request.url.toString(), 'https://api.example.test/root/v1/later');
+      expect(jsonDecode(request.body), <String, Object?>{
+        'plan': 'practice guitar before dinner',
+        'items': <Object?>[
+          <String, Object?>{
+            'id': 'saved-guitar',
+            'app_label': 'YouTube',
+            'text': 'find the fingerpicking lesson',
+          },
+          <String, Object?>{
+            'id': 'saved-shoes',
+            'app_label': 'Browser',
+            'text': 'look at walking shoes',
+          },
+        ],
+      });
+      return _jsonResponse(<String, Object?>{
+        'items': <Object?>[
+          <String, Object?>{'id': 'saved-guitar', 'score': 0.94, 'fits': true},
+          <String, Object?>{'id': 'saved-shoes', 'score': 0.16, 'fits': false},
+        ],
+        'usage': <String, Object?>{'credits': 2, 'model_ms': 38.3},
+      });
+    });
+
+    final response = await client(transport).later(laterRequest());
+
+    expect(response!.items.map((item) => item.id), <String>[
+      'saved-guitar',
+      'saved-shoes',
+    ]);
+    expect(response.items.first.score, 0.94);
+    expect(response.items.first.fits, isTrue);
+    expect(response.items.last.fits, isFalse);
+    expect(response.usage.credits, 2);
+  });
+
+  test(
+    'later maps timeout, HTTP, transport, and malformed responses to fallback',
+    () async {
+      final cases = <http.Client>[
+        MockClient((_) => Completer<http.Response>().future),
+        MockClient((_) async => http.Response('rate limited', 429)),
+        MockClient((_) async => throw http.ClientException('offline')),
+        MockClient((_) async => http.Response('not json', 200)),
+      ];
+
+      for (final transport in cases) {
+        final response = await client(
+          transport,
+          timeout: const Duration(milliseconds: 5),
+        ).later(laterRequest());
+        expect(response, isNull);
+      }
+    },
+  );
+
+  test('production timeout defaults cover every route', () {
     final api = CurreApiClient(
       baseUrl: Uri.parse('https://api.example.test'),
       appKey: 'key',
@@ -398,6 +474,7 @@ void main() {
     expect(api.planFirstAttemptTimeout, const Duration(seconds: 9));
     expect(api.warmUpTimeout, const Duration(seconds: 3));
     expect(api.proofTimeout, const Duration(seconds: 8));
+    expect(api.laterTimeout, const Duration(seconds: 6));
   });
 }
 

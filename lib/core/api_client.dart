@@ -24,7 +24,7 @@ class PlanCallResult {
   bool get requiresManualChecklist => response == null;
 }
 
-/// Typed client for Curre's three backend routes.
+/// Typed client for Curre's four backend routes.
 class CurreApiClient {
   CurreApiClient({
     required Uri baseUrl,
@@ -33,6 +33,7 @@ class CurreApiClient {
     Duration unlockTimeout = const Duration(seconds: 8),
     Duration planTimeout = const Duration(seconds: 12),
     Duration proofTimeout = const Duration(seconds: 8),
+    Duration laterTimeout = const Duration(seconds: 6),
     Duration planFirstAttemptTimeout = const Duration(seconds: 9),
     Duration planRetryDelay = const Duration(milliseconds: 250),
     Duration warmUpTimeout = const Duration(seconds: 3),
@@ -45,6 +46,7 @@ class CurreApiClient {
          unlockTimeout: unlockTimeout,
          planTimeout: planTimeout,
          proofTimeout: proofTimeout,
+         laterTimeout: laterTimeout,
          planFirstAttemptTimeout: planFirstAttemptTimeout,
          planRetryDelay: planRetryDelay,
          warmUpTimeout: warmUpTimeout,
@@ -59,6 +61,7 @@ class CurreApiClient {
     required this.unlockTimeout,
     required this.planTimeout,
     required this.proofTimeout,
+    required this.laterTimeout,
     required this.planFirstAttemptTimeout,
     required this.planRetryDelay,
     required this.warmUpTimeout,
@@ -91,6 +94,7 @@ class CurreApiClient {
   final Duration unlockTimeout;
   final Duration planTimeout;
   final Duration proofTimeout;
+  final Duration laterTimeout;
   final Duration planFirstAttemptTimeout;
   final Duration planRetryDelay;
   final Duration warmUpTimeout;
@@ -238,6 +242,22 @@ class CurreApiClient {
       return ProofResponse.fromJson(_decodeObject(response.body));
     } on Object {
       return const ProofResponse.pending();
+    }
+  }
+
+  /// Ranks saved "Not now" reasons against a new plan. Returns null for
+  /// every transport, timeout, status, or malformed response failure; the
+  /// shelf then shows the newest first.
+  Future<LaterResponse?> later(LaterRequest request) async {
+    try {
+      final response = await _post(
+        'v1/later',
+        request.toJson(),
+      ).timeout(laterTimeout);
+      if (!_isSuccess(response.statusCode)) return null;
+      return LaterResponse.fromJson(_decodeObject(response.body));
+    } on Object {
+      return null;
     }
   }
 

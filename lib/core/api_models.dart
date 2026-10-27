@@ -162,6 +162,15 @@ enum PersonalDetailKind {
 }
 
 extension PersonalDetailKindWire on PersonalDetailKind {
+  String get wireValue => switch (this) {
+    PersonalDetailKind.person => 'person',
+    PersonalDetailKind.phone => 'phone',
+    PersonalDetailKind.email => 'email',
+    PersonalDetailKind.address => 'address',
+    PersonalDetailKind.creditCard => 'credit_card',
+    PersonalDetailKind.bankAccount => 'bank_account',
+  };
+
   static PersonalDetailKind fromWireValue(String value) => switch (value) {
     'person' => PersonalDetailKind.person,
     'phone' => PersonalDetailKind.phone,
@@ -194,6 +203,12 @@ class Redaction {
   final PersonalDetailKind kind;
   final int start;
   final int end;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'kind': kind.wireValue,
+    'start': start,
+    'end': end,
+  };
 }
 
 List<Redaction>? _redactions(Object? value) => value == null
@@ -411,6 +426,88 @@ class ProofResponse {
   /// they could not be looked for, and the note is kept as typed.
   final List<Redaction>? redactions;
   final ApiUsage? usage;
+}
+
+/// One saved "Not now" reason, as the Later shelf sends it to be ranked.
+class LaterRequestItem {
+  LaterRequestItem({
+    required this.id,
+    required this.appLabel,
+    required this.text,
+  }) {
+    _checkLength(id, 'id', minimum: 1, maximum: 64);
+    _checkLength(appLabel, 'appLabel', minimum: 1, maximum: 60);
+    _checkLength(text, 'text', minimum: 1, maximum: 300);
+  }
+
+  final String id;
+  final String appLabel;
+  final String text;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'app_label': appLabel,
+    'text': text,
+  };
+}
+
+class LaterRequest {
+  LaterRequest({required this.plan, required List<LaterRequestItem> items})
+    : items = List.unmodifiable(items) {
+    _checkLength(plan, 'plan', minimum: 1, maximum: 500);
+    if (items.isEmpty || items.length > 20) {
+      throw RangeError.range(items.length, 1, 20, 'items.length');
+    }
+    _checkUnique(items.map((item) => item.id), 'item ids');
+  }
+
+  /// The plan sentence the saved items are ranked against.
+  final String plan;
+  final List<LaterRequestItem> items;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'plan': plan,
+    'items': items.map((item) => item.toJson()).toList(growable: false),
+  };
+}
+
+/// How well one saved item fits the plan. [fits] is whether it is worth
+/// offering now; [score] orders them.
+class LaterRank {
+  LaterRank({required this.id, required this.score, required this.fits}) {
+    if (!score.isFinite || score < 0 || score > 1) {
+      throw RangeError.range(score, 0, 1, 'score');
+    }
+  }
+
+  factory LaterRank.fromJson(Map<String, Object?> json) => LaterRank(
+    id: _string(json['id'], 'id'),
+    score: _number(json['score'], 'score').toDouble(),
+    fits: switch (json['fits']) {
+      final bool value => value,
+      _ => throw const FormatException('fits must be a boolean'),
+    },
+  );
+
+  final String id;
+  final double score;
+  final bool fits;
+}
+
+class LaterResponse {
+  LaterResponse({required List<LaterRank> items, required this.usage})
+    : items = List.unmodifiable(items);
+
+  factory LaterResponse.fromJson(Map<String, Object?> json) => LaterResponse(
+    items: _list(json['items'], 'items')
+        .map((value) => LaterRank.fromJson(_map(value, 'items[]')))
+        .toList(growable: false),
+    usage: ApiUsage.fromJson(_map(json['usage'], 'usage')),
+  );
+
+  /// Best first.
+  final List<LaterRank> items;
+  final ApiUsage usage;
 }
 
 void _checkLength(String value, String name, {int minimum = 0, int? maximum}) {
