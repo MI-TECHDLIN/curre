@@ -19,7 +19,7 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "com.mitech.curre"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

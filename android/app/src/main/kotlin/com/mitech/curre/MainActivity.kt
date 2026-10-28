@@ -19,13 +19,13 @@ import android.os.Process
 import android.provider.CalendarContract
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private lateinit var launcherApps: LauncherApps
     private lateinit var platformChannel: MethodChannel
     private var homeSurfaceActive = false
@@ -468,11 +468,20 @@ class MainActivity : FlutterActivity() {
         "shortLabel" to shortcut.shortLabel.toString(),
         "longLabel" to shortcut.longLabel?.toString(),
         "isConversation" to isConversationCandidate,
-        "personNames" to shortcut.persons
-            .orEmpty()
-            .mapNotNull { it.name?.toString() }
-            .filter { it.isNotBlank() },
+        "personNames" to shortcutPersonNames(shortcut),
     )
+
+    private fun shortcutPersonNames(shortcut: ShortcutInfo): List<String> {
+        val persons = runCatching {
+            shortcut.javaClass.getMethod("getPersons").invoke(shortcut) as? List<*>
+        }.getOrNull().orEmpty()
+
+        return persons.mapNotNull { person ->
+            runCatching {
+                person?.javaClass?.getMethod("getName")?.invoke(person)?.toString()
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+        }
+    }
 
     private fun startShortcut(packageName: String, shortcutId: String): Boolean {
         if (!launcherApps.hasShortcutHostPermission()) return false
