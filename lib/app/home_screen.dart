@@ -120,6 +120,15 @@ class _HomeBody extends StatelessWidget {
     final today = controller.now;
     final proof = controller.proofSummary;
     final offlineTasks = controller.offlineTasksOnHome;
+    final completion = controller.activePlanCompletion;
+    // Earlier tasks away from the phone still waiting for their Done; the
+    // active plan's own task is in [completion].
+    final earlierOffline = offlineTasks
+        .where((task) => task.planId != plan?.id)
+        .toList(growable: false);
+    final activeTasks = completion?.active ?? const <TaskProgress>[];
+    final doneTasks = completion?.done ?? const <TaskProgress>[];
+    final allDone = plan != null && controller.allTasksDone;
     final schedule = SessionSchedule.fromSettings(controller.settings);
     final dayProgress = DayProgress.of(
       plans: controller.plans,
@@ -230,10 +239,19 @@ class _HomeBody extends StatelessWidget {
                         child: _PlanCard(
                           plan: plan,
                           progress: planProgress!.value,
+                          doneCount: doneTasks.length,
                           onEdit: openCheckin,
                         ),
                       ),
                     ),
+                  if (allDone) ...[
+                    const SizedBox(height: CurreSpace.s4),
+                    _AllDoneCard(
+                      session: plan.session,
+                      proof: proof,
+                      onEndPlan: () => _confirmEndPlan(context, controller),
+                    ),
+                  ],
                   for (final grant in controller.activeGrants) ...[
                     const SizedBox(height: CurreSpace.s4),
                     _GrantBanner(
@@ -256,17 +274,12 @@ class _HomeBody extends StatelessWidget {
                       offlineTasks.isEmpty)
                     const _EmptySightNote(),
                   if (plan != null)
-                    for (final (index, app) in plan.apps.indexed) ...[
+                    for (final (index, item) in activeTasks.indexed) ...[
                       if (index > 0) const SizedBox(height: CurreSpace.s2),
-                      _PlanDoor(
-                        controller: controller,
-                        plan: plan,
-                        app: app,
-                        link: index + 1,
-                      ),
+                      _TaskRow(controller: controller, plan: plan, item: item),
                     ],
-                  for (final (index, task) in offlineTasks.indexed) ...[
-                    if (index > 0 || (plan?.apps.isNotEmpty ?? false))
+                  for (final (index, task) in earlierOffline.indexed) ...[
+                    if (index > 0 || activeTasks.isNotEmpty)
                       const SizedBox(height: CurreSpace.s2),
                     _OfflineTaskRow(controller: controller, task: task),
                   ],
@@ -276,6 +289,22 @@ class _HomeBody extends StatelessWidget {
                   )) ...[
                     const SizedBox(height: CurreSpace.s2),
                     _GrantDoor(controller: controller, grant: grant),
+                  ],
+                  if (plan != null && doneTasks.isNotEmpty) ...[
+                    SizedBox(
+                      height:
+                          activeTasks.isEmpty &&
+                              earlierOffline.isEmpty &&
+                              controller.activeGrants.isEmpty
+                          ? 0
+                          : CurreSpace.s4,
+                    ),
+                    _DoneTodayGroup(
+                      key: ValueKey<String>('done-today-${plan.id}'),
+                      controller: controller,
+                      plan: plan,
+                      done: doneTasks,
+                    ),
                   ],
                   if (extraEssentials.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s5),
@@ -502,11 +531,23 @@ class _PlanCard extends StatelessWidget {
     required this.plan,
     required this.progress,
     required this.onEdit,
+    this.doneCount = 0,
   });
 
   final Plan plan;
   final double progress;
   final VoidCallback onEdit;
+
+  /// How many of the plan's tasks are done.
+  final int doneCount;
+
+  /// The pill under the plan: its tasks, then how many are done.
+  static String taskCountCopy(int tasks, int done) {
+    if (done == 0 || tasks == 0) {
+      return '$tasks ${tasks == 1 ? 'task' : 'tasks'} ready';
+    }
+    return '$done of $tasks done';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -629,7 +670,7 @@ class _PlanCard extends StatelessWidget {
                     vertical: CurreSpace.s2,
                   ),
                   child: Text(
-                    '${plan.apps.length} ${plan.apps.length == 1 ? 'task' : 'tasks'} ready',
+                    taskCountCopy(plan.apps.length, doneCount),
                     style: type.caption.weight(680).copyWith(color: sky.bg),
                   ),
                 ),
@@ -873,39 +914,94 @@ class _EssentialDoor extends StatelessWidget {
   );
 }
 
+/// One of the active plan's tasks: its app's door, or the task away from
+/// the phone when the plan has no apps. [_PlanDoor] keeps the app's link
+/// number from the plan's own order wherever the row sits.
+class _TaskRow extends StatelessWidget {
+  const _TaskRow({
+    required this.controller,
+    required this.plan,
+    required this.item,
+  });
+
+  final CurreController controller;
+  final Plan plan;
+  final TaskProgress item;
+
+  @override
+  Widget build(BuildContext context) {
+    final package = item.task.packageName;
+    if (package == null) {
+      return _OfflineTaskRow(controller: controller, task: item.task);
+    }
+    final index = plan.apps.indexWhere((app) => app.packageName == package);
+    return _PlanDoor(
+      controller: controller,
+      plan: plan,
+      app: plan.apps[index],
+      link: index + 1,
+      state: item.state,
+    );
+  }
+}
+
+/// What a task row says once the task is done, the same words for a door
+/// and for a task away from the phone.
+String? doneTaskCopy(TaskDoneState state) => switch (state) {
+  TaskDoneState.open => null,
+  TaskDoneState.proved => 'Done, with proof',
+  TaskDoneState.waiting => 'Done · your note is waiting to be checked',
+  TaskDoneState.checkedOff => 'Done · tap to add a note',
+};
+
 class _PlanDoor extends StatelessWidget {
   const _PlanDoor({
     required this.controller,
     required this.plan,
     required this.app,
     required this.link,
+    this.state = TaskDoneState.open,
   });
 
   final CurreController controller;
   final Plan plan;
   final PlannedApp app;
   final int link;
+  final TaskDoneState state;
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
     final entry = controller.appFor(app.packageName);
+    final appName = entry?.label ?? app.packageName;
     final destination = controller.destinationFor(app, plan);
+    final done = doneTaskCopy(state);
     return DoorRow(
-      appName: entry?.label ?? app.packageName,
-      destination: '→ $destination',
+      appName: appName,
+      destination: done ?? '→ $destination',
       appIcon: InstalledAppIcon(
         controller: controller,
         packageName: app.packageName,
       ),
-      link: link,
+      // A done row is a plain, quieter row; it still opens its app.
+      link: done == null ? link : null,
+      trailing: state == TaskDoneState.proved
+          ? CurreGlyph(CurreGlyphKind.check, size: 22, color: colors.emberText)
+          : null,
+      semanticLabel: done == null
+          ? null
+          : '$appName, $done, opens $destination',
       onTap: () async {
         final task = PlannedTask.forDoor(plan, app);
-        final ask = controller.asksAfterDoor(task);
+        // Asked once per task; a check-off row invites its note, so a tap
+        // there asks again on the way back.
+        final ask =
+            controller.asksAfterDoor(task) || state == TaskDoneState.checkedOff;
         final result = await controller.openPlanDoor(plan, app);
         if (!context.mounted) return;
         _reportDoorResult(context, result, app.query?.text);
         // Opened now, so it is waiting when the user comes back from the
-        // door: the one question, asked once per task.
+        // door.
         if (result.succeeded && ask) {
           await showCompletionSheet(
             context,
@@ -918,6 +1014,236 @@ class _PlanDoor extends StatelessWidget {
     );
   }
 }
+
+/// Finished tasks, below the ones still to do and in the plan's order.
+/// More than [PlanCompletion.doneRowsShown] fold into one line with their
+/// count until it is tapped. Rows stay tappable, so their apps stay at hand.
+class _DoneTodayGroup extends StatefulWidget {
+  const _DoneTodayGroup({
+    super.key,
+    required this.controller,
+    required this.plan,
+    required this.done,
+  });
+
+  final CurreController controller;
+  final Plan plan;
+  final List<TaskProgress> done;
+
+  @override
+  State<_DoneTodayGroup> createState() => _DoneTodayGroupState();
+}
+
+class _DoneTodayGroupState extends State<_DoneTodayGroup> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final count = widget.done.length;
+    final folds = count > PlanCompletion.doneRowsShown;
+    final countLabel = '$count ${count == 1 ? 'task' : 'tasks'}';
+    if (folds && !_open) {
+      return Semantics(
+        key: const Key('done-today-folded'),
+        button: true,
+        label: 'Done today, $countLabel. Show them',
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: () => setState(() => _open = true),
+          borderRadius: CurreShape.md,
+          splashFactory: NoSplash.splashFactory,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Row(
+              children: [
+                CurreGlyph(
+                  CurreGlyphKind.check,
+                  size: 20,
+                  color: colors.emberText,
+                ),
+                const SizedBox(width: CurreSpace.s2),
+                Expanded(
+                  child: Text(
+                    'Done today · $count',
+                    style: type.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text('Show', style: type.label.copyWith(color: colors.ink2)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Column(
+      key: const Key('done-today'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Done today', style: type.label)),
+            if (folds)
+              TextButton(
+                onPressed: () => setState(() => _open = false),
+                child: Text(
+                  'Hide',
+                  style: type.label.copyWith(color: colors.ink2),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: CurreSpace.s1),
+        for (final (index, item) in widget.done.indexed) ...[
+          if (index > 0) const SizedBox(height: CurreSpace.s1),
+          _TaskRow(
+            controller: widget.controller,
+            plan: widget.plan,
+            item: item,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The calm close of a plan whose tasks are all done: today's small, still
+/// sun (it rises once, on the completion sheet, never here) and a way to
+/// end the plan early so its apps go back to Hidden apps.
+class _AllDoneCard extends StatelessWidget {
+  const _AllDoneCard({
+    required this.session,
+    required this.proof,
+    required this.onEndPlan,
+  });
+
+  final SessionName session;
+  final ProofSummary proof;
+  final VoidCallback onEndPlan;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    return DecoratedBox(
+      key: const Key('home-all-done'),
+      decoration: BoxDecoration(
+        color: colors.raised,
+        borderRadius: CurreShape.md,
+        border: Border.all(color: colors.hairline),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(CurreSpace.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ProoflightSun(
+                  rays: proof.raysToday,
+                  proofDays: proof.currentRun,
+                  size: 56,
+                  lineColor: colors.ink3,
+                  semanticLabel: proof.raysToday > 0
+                      ? 'Today’s sun is up'
+                      : 'Today’s sun',
+                ),
+                const SizedBox(width: CurreSpace.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'All done for this ${session.label}',
+                        style: type.title,
+                      ),
+                      const SizedBox(height: CurreSpace.s1),
+                      Text(
+                        'Every task in this plan is done. End it now and its apps go back to Hidden apps.',
+                        style: type.body.copyWith(color: colors.ink2),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: CurreSpace.s4),
+            CurreSecondaryButton(label: 'End plan now', onPressed: onEndPlan),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks once, then ends the plan and offers a short Undo.
+Future<void> _confirmEndPlan(
+  BuildContext context,
+  CurreController controller,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('End this plan now?'),
+      content: const Text(
+        'Its apps go back to Hidden apps. You can plan again whenever you like.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Keep it'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('End plan'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final Plan? ended;
+  try {
+    ended = await controller.endPlanNow();
+  } on Object {
+    if (context.mounted) {
+      showCurreSnack(context, 'Curre couldn’t end the plan. Please try again.');
+    }
+    return;
+  }
+  if (ended == null || !context.mounted) return;
+  final colors = Theme.of(context).extension<CurreColors>()!;
+  final type = Theme.of(context).extension<CurreType>()!;
+  showCurreSnack(
+    context,
+    'Plan ended. Its apps are back in Hidden apps.',
+    actionLabel: 'Undo',
+    duration: endPlanUndoWindow,
+    onAction: () async {
+      final back = await controller.undoEndPlan(ended!);
+      if (back) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'That plan’s time is already up.',
+              style: type.body.copyWith(color: colors.paper),
+            ),
+            backgroundColor: colors.ink,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+    },
+  );
+}
+
+/// How long "Plan ended" offers its Undo.
+const Duration endPlanUndoWindow = Duration(seconds: 6);
 
 /// A task done away from the phone. Start leaves Curre's trace before the
 /// task, as a door does; Done asks the one question. The row stays after

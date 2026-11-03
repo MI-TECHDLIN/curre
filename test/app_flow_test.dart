@@ -472,7 +472,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('No proof days yet'), findsOneWidget);
 
-    // The same door again opens the task without asking twice.
+    // The same door, now under Done today, opens the task without asking
+    // twice.
+    expect(find.text('Done · your note is waiting to be checked'), findsOne);
+    await tester.ensureVisible(find.byType(DoorRow).first);
     await tester.tap(find.byType(DoorRow).first);
     await tester.pumpAndSettle();
     expect(platform.launches, 2);
@@ -549,8 +552,17 @@ void main() {
     // Home settles: nothing about the streak moves there.
     await tester.pumpAndSettle();
     expect(find.text('5 proof days'), findsOneWidget);
-    final sun = tester.widget<ProoflightSun>(find.byType(ProoflightSun));
+    final sun = tester.widget<ProoflightSun>(find.byType(ProoflightSun).first);
     expect((sun.rays, sun.rise), (1, null));
+    // Every task is done: the all-done card's small sun is still too.
+    final doneSun = tester.widget<ProoflightSun>(
+      find.descendant(
+        of: find.byKey(const Key('home-all-done')),
+        matching: find.byType(ProoflightSun),
+      ),
+    );
+    expect((doneSun.rays, doneSun.rise, doneSun.grow), (1, null, 1));
+    expect(find.text('Done, with proof'), findsOneWidget);
   });
 
   testWidgets('a task away from the phone waits past its plan for Done', (

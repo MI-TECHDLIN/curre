@@ -576,7 +576,15 @@ String get overrideWaitWords => '${overrideWait.inSeconds} seconds';
 String hiddenAppsLabel(int count) =>
     count == 1 ? '1 hidden app' : '$count hidden apps';
 
-void showCurreSnack(BuildContext context, String message) {
+/// A short note at the foot of the screen. With [actionLabel] it offers one
+/// action (an Undo) and still goes away by itself after [duration].
+void showCurreSnack(
+  BuildContext context,
+  String message, {
+  String? actionLabel,
+  VoidCallback? onAction,
+  Duration duration = const Duration(seconds: 4),
+}) {
   final colors = Theme.of(context).extension<CurreColors>()!;
   final type = Theme.of(context).extension<CurreType>()!;
   ScaffoldMessenger.of(context)
@@ -586,6 +594,15 @@ void showCurreSnack(BuildContext context, String message) {
         content: Text(message, style: type.body.copyWith(color: colors.paper)),
         backgroundColor: colors.ink,
         behavior: SnackBarBehavior.floating,
+        duration: duration,
+        persist: false,
+        action: actionLabel == null || onAction == null
+            ? null
+            : SnackBarAction(
+                label: actionLabel,
+                textColor: colors.paper,
+                onPressed: onAction,
+              ),
       ),
     );
 }

@@ -5,6 +5,7 @@ export 'later.dart';
 export 'local_store.dart';
 export 'models.dart';
 export 'outcome_mapping.dart';
+export 'plan_completion.dart';
 export 'plan_time_parser.dart';
 export 'proof.dart';
 export 'progress.dart';

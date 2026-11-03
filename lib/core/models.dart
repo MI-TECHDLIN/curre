@@ -430,8 +430,10 @@ class Plan {
     required DateTime endsAt,
     required this.source,
     this.endPhrase,
+    DateTime? plannedEndsAt,
   }) : apps = List.unmodifiable(apps),
-       endsAt = _asUtc(endsAt);
+       endsAt = _asUtc(endsAt),
+       plannedEndsAt = plannedEndsAt == null ? null : _asUtc(plannedEndsAt);
 
   factory Plan.fromJson(Map<String, Object?> json) => Plan(
     id: _string(json['id'], 'id'),
@@ -446,6 +448,9 @@ class Plan {
         ? null
         : SourceSpan.fromJson(_map(json['endPhrase'], 'endPhrase')),
     source: PlanSourceWire.fromWireValue(_string(json['source'], 'source')),
+    plannedEndsAt: json['plannedEndsAt'] == null
+        ? null
+        : _instant(json['plannedEndsAt'], 'plannedEndsAt'),
   );
 
   final String id;
@@ -457,7 +462,38 @@ class Plan {
   final SourceSpan? endPhrase;
   final PlanSource source;
 
+  /// When the plan was meant to end, kept only once it was ended early
+  /// ("End plan now"); [endsAt] is then the moment it ended.
+  final DateTime? plannedEndsAt;
+
+  bool get endedEarly => plannedEndsAt != null;
+
   Set<String> get packages => apps.map((app) => app.packageName).toSet();
+
+  /// This plan ended at [at] instead of its planned end. Ending an already
+  /// ended-early plan again keeps the first planned end.
+  Plan endedEarlyAt(DateTime at) =>
+      _copy(endsAt: at, plannedEndsAt: plannedEndsAt ?? endsAt);
+
+  /// The plan as it was before it ended early.
+  Plan withEarlyEndUndone() {
+    final planned = plannedEndsAt;
+    if (planned == null) return this;
+    return _copy(endsAt: planned, plannedEndsAt: null);
+  }
+
+  Plan _copy({required DateTime endsAt, required DateTime? plannedEndsAt}) =>
+      Plan(
+        id: id,
+        session: session,
+        date: date,
+        intention: intention,
+        apps: apps,
+        endsAt: endsAt,
+        source: source,
+        endPhrase: endPhrase,
+        plannedEndsAt: plannedEndsAt,
+      );
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
@@ -468,6 +504,8 @@ class Plan {
     'endsAt': endsAt.toIso8601String(),
     if (endPhrase != null) 'endPhrase': endPhrase!.toJson(),
     'source': source.wireValue,
+    if (plannedEndsAt != null)
+      'plannedEndsAt': plannedEndsAt!.toIso8601String(),
   };
 }
 
