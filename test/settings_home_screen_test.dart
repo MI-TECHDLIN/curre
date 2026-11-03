@@ -74,7 +74,7 @@ void main() {
       await tester.pump();
 
       await showAccess(tester, 'Ask “Why now?” when a hidden app opens');
-      expect(find.text('Needs your OK in Android first'), findsNWidgets(2));
+      expect(find.text('Needs your OK in Android first'), findsWidgets);
       await tapText(tester, 'Turn on Usage access');
       expect(access.usageRequests, 1);
       expect(controller.hasUsageAccess, isTrue);

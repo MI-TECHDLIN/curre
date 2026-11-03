@@ -137,43 +137,26 @@ final c = Key('override-countdown');
 
       await check(1);
       await tap('Show me how');
-      await check(2);
-      await tap('Sounds fair');
-      await tap('Instagram');
-      await check(3);
-      await tap('This one pulls me in');
       await tester.enterText(find.byType(TextField), 'Ada');
       await tester.pump();
-      await check(4);
+      await check(2);
       await tap('Call me Ada');
-      await check(5);
-      await tap('Use my initial');
-      await check(6);
-      await tap('Mornings start at 04:00');
-      await check(7);
+      await tap('Instagram');
+      await check(3);
+      await tap('Hide this one');
+      await check(4);
       await tap('Make Curre my home screen');
-      await check(7);
+      await check(4);
       await tap('Continue');
-      await check(8);
-      await tap('Allow');
-      await check(8);
-      await tap('Skip for now');
-      await check(9);
-      await tap('Allow');
-      await check(9);
-      await tap('Skip for now');
-      await check(10);
-      await tap('Not now');
-      await check(11);
-      final use = find.textContaining(RegExp(r'^Use these \d+ apps$'));
-      await tap(tester.widget<Text>(use).data!);
-      await check(12);
+      await check(5);
       semantics.dispose();
     });
 
     testWidgets('Home, Hidden apps, settings and the profile', (tester) async {
       final semantics = tester.ensureSemantics();
       final controller = fakeController(
+        // Every question asked in context is on screen too.
+        pendingPrompts: ContextPrompt.values.toSet(),
         gentleIntercept: FakeGentleIntercept(
           missed: [
             MissedWhileHiddenNotification(
@@ -197,18 +180,28 @@ final c = Key('override-countdown');
         ),
       ];
       await show(tester, HomeScreen(controller: controller));
+      expect(find.text('Want a quiet nudge when time’s up?'), findsOneWidget);
       expectPlainCopy(tester, where: 'Home');
       await show(tester, HiddenAppsScreen(controller: controller));
       expect(
         visibleCopy(tester),
         containsAll(<String>[
           'Hidden apps',
-          'Bring back Chrome',
           'Missed notifications',
           '1 notification from hidden apps',
+          'Ask “Why now?” when a hidden app opens?',
         ]),
       );
       expectPlainCopy(tester, where: 'Hidden apps');
+      await tester.scrollUntilVisible(
+        find.text('Chrome'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(visibleCopy(tester), contains('Bring back Chrome'));
+      expectPlainCopy(tester, where: 'Hidden apps');
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 3000));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.tap(find.text('Missed notifications'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));

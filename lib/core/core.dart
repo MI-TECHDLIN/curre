@@ -8,6 +8,7 @@ export 'outcome_mapping.dart';
 export 'plan_time_parser.dart';
 export 'proof.dart';
 export 'progress.dart';
+export 'prompts.dart';
 export 'redaction.dart';
 export 'sessions.dart';
 export 'span.dart';

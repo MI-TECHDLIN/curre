@@ -7,6 +7,7 @@ import '../design/design.dart';
 import '../doors/door_models.dart';
 import '../doors/door_router.dart';
 import '../platform/home_refresh.dart';
+import 'access_help.dart';
 import 'app_widgets.dart';
 import 'checkin_screen.dart';
 import 'completion_sheet.dart';
@@ -242,6 +243,11 @@ class _HomeBody extends StatelessWidget {
                       now: controller.now,
                     ),
                   ],
+                  if (controller.offers(ContextPrompt.nudges) &&
+                      (plan != null || controller.activeGrants.isNotEmpty)) ...[
+                    const SizedBox(height: CurreSpace.s4),
+                    _NudgeOffer(controller: controller),
+                  ],
                   const SizedBox(height: CurreSpace.s6),
                   _SightHeader(doorCount: doorCount),
                   const SizedBox(height: CurreSpace.s3),
@@ -328,6 +334,46 @@ class _HomeBody extends StatelessWidget {
     ];
     return '${weekdays[date.weekday - 1]}, ${date.day} ${months[date.month - 1]}';
   }
+}
+
+/// Asks once, the first time time is running, whether Curre may send a
+/// quiet nudge when it's up.
+class _NudgeOffer extends StatefulWidget {
+  const _NudgeOffer({required this.controller});
+
+  final CurreController controller;
+
+  @override
+  State<_NudgeOffer> createState() => _NudgeOfferState();
+}
+
+class _NudgeOfferState extends State<_NudgeOffer> {
+  var _working = false;
+
+  Future<void> _answer({required bool allow}) async {
+    setState(() => _working = true);
+    final allowed = await widget.controller.answerNudgeOffer(allow: allow);
+    if (!mounted) return;
+    setState(() => _working = false);
+    showCurreSnack(
+      context,
+      allowed
+          ? 'Quiet nudges are on. You can choose which ones in Curre settings.'
+          : 'No problem. You can turn quiet nudges on later in Curre settings.',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => ContextOfferCard(
+    key: const Key('nudge-offer'),
+    prop: CurreProp.bell,
+    title: 'Want a quiet nudge when time’s up?',
+    body: 'Curre can let you know when your plan or an app’s time runs out. No sound, no buzz, never ads.',
+    yesLabel: 'Yes, nudge me',
+    yesGlyph: CurreGlyphKind.notify,
+    onYes: _working ? null : () => unawaited(_answer(allow: true)),
+    onNotNow: _working ? null : () => unawaited(_answer(allow: false)),
+  );
 }
 
 class _CheckinPrompt extends StatelessWidget {

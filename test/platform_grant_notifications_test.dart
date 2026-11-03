@@ -131,6 +131,9 @@ class _FakeGrantNotificationGateway implements GrantNotificationGateway {
   }
 
   @override
+  Future<bool?> areNotificationsAllowed() async => permissionResult;
+
+  @override
   Future<void> showOngoing(GrantNotificationNotice notice) async {
     calls.add('show');
     shown.add(notice);

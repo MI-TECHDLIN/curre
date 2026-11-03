@@ -34,6 +34,10 @@ class GrantNotificationNotice {
 abstract interface class GrantNotificationGateway {
   Future<void> initialize();
   Future<bool> requestPermission();
+
+  /// Whether Android lets Curre's notifications appear, or null when Curre
+  /// can't tell (not on Android).
+  Future<bool?> areNotificationsAllowed();
   Future<void> showOngoing(GrantNotificationNotice notice);
   Future<void> scheduleExpiry(GrantNotificationNotice notice);
   Future<void> cancel(int id);
@@ -57,6 +61,11 @@ class GrantNotificationService {
   Future<bool> requestPermission() async {
     await _gateway.initialize();
     return _gateway.requestPermission();
+  }
+
+  Future<bool?> areNotificationsAllowed() async {
+    await _gateway.initialize();
+    return _gateway.areNotificationsAllowed();
   }
 
   Future<void> startGrant({
@@ -199,6 +208,10 @@ class FlutterGrantNotificationGateway
   @override
   Future<bool> requestPermission() async =>
       await _androidPlugin?.requestNotificationsPermission() ?? true;
+
+  @override
+  Future<bool?> areNotificationsAllowed() async =>
+      _androidPlugin?.areNotificationsEnabled();
 
   @override
   Future<void> showOngoing(GrantNotificationNotice notice) => _plugin.show(

@@ -158,6 +158,11 @@ abstract interface class GentleInterceptGateway
   Future<void> pollPendingForegroundEvent();
   Future<bool> hasNotificationAccess();
   Future<bool> requestNotificationAccess();
+
+  /// Opens Curre's App info page, where a phone that blocks a setting for
+  /// an app installed outside an app store lets the user allow it once.
+  /// False when nothing opened.
+  Future<bool> openAppInfo();
   Future<void> configureQuietNotifications(
     QuietNotificationConfiguration configuration,
   );
@@ -191,6 +196,9 @@ class DisabledGentleInterceptGateway implements GentleInterceptGateway {
 
   @override
   Future<bool> requestNotificationAccess() async => false;
+
+  @override
+  Future<bool> openAppInfo() async => false;
 
   @override
   Future<void> configureQuietNotifications(
@@ -272,6 +280,10 @@ class AndroidGentleInterceptGateway implements GentleInterceptGateway {
   @override
   Future<bool> requestNotificationAccess() async =>
       await _channel.invokeMethod<bool>('requestNotificationAccess') ?? false;
+
+  @override
+  Future<bool> openAppInfo() async =>
+      await _channel.invokeMethod<bool>('openAppInfo') ?? false;
 
   @override
   Future<void> configureQuietNotifications(

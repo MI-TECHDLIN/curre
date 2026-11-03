@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,13 +12,17 @@ import 'curre_controller.dart';
 import 'onboarding/app_hints.dart';
 import 'onboarding/onboarding_parts.dart';
 import 'onboarding/onboarding_scenes.dart';
+import 'privacy_details_screen.dart';
 
-/// First-run setup, told as one short story from the problem to the first
-/// plan (onboarding study, 2026-10-25): the pull of a feed, what stays
-/// private, the apps that pull you in, who you are, when your morning
-/// starts, Curre as the home screen, catching apps that sneak back in,
-/// keeping hidden apps quiet, quiet nudges, the apps plans can use, and
-/// finally the first plan itself.
+/// First-run setup in five short steps (onboarding study, 2026-10-25,
+/// cut from twelve on 2026-11-03): the problem and Curre's promise, who
+/// you are, the apps that pull you in, Curre as the home screen, and the
+/// first plan itself.
+///
+/// Everything else waits until it helps: the morning starts at 06:00
+/// (changed in Curre settings), and quiet nudges, Usage access and
+/// notification access are each offered once in context
+/// ([ContextPrompt]); the microphone is asked on the first mic tap.
 ///
 /// Every step is a colour stage with an illustrated scene above a paper
 /// sheet of controls, and the stages run from night into morning. Answers
@@ -34,59 +37,30 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-enum _Step {
-  story,
-  privacy,
-  pull,
-  name,
-  face,
-  morning,
-  home,
-  sneak,
-  quiet,
-  nudges,
-  apps,
-  plan,
-}
+enum _Step { welcome, you, pull, home, plan }
 
 class _OnboardingScreenState extends State<OnboardingScreen>
     with WidgetsBindingObserver {
-  static const _morningChoices = <LocalTime>[
-    LocalTime(4),
-    LocalTime(5),
-    LocalTime(6),
-    LocalTime(7),
-  ];
-  static const _maxApps = 30;
+  /// When mornings start until the user changes it in Curre settings.
+  static const _defaultMorning = LocalTime(6);
   static const _shortList = 8;
 
   final _name = TextEditingController();
   final _plan = TextEditingController();
   final _nameFocus = FocusNode();
   final _pull = <String>{};
-  final _apps = <String>{};
-  final _appsRemoved = <String>{};
   late final Set<String> _essentials;
-  late LocalTime _morning;
-  late bool _nudgesEnabled;
+  late final LocalTime _morning;
 
-  var _step = _Step.story;
+  var _step = _Step.welcome;
   String? _avatarId;
   var _showAllPull = false;
-  var _showAllApps = false;
-  var _appsSeeded = false;
   var _sinking = false;
   var _nameTried = false;
-  String? _morningError;
   bool? _homeReady;
   HomeSettingsOpened? _homeSettings;
-
-  /// The intercept's Android permissions, by the step that asks for each:
-  /// absent until Curre knows, then whether it is on.
-  final _accessOn = <_Step, bool>{};
   var _working = false;
   String? _error;
-  String _query = '';
 
   CurreController get controller => widget.controller;
 
@@ -97,15 +71,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final settings = controller.settings;
     _name.text = settings.displayName ?? '';
     _avatarId = settings.avatarId;
-    _morning = settings.sessionStarts[SessionName.morning]!;
-    _nudgesEnabled = settings.hasAnyNudges;
+    final afternoon = settings.sessionStarts[SessionName.afternoon]!;
+    _morning = _defaultMorning.compareTo(afternoon) < 0
+        ? _defaultMorning
+        : settings.sessionStarts[SessionName.morning]!;
     _essentials = settings.essentials.isEmpty
         ? controller.suggestedEssentials
         : settings.essentials.toSet();
-    if (settings.candidates.isNotEmpty) {
-      _apps.addAll(settings.candidates);
-      _appsSeeded = true;
-    }
   }
 
   @override
@@ -123,7 +95,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // answer whenever the user comes back to this step.
     if (state != AppLifecycleState.resumed) return;
     if (_step == _Step.home) unawaited(_recheckHome());
-    if (_isAccessStep(_step)) unawaited(_recheckAccess(_step));
   }
 
   Future<void> _recheckHome() async {
@@ -132,32 +103,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (ready || _homeReady != null) setState(() => _homeReady = ready);
   }
 
-  static bool _isAccessStep(_Step step) =>
-      step == _Step.sneak || step == _Step.quiet;
-
-  Future<bool> _hasAccess(_Step step) => step == _Step.sneak
-      ? controller.refreshUsageAccess()
-      : controller.refreshNotificationAccess();
-
-  Future<void> _recheckAccess(_Step step) async {
-    final on = await _hasAccess(step);
-    if (!mounted || _step != step) return;
-    if (on || _accessOn.containsKey(step)) {
-      setState(() => _accessOn[step] = on);
-    }
-  }
-
   // -------------------------------------------------------------------------
   // Answers and app lists.
 
   String? get _displayName => Settings.normalizeDisplayName(_name.text);
 
-  /// Apps the user could pick in the app steps: everything but Curre and
-  /// the apps that are always on Home.
+  /// Apps the user could pick: everything but Curre and the apps that are
+  /// always on Home.
   List<LaunchableApp> get _eligibleApps => controller.apps
       .where(
         (app) =>
-            app.packageName != 'com.mitech.curre' &&
+            app.packageName != currePackageName &&
             !_essentials.contains(app.packageName),
       )
       .toList(growable: false);
@@ -176,40 +132,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return [...common, ...rest];
   }
 
-  List<LaunchableApp> get _appChoices {
-    final eligible = _eligibleApps.toList()..sort(_byLabel);
-    final picked = eligible.where((app) => _apps.contains(app.packageName));
-    final others = eligible.where((app) => !_apps.contains(app.packageName));
-    return [...picked, ...others];
-  }
-
   static int _byLabel(LaunchableApp a, LaunchableApp b) =>
       a.label.toLowerCase().compareTo(b.label.toLowerCase());
 
-  int get _minimumApps => math.min(2, _eligibleApps.length);
-
-  void _seedApps() {
-    final eligible = {for (final app in _eligibleApps) app.packageName};
-    if (!_appsSeeded) {
-      _appsSeeded = true;
-      for (final package in commonTaskPackages) {
-        if (eligible.contains(package)) _apps.add(package);
-      }
-    }
-    // What pulls you in is often also what a plan needs (YouTube for a
-    // lesson): bring those along unless the user took them out here.
-    for (final package in _pull) {
-      if (!_appsRemoved.contains(package) && _apps.length < _maxApps) {
-        _apps.add(package);
-      }
-    }
-    _apps.removeWhere((package) => !eligible.contains(package));
-    final sorted = _eligibleApps.toList()..sort(_byLabel);
-    for (final app in sorted) {
-      if (_apps.length >= _minimumApps) break;
-      _apps.add(app.packageName);
-    }
-  }
+  /// The apps plans can use: what the user didn't hide, everyday ones
+  /// first. Curre settings changes them any time.
+  Set<String> get _planApps => defaultPlanApps(
+    eligible: [
+      for (final app in _eligibleApps.toList()..sort(_byLabel)) app.packageName,
+    ],
+    hidden: _pull,
+  );
 
   SessionName get _planSession {
     final starts = Map<SessionName, LocalTime>.of(
@@ -233,10 +166,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _step = step;
       _error = null;
       _sinking = false;
-      if (step == _Step.apps) _seedApps();
     });
     if (step == _Step.home) unawaited(_recheckHome());
-    if (_isAccessStep(step)) unawaited(_recheckAccess(step));
   }
 
   void _next() {
@@ -260,36 +191,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _next();
   }
 
-  void _submitName() {
+  void _submitYou() {
     if (_displayName == null) {
       setState(() => _nameTried = true);
       _nameFocus.requestFocus();
       return;
     }
     _next();
-  }
-
-  Future<void> _pickOtherMorning() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: _morning.hour, minute: _morning.minute),
-      helpText: 'Your morning starts at',
-    );
-    if (picked == null || !mounted) return;
-    _setMorning(LocalTime(picked.hour, picked.minute));
-  }
-
-  void _setMorning(LocalTime value) {
-    final afternoon = controller.settings.sessionStarts[SessionName.afternoon]!;
-    setState(() {
-      if (value.compareTo(afternoon) >= 0) {
-        _morningError =
-            'Pick a time before $afternoon. That’s when your afternoon starts.';
-      } else {
-        _morning = value;
-        _morningError = null;
-      }
-    });
   }
 
   Future<void> _askForHome() async {
@@ -311,42 +219,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     setState(() => _homeSettings = opened);
   }
 
-  /// Opens Android's screen for this step's permission; the answer comes
-  /// back when the user returns to Curre (false too when the screen
-  /// couldn't open).
-  Future<void> _askForAccess() async {
-    final step = _step;
-    setState(() => _working = true);
-    final on = await (step == _Step.sneak
-        ? controller.requestUsageAccess()
-        : controller.requestNotificationAccess());
-    if (!mounted) return;
-    setState(() {
-      _working = false;
-      _accessOn[step] = on;
-    });
-  }
-
-  Future<void> _allowNudges() async {
-    setState(() => _working = true);
-    final allowed = await controller.requestNotifications();
-    if (!mounted) return;
-    setState(() {
-      _working = false;
-      _nudgesEnabled = allowed;
-    });
-    if (!allowed) {
-      showCurreSnack(
-        context,
-        'No problem. You can turn quiet nudges on later in Curre settings.',
-      );
-    }
-    _next();
-  }
-
-  void _declineNudges() {
-    setState(() => _nudgesEnabled = false);
-    _next();
+  void _openPrivacyDetails() {
+    unawaited(
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const PrivacyDetailsScreen()),
+      ),
+    );
   }
 
   Future<void> _finish({required bool withPlan}) async {
@@ -360,9 +238,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         displayName: _name.text,
         avatarId: _avatarId,
         essentials: _essentials,
-        candidates: _apps,
+        candidates: _planApps,
         morningStart: _morning,
-        nudgesEnabled: _nudgesEnabled,
         firstIntention: withPlan ? _plan.text : null,
       );
     } on Object {
@@ -398,15 +275,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final brightness = Theme.of(context).brightness;
     final light = brightness == Brightness.light;
     switch (_step) {
-      case _Step.story:
+      case _Step.welcome:
         return StagePalette.of(StageTone.night, brightness);
-      case _Step.privacy:
-        return StagePalette.of(StageTone.lilac, brightness);
-      case _Step.pull:
-        return StagePalette.of(StageTone.coral, brightness);
-      case _Step.name:
-        return StagePalette.of(StageTone.peach, brightness);
-      case _Step.face:
+      case _Step.you:
         final option = AvatarCatalog.byId(_avatarId);
         if (option == null) return StagePalette.of(StageTone.peach, brightness);
         final bg = option.background.color;
@@ -416,18 +287,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Color.lerp(bg, const Color(0xFF13111A), .74)!,
                 ink: Color.lerp(bg, Colors.white, .4),
               );
-      case _Step.morning:
-        return StagePalette.of(StageTone.dawn, brightness);
+      case _Step.pull:
+        return StagePalette.of(StageTone.coral, brightness);
       case _Step.home:
         return StagePalette.of(StageTone.sky, brightness);
-      case _Step.sneak:
-        return StagePalette.of(StageTone.teal, brightness);
-      case _Step.quiet:
-        return StagePalette.of(StageTone.slate, brightness);
-      case _Step.nudges:
-        return StagePalette.of(StageTone.sage, brightness);
-      case _Step.apps:
-        return StagePalette.of(StageTone.mint, brightness);
       case _Step.plan:
         final sky = Theme.of(context)
             .extension<CurreColors>()!
@@ -442,7 +305,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final palette = _palette(context);
     final reduce = MediaQuery.disableAnimationsOf(context);
     return PopScope(
-      canPop: _step == _Step.story,
+      canPop: _step == _Step.welcome,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _back();
       },
@@ -505,7 +368,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             total: _Step.values.length,
             eyebrow: _eyebrow,
             headline: _headline,
-            onBack: _step == _Step.story || _working ? null : _back,
+            onBack: _step == _Step.welcome || _working ? null : _back,
             scene: _scene(palette),
             backdrop: _step == _Step.plan
                 ? (size) => PlanBackdrop(
@@ -536,38 +399,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   String get _eyebrow => switch (_step) {
-    _Step.story => 'Welcome to Curre',
-    _Step.privacy => 'Your privacy',
+    _Step.welcome => 'Welcome to Curre',
+    _Step.you => 'About you',
     _Step.pull => 'Your apps',
-    _Step.name => 'About you',
-    _Step.face => 'About you',
-    _Step.morning => 'Your day',
     _Step.home => 'Your home screen',
-    _Step.sneak => 'Hidden apps',
-    _Step.quiet => 'Hidden apps',
-    _Step.nudges => 'Quiet nudges',
-    _Step.apps => 'Your apps',
     _Step.plan => 'Your first plan',
   };
 
   String get _headline => switch (_step) {
-    _Step.story => 'Ever pick up your phone for one thing and lose an hour?',
-    _Step.privacy => 'Your life stays on your phone.',
-    _Step.pull => 'Which apps pull you in?',
-    _Step.name => 'What should Curre call you?',
-    _Step.face => 'Pick a face that feels like you.',
-    _Step.morning => 'When does your morning start?',
+    _Step.welcome => 'Ever pick up your phone for one thing and lose an hour?',
+    _Step.you => 'What should Curre call you?',
+    _Step.pull => 'What pulls you in?',
     _Step.home => 'Make Curre your home screen.',
-    _Step.sneak => 'What if a hidden app sneaks back in?',
-    _Step.quiet => 'Keep hidden apps quiet?',
-    _Step.nudges => 'Want a quiet nudge when time’s up?',
-    _Step.apps => 'Which apps will your plans need?',
     _Step.plan => 'What’s this ${_planSession.label} for?',
   };
 
   Widget _scene(StagePalette palette) => switch (_step) {
-    _Step.story => StoryScene(palette: palette),
-    _Step.privacy => PrivacyScene(palette: palette),
+    _Step.welcome => StoryScene(palette: palette),
+    _Step.you => FaceScene(
+      palette: palette,
+      avatarId: _avatarId,
+      initial: _displayName,
+    ),
     _Step.pull => PullScene(
       palette: palette,
       controller: controller,
@@ -576,108 +429,118 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           .toList(growable: false),
       sinking: _sinking,
     ),
-    _Step.name => NameScene(palette: palette, name: _displayName),
-    _Step.face => FaceScene(
-      palette: palette,
-      avatarId: _avatarId,
-      initial: _displayName,
-    ),
-    _Step.morning => MorningScene(palette: palette, start: _morning),
     _Step.home => HomeScene(
       palette: palette,
       controller: controller,
       name: _displayName,
       avatarId: _avatarId,
     ),
-    _Step.sneak => SneakScene(
-      palette: palette,
-      controller: controller,
-      app: _sceneHiddenApps.first,
-    ),
-    _Step.quiet => QuietScene(
-      palette: palette,
-      controller: controller,
-      apps: _sceneHiddenApps,
-    ),
-    _Step.nudges => NudgeScene(palette: palette),
-    _Step.apps => AppsScene(palette: palette, controller: controller),
     _Step.plan => PlanScene(avatarId: _avatarId, name: _displayName),
   };
 
   List<Widget> _sheet(BuildContext context) => switch (_step) {
-    _Step.story => _storySheet(context),
-    _Step.privacy => _privacySheet(context),
+    _Step.welcome => _welcomeSheet(context),
+    _Step.you => _youSheet(context),
     _Step.pull => _pullSheet(context),
-    _Step.name => _nameSheet(context),
-    _Step.face => _faceSheet(context),
-    _Step.morning => _morningSheet(context),
     _Step.home => _homeSheet(context),
-    _Step.sneak => _sneakSheet(context),
-    _Step.quiet => _quietSheet(context),
-    _Step.nudges => _nudgesSheet(context),
-    _Step.apps => _appsSheet(context),
     _Step.plan => _planSheet(context),
   };
 
   // -------------------------------------------------------------------------
   // Sheets: the words and controls under each scene.
 
-  List<Widget> _storySheet(BuildContext context) => [
-    const _StoryCard(
-      prop: CurreProp.yarn,
-      label: 'Without Curre',
-      body: 'One quick look. The feed pulls you in. An hour is gone.',
-    ),
-    const SizedBox(height: CurreSpace.s3),
-    const _StoryCard(
-      prop: CurreProp.door,
-      label: 'With Curre',
-      body: 'Say what you need. Curre opens the app right where you need it.',
-      highlight: true,
-    ),
-  ];
-
-  List<Widget> _privacySheet(BuildContext context) {
+  List<Widget> _welcomeSheet(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     return [
-      const Text('Here is exactly what Curre reads, and what it never sees.'),
+      const _StoryCard(
+        prop: CurreProp.yarn,
+        label: 'Without Curre',
+        body: 'One quick look. The feed pulls you in. An hour is gone.',
+      ),
+      const SizedBox(height: CurreSpace.s3),
+      const _StoryCard(
+        prop: CurreProp.door,
+        label: 'With Curre',
+        body: 'Say what you need. Curre opens the app right where you need it.',
+        highlight: true,
+      ),
       const SizedBox(height: CurreSpace.s4),
-      const _PromiseCard(
-        prop: CurreProp.shield,
-        title: 'Stays on this phone',
-        lines: [
-          'Your contacts and chats',
-          'Your history of plans and reasons',
-          'Which apps you use, and when',
+      Row(
+        children: [
+          const CurrePropArt(CurreProp.shield, size: 32),
+          const SizedBox(width: CurreSpace.s3),
+          Expanded(
+            child: Text(
+              'Your history and contacts stay on this phone.',
+              style: type.body.copyWith(color: colors.ink2),
+            ),
+          ),
         ],
       ),
-      const SizedBox(height: CurreSpace.s3),
-      const _PromiseCard(
-        prop: CurreProp.cloud,
-        title: 'Read online for a short time',
-        lines: [
-          'The plan you type or say',
-          'The names of your apps',
-          'Your reason when you open a hidden app',
-          'A note you send after a task',
-        ],
-      ),
-      const SizedBox(height: CurreSpace.s3),
-      Text(
-        'Curre keeps no online copy. The AI service that reads your words may keep a copy for about a day so retries work, then deletes it. Your history stays on this phone.',
-        style: type.caption.copyWith(color: colors.ink3),
-        textAlign: TextAlign.center,
+      _QuietButton(
+        label: 'How Curre keeps things private',
+        onPressed: _openPrivacyDetails,
       ),
     ];
   }
 
+  List<Widget> _youSheet(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    final missing = _nameTried && _displayName == null;
+    return [
+      const Text('Just for your greeting on Home. It stays on this phone.'),
+      const SizedBox(height: CurreSpace.s4),
+      TextField(
+        controller: _name,
+        focusNode: _nameFocus,
+        maxLength: 60,
+        textCapitalization: TextCapitalization.words,
+        textInputAction: TextInputAction.done,
+        style: type.youLarge.copyWith(height: 1.15),
+        decoration: InputDecoration(
+          labelText: 'Your name',
+          hintText: 'Ada',
+          filled: true,
+          fillColor: colors.raised,
+          counterText: '',
+          errorText: missing ? 'Add a name, even just a nickname.' : null,
+        ),
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+      ),
+      const SizedBox(height: CurreSpace.s5),
+      Text(
+        'Pick a face, or keep your initial. You can change it any time.',
+        style: type.body.copyWith(color: colors.ink2),
+      ),
+      const SizedBox(height: CurreSpace.s3),
+      AvatarPicker(
+        selectedAvatarId: _avatarId,
+        onSelected: (id) => setState(() {
+          HapticFeedback.selectionClick();
+          _avatarId = id;
+        }),
+      ),
+      if (_avatarId != null) ...[
+        const SizedBox(height: CurreSpace.s2),
+        _QuietButton(
+          label: 'Use my initial instead',
+          onPressed: () => setState(() => _avatarId = null),
+        ),
+      ],
+    ];
+  }
+
   List<Widget> _pullSheet(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
     final choices = _pullChoices;
     final shown = _showAllPull ? choices : choices.take(_shortList).toList();
     return [
       const Text(
-        'Pick the ones where a quick look turns into an hour. Curre keeps them, and anything you don’t need right now, off your Home.',
+        'Pick the ones where a quick look turns into an hour. They go to Hidden apps: off your Home, a tap away when you really need one.',
       ),
       const SizedBox(height: CurreSpace.s4),
       _AppChips(
@@ -695,117 +558,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onPressed: () => setState(() => _showAllPull = true),
         ),
       ],
-    ];
-  }
-
-  List<Widget> _nameSheet(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    final missing = _nameTried && _displayName == null;
-    return [
-      const Text('Just for your greeting. It stays on this phone.'),
       const SizedBox(height: CurreSpace.s4),
-      TextField(
-        controller: _name,
-        focusNode: _nameFocus,
-        autofocus: true,
-        maxLength: 60,
-        textCapitalization: TextCapitalization.words,
-        textInputAction: TextInputAction.done,
-        style: type.youLarge.copyWith(height: 1.15),
-        decoration: InputDecoration(
-          labelText: 'Your name',
-          hintText: 'Ada',
-          filled: true,
-          fillColor: colors.raised,
-          counterText: '',
-          errorText: missing ? 'Add a name, even just a nickname.' : null,
-        ),
-        onChanged: (_) => setState(() {}),
-        onSubmitted: (_) => _submitName(),
-      ),
-    ];
-  }
-
-  List<Widget> _faceSheet(BuildContext context) => [
-    const Text(
-      'It sits next to your greeting on Home. You can change it any time.',
-    ),
-    const SizedBox(height: CurreSpace.s4),
-    AvatarPicker(
-      selectedAvatarId: _avatarId,
-      onSelected: (id) => setState(() {
-        HapticFeedback.selectionClick();
-        _avatarId = id;
-      }),
-    ),
-  ];
-
-  List<Widget> _morningSheet(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    final custom = !_morningChoices.contains(_morning);
-    final afternoon = controller.settings.sessionStarts[SessionName.afternoon]!;
-    final evening = controller.settings.sessionStarts[SessionName.evening]!;
-    return [
-      const Text('That’s when Curre asks what your morning is for.'),
-      const SizedBox(height: CurreSpace.s4),
-      LayoutBuilder(
-        builder: (context, box) {
-          final columns =
-              box.maxWidth < 300 ||
-                  MediaQuery.textScalerOf(context).scale(1) > 1.5
-              ? 1
-              : 2;
-          final width =
-              (box.maxWidth - CurreSpace.s3 * (columns - 1)) / columns;
-          return Wrap(
-            spacing: CurreSpace.s3,
-            runSpacing: CurreSpace.s3,
-            children: [
-              for (final time in [..._morningChoices, if (custom) _morning])
-                SizedBox(
-                  width: width,
-                  child: ChoiceCard(
-                    dense: true,
-                    title: time.toString(),
-                    subtitle: _morningHint(time),
-                    selected: time == _morning,
-                    semanticLabel:
-                        'Morning starts at $time, ${_morningHint(time)}',
-                    onTap: () => _setMorning(time),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+      const _AlwaysOnHome(),
       const SizedBox(height: CurreSpace.s2),
-      _QuietButton(label: 'Pick another time', onPressed: _pickOtherMorning),
-      if (_morningError != null) ...[
-        const SizedBox(height: CurreSpace.s2),
-        Semantics(
-          liveRegion: true,
-          child: Text(
-            _morningError!,
-            style: type.caption.copyWith(color: colors.emberText),
-          ),
-        ),
-      ],
-      const SizedBox(height: CurreSpace.s3),
       Text(
-        'Afternoons start at $afternoon and evenings at $evening. You can change all three in Curre settings.',
+        'Plans can open the rest. Change any of this in Curre settings.',
         style: type.caption.copyWith(color: colors.ink3),
       ),
     ];
   }
-
-  static String _morningHint(LocalTime time) => switch (time.hour) {
-    < 5 => 'Before the sun',
-    5 => 'First light',
-    6 => 'Early riser',
-    _ => 'A gentle start',
-  };
 
   List<Widget> _homeSheet(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
@@ -860,190 +621,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     HomeSettingsOpened.none => 'Open your phone’s Settings app, search for “Home app”, choose Curre, then come back here.',
   };
 
-  /// The apps the user said pull them in, else familiar examples: the
-  /// hidden apps the sneak-back and quiet scenes show.
-  List<LaunchableApp> get _sceneHiddenApps {
-    final pulled = [
-      for (final app in _pullChoices)
-        if (_pull.contains(app.packageName)) app,
-    ];
-    if (pulled.isNotEmpty) return pulled;
-    return const [
-      LaunchableApp(packageName: 'com.instagram.android', label: 'Instagram'),
-      LaunchableApp(packageName: 'com.netflix.mediaclient', label: 'Netflix'),
-    ];
-  }
-
-  List<Widget> _sneakSheet(BuildContext context) => [
-    const Text(
-      'Some apps sneak back in through notifications, links or your recent apps. Let Curre ask “Why now?” when that happens.',
-    ),
-    const SizedBox(height: CurreSpace.s4),
-    const _PromiseCard(
-      prop: CurreProp.shield,
-      title: 'What Curre checks',
-      lines: [
-        'Only which app just opened',
-        'Never what’s on your screen or in your messages',
-        'You can switch it off any time in your phone’s Settings',
-      ],
-    ),
-    ..._accessNotes(
-      context,
-      android: 'Android calls this “Usage access”. When the list opens, find Curre, switch it on, then come back here.',
-      done: 'All set. Curre will ask “Why now?” when a hidden app sneaks back in.',
-    ),
-  ];
-
-  List<Widget> _quietSheet(BuildContext context) => [
-    const Text(
-      'Hidden apps can still buzz you. Let Curre keep them quiet until you bring them back.',
-    ),
-    const SizedBox(height: CurreSpace.s4),
-    const _PromiseCard(
-      prop: CurreProp.zzz,
-      title: 'What stays quiet',
-      lines: [
-        'Only notifications from hidden apps',
-        'The apps on your Home still reach you',
-        'You can switch it off any time in your phone’s Settings',
-      ],
-    ),
-    ..._accessNotes(
-      context,
-      android: 'Android calls this “Notification access” and shows a strong warning. Curre uses it only to keep hidden apps quiet. Find Curre, switch it on, then come back here.',
-      done: 'All set. Hidden apps will stay quiet until you bring them back.',
-    ),
-  ];
-
-  /// How to switch an intercept permission on in Android, and where it
-  /// stands once the user is back.
-  List<Widget> _accessNotes(
-    BuildContext context, {
-    required String android,
-    required String done,
-  }) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    final on = _accessOn[_step];
-    return [
-      const SizedBox(height: CurreSpace.s3),
-      Text(android, style: type.caption.copyWith(color: colors.ink3)),
-      if (on != null) ...[
-        const SizedBox(height: CurreSpace.s3),
-        Semantics(
-          liveRegion: true,
-          child: _StatusNote(
-            glyph: on == true ? CurreGlyphKind.check : CurreGlyphKind.info,
-            color: on == true ? colors.emberText : colors.ink2,
-            text: on == true ? done : 'It isn’t on yet. Try again, or skip for now and turn it on later in Curre settings.',
-          ),
-        ),
-      ],
-    ];
-  }
-
-  List<Widget> _nudgesSheet(BuildContext context) => const [
-    Text(
-      'When you open a hidden app for a few minutes, Curre can let you know when the time is up. No sound, no buzz.',
-    ),
-    SizedBox(height: CurreSpace.s4),
-    _PromiseCard(
-      prop: CurreProp.bell,
-      title: 'One silent note',
-      lines: [
-        'Only when time you asked for runs out',
-        'Never ads, never “come back” reminders',
-        'Turn it off any time',
-      ],
-    ),
-  ];
-
-  List<Widget> _appsSheet(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    final all = _appChoices;
-    final filtered = _query.isEmpty
-        ? all
-        : all
-              .where(
-                (app) => app.label.toLowerCase().contains(_query.toLowerCase()),
-              )
-              .toList(growable: false);
-    final shown = _showAllApps
-        ? filtered
-        : filtered.take(math.max(_shortList, _apps.length)).toList();
-    final enough = _apps.length >= _minimumApps;
-    return [
-      Text(
-        'When you plan your day, Curre picks the apps from this list. Choose 2 to $_maxApps.',
-      ),
-      const SizedBox(height: CurreSpace.s3),
-      _AlwaysOnHome(controller: controller),
-      const SizedBox(height: CurreSpace.s4),
-      Semantics(
-        liveRegion: true,
-        child: Text(
-          enough
-              ? '${_apps.length} picked'
-              : 'Pick at least $_minimumApps apps',
-          style: type.meta.copyWith(
-            color: enough ? colors.ink3 : colors.emberText,
-          ),
-        ),
-      ),
-      const SizedBox(height: CurreSpace.s2),
-      if (_showAllApps && all.length > 12) ...[
-        TextField(
-          decoration: InputDecoration(
-            labelText: 'Find an app',
-            filled: true,
-            fillColor: colors.raised,
-            prefixIcon: Padding(
-              padding: const EdgeInsets.all(12),
-              child: CurreGlyph(CurreGlyphKind.kindBrowse, color: colors.ink3),
-            ),
-          ),
-          onChanged: (value) => setState(() => _query = value.trim()),
-        ),
-        const SizedBox(height: CurreSpace.s3),
-      ],
-      for (final app in shown) ...[
-        ChoiceCard(
-          dense: true,
-          leading: AppMonogram(label: app.label, packageName: app.packageName),
-          title: app.label,
-          subtitle: appTaskExamples[app.packageName],
-          selected: _apps.contains(app.packageName),
-          onTap: () => _toggleApp(app),
-        ),
-        const SizedBox(height: CurreSpace.s2),
-      ],
-      if (!_showAllApps && filtered.length > shown.length)
-        _QuietButton(
-          label: 'Show all ${all.length} apps',
-          onPressed: () => setState(() => _showAllApps = true),
-        ),
-    ];
-  }
-
-  void _toggleApp(LaunchableApp app) {
-    HapticFeedback.selectionClick();
-    setState(() {
-      if (_apps.remove(app.packageName)) {
-        _appsRemoved.add(app.packageName);
-      } else if (_apps.length < _maxApps) {
-        _apps.add(app.packageName);
-        _appsRemoved.remove(app.packageName);
-      } else {
-        showCurreSnack(
-          context,
-          'That’s $_maxApps already. Untick one to add another.',
-        );
-      }
-    });
-  }
-
   List<Widget> _planSheet(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
@@ -1097,6 +674,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               }),
             ),
         ],
+      ),
+      const SizedBox(height: CurreSpace.s4),
+      Text(
+        'Curre asks what your morning is for from $_morning. Change that any time in Curre settings.',
+        style: type.caption.copyWith(color: colors.ink3),
       ),
     ];
   }
@@ -1182,18 +764,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   (_Action, _Action?) _actions() {
     switch (_step) {
-      case _Step.story:
+      case _Step.welcome:
         return (_Action('Show me how', _next, CurreGlyphKind.go), null);
-      case _Step.privacy:
-        return (_Action('Sounds fair', _next, CurreGlyphKind.go), null);
+      case _Step.you:
+        final name = _displayName;
+        return (
+          _Action(
+            name == null || name.runes.length > 16
+                ? 'Continue'
+                : 'Call me $name',
+            _submitYou,
+            CurreGlyphKind.go,
+          ),
+          null,
+        );
       case _Step.pull:
         final count = _pull.length;
         return (
           _Action(
             switch (count) {
               0 => 'Pick at least one',
-              1 => 'This one pulls me in',
-              _ => 'These pull me in',
+              1 => 'Hide this one',
+              _ => 'Hide these $count',
             },
             count == 0 ? null : _leavePull,
             count == 0 ? null : CurreGlyphKind.go,
@@ -1202,35 +794,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             setState(_pull.clear);
             _next();
           }),
-        );
-      case _Step.name:
-        final name = _displayName;
-        return (
-          _Action(
-            name == null || name.runes.length > 16
-                ? 'Continue'
-                : 'Call me $name',
-            _submitName,
-            CurreGlyphKind.go,
-          ),
-          null,
-        );
-      case _Step.face:
-        return (
-          _Action(
-            _avatarId == null ? 'Pick a face first' : 'This is me',
-            _avatarId == null ? null : _next,
-            _avatarId == null ? null : CurreGlyphKind.go,
-          ),
-          _Action('Use my initial', () {
-            setState(() => _avatarId = null);
-            _next();
-          }),
-        );
-      case _Step.morning:
-        return (
-          _Action('Mornings start at $_morning', _next, CurreGlyphKind.go),
-          null,
         );
       case _Step.home:
         if (_homeReady == true) {
@@ -1245,31 +808,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _homeReady == false
               ? _Action('Open home settings', _openHomeSettings)
               : null,
-        );
-      case _Step.sneak || _Step.quiet:
-        if (_accessOn[_step] == true) {
-          return (_Action('Continue', _next, CurreGlyphKind.go), null);
-        }
-        return (
-          _Action('Allow', _askForAccess, CurreGlyphKind.go),
-          _Action('Skip for now', _next),
-        );
-      case _Step.nudges:
-        return (
-          _Action('Yes, nudge me', _allowNudges, CurreGlyphKind.notify),
-          _Action('Not now', _declineNudges),
-        );
-      case _Step.apps:
-        final count = _apps.length;
-        return (
-          _Action(
-            count < _minimumApps
-                ? 'Pick at least $_minimumApps'
-                : 'Use these $count apps',
-            count < _minimumApps ? null : _next,
-            count < _minimumApps ? null : CurreGlyphKind.go,
-          ),
-          null,
         );
       case _Step.plan:
         final session = _planSession.label;
@@ -1370,7 +908,7 @@ class _Stage extends StatelessWidget {
                     const SizedBox(width: CurreSpace.s3),
                     ExcludeSemantics(
                       child: Text(
-                        '$step of $total',
+                        '$step / $total',
                         style: type.meta.copyWith(color: palette.ink),
                       ),
                     ),
@@ -1495,74 +1033,6 @@ class _StoryCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(body, style: type.body.copyWith(color: colors.ink2)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PromiseCard extends StatelessWidget {
-  const _PromiseCard({
-    required this.prop,
-    required this.title,
-    required this.lines,
-  });
-
-  final CurreProp prop;
-  final String title;
-  final List<String> lines;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    return Container(
-      padding: const EdgeInsets.all(CurreSpace.s4),
-      decoration: BoxDecoration(
-        color: colors.raised,
-        borderRadius: CurreShape.md,
-        border: Border.all(color: colors.hairline, width: 1.5),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CurrePropArt(prop, size: 44),
-          const SizedBox(width: CurreSpace.s3),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: type.label.weight(700)),
-                const SizedBox(height: CurreSpace.s1),
-                for (final line in lines)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 9, right: 8),
-                          child: Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: colors.ember,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            line,
-                            style: type.body.copyWith(color: colors.ink2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
@@ -1772,10 +1242,10 @@ class _AppChip extends StatelessWidget {
   }
 }
 
+/// The essentials, picked for the user: they stay on Home whatever the
+/// plan.
 class _AlwaysOnHome extends StatelessWidget {
-  const _AlwaysOnHome({required this.controller});
-
-  final CurreController controller;
+  const _AlwaysOnHome();
 
   @override
   Widget build(BuildContext context) {
@@ -1796,11 +1266,7 @@ class _AlwaysOnHome extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CurreGlyph(
-              CurreGlyphKind.essential,
-              size: 20,
-              color: colors.emberText,
-            ),
+            CurreGlyph(CurreGlyphKind.check, size: 20, color: colors.emberText),
             const SizedBox(width: CurreSpace.s3),
             Expanded(
               child: Text.rich(

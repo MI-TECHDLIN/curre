@@ -123,6 +123,13 @@ class FakeGentleIntercept extends DisabledGentleInterceptGateway {
   List<MissedWhileHiddenNotification> missed;
   var usageRequests = 0;
   var notificationRequests = 0;
+  var appInfoOpens = 0;
+
+  @override
+  Future<bool> openAppInfo() async {
+    appInfoOpens++;
+    return true;
+  }
 
   @override
   Future<List<MissedWhileHiddenNotification>> loadMissedNotifications() async =>
@@ -168,6 +175,12 @@ class FakeNotificationGateway implements GrantNotificationGateway {
   bool allow;
   var requests = 0;
 
+  /// What Android says before any request; null when it can't tell.
+  bool? allowed;
+
+  @override
+  Future<bool?> areNotificationsAllowed() async => allowed;
+
   @override
   Future<void> cancel(int id) async {}
 
@@ -177,6 +190,7 @@ class FakeNotificationGateway implements GrantNotificationGateway {
   @override
   Future<bool> requestPermission() async {
     requests++;
+    allowed = allow;
     return allow;
   }
 
@@ -203,6 +217,7 @@ CurreController fakeController({
   DateTime? now,
   AppInventoryState appInventoryState = AppInventoryState.ready,
   List<LaterItem> laterItems = const <LaterItem>[],
+  Set<ContextPrompt> pendingPrompts = const <ContextPrompt>{},
 }) {
   final homePlatform = home ?? FakeHomePlatform();
   final launcher = platform ?? FakeDoorPlatform();
@@ -240,6 +255,7 @@ CurreController fakeController({
     appInventoryState: appInventoryState,
     laterItems: laterItems,
     onboardingComplete: onboardingComplete,
+    pendingPrompts: pendingPrompts,
     now: () => now ?? DateTime(2026, 10, 26, 6, 40),
   );
 }

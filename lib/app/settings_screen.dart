@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/core.dart';
 import '../design/design.dart';
 import '../platform/platform.dart';
+import 'access_help.dart';
 import 'app_choice_screen.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
@@ -31,6 +32,15 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _checkingUsageAccess = true;
   bool _checkingNotificationAccess = true;
 
+  /// Whether Usage access or notification access was asked for here and
+  /// Android still says no: their cards then show the steps again.
+  bool _usageTried = false;
+  bool _notificationAccessTried = false;
+
+  /// Android's answer for quiet nudges; null when Curre can't tell.
+  bool? _notificationsAllowed;
+  bool _checkingNotifications = true;
+
   CurreController get controller => widget.controller;
 
   @override
@@ -40,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     unawaited(_checkHome());
     unawaited(_refreshUsageAccess());
     unawaited(_refreshNotificationAccess());
+    unawaited(_refreshNotificationPermission());
   }
 
   @override
@@ -57,6 +68,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       unawaited(_checkHome());
       unawaited(_refreshUsageAccess());
       unawaited(_refreshNotificationAccess());
+      unawaited(_refreshNotificationPermission());
     }
   }
 
@@ -150,6 +162,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   allowLabel: 'Turn on Usage access',
                   allowGlyph: CurreGlyphKind.outOfSight,
                   onAllow: _requestUsageAccess,
+                  help: RestrictedSettingsHelp(
+                    controller: controller,
+                    stillOff: _usageTried,
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s3),
                 _AccessCard(
@@ -171,6 +187,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   allowLabel: 'Turn on notification access',
                   allowGlyph: CurreGlyphKind.notify,
                   onAllow: _requestNotificationAccess,
+                  help: RestrictedSettingsHelp(
+                    controller: controller,
+                    stillOff: _notificationAccessTried,
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Quiet nudges'),
@@ -198,7 +218,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 _SettingsTile(
                   glyph: CurreGlyphKind.notify,
                   title: 'Allow notifications',
-                  subtitle: 'Android controls whether the quiet nudges you choose can appear',
+                  subtitle: _checkingNotifications
+                      ? 'Checking…'
+                      : switch (_notificationsAllowed) {
+                          true =>
+                            'Allowed. The quiet nudges you choose can appear.',
+                          false => 'Not allowed yet. Tap to allow.',
+                          null => 'Android controls whether the quiet nudges you choose can appear',
+                        },
                   onTap: _askForNotificationPermission,
                 ),
                 const SizedBox(height: CurreSpace.s6),
@@ -355,6 +382,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (mounted) setState(() => _checkingNotificationAccess = false);
   }
 
+  Future<void> _refreshNotificationPermission() async {
+    final allowed = await controller.notificationsAllowed();
+    if (!mounted) return;
+    setState(() {
+      _notificationsAllowed = allowed;
+      _checkingNotifications = false;
+    });
+  }
+
   Future<void> _setGentleInterceptEnabled(bool enabled) =>
       _save(controller.settings.copyWith(askWhyOnHiddenAppOpen: enabled));
 
@@ -367,7 +403,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _requestUsageAccess() async {
     final granted = await controller.requestUsageAccess();
     if (!mounted) return;
-    setState(() => _checkingUsageAccess = false);
+    setState(() {
+      _checkingUsageAccess = false;
+      _usageTried = !granted;
+    });
     showCurreSnack(
       context,
       granted
@@ -379,7 +418,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _requestNotificationAccess() async {
     final granted = await controller.requestNotificationAccess();
     if (!mounted) return;
-    setState(() => _checkingNotificationAccess = false);
+    setState(() {
+      _checkingNotificationAccess = false;
+      _notificationAccessTried = !granted;
+    });
     showCurreSnack(
       context,
       granted
@@ -400,6 +442,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   Future<void> _askForNotificationPermission() async {
     final allowed = await controller.requestNotifications();
     if (!mounted) return;
+    setState(() {
+      _notificationsAllowed = allowed;
+      _checkingNotifications = false;
+    });
     showCurreSnack(
       context,
       allowed
@@ -569,6 +615,7 @@ class _AccessCard extends StatelessWidget {
     required this.allowLabel,
     required this.allowGlyph,
     required this.onAllow,
+    required this.help,
   });
 
   final String title;
@@ -580,6 +627,9 @@ class _AccessCard extends StatelessWidget {
   final String allowLabel;
   final CurreGlyphKind allowGlyph;
   final VoidCallback onAllow;
+
+  /// Shown while Android still says no: how to allow a restricted setting.
+  final Widget help;
 
   @override
   Widget build(BuildContext context) {
@@ -619,6 +669,8 @@ class _AccessCard extends StatelessWidget {
                 glyph: allowGlyph,
                 onPressed: onAllow,
               ),
+              const SizedBox(height: CurreSpace.s3),
+              help,
             ],
           ],
         ),
