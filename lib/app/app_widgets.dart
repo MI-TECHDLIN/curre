@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/core.dart';
@@ -589,4 +588,57 @@ void showCurreSnack(BuildContext context, String message) {
         behavior: SnackBarBehavior.floating,
       ),
     );
+}
+
+/// What a waiting screen says while the first call of a session is slow.
+const gettingReadyCopy = 'Getting things ready…';
+const gettingReadyDetail = 'This can take a few more seconds.';
+
+/// Shows [child] (the screen's usual waiting line) until [waking] turns on,
+/// then a calm "getting ready" note in the same place.
+class GettingReadyNote extends StatelessWidget {
+  const GettingReadyNote({
+    super.key,
+    required this.waking,
+    required this.child,
+    this.textAlign,
+  });
+
+  final ValueListenable<bool> waking;
+  final Widget child;
+  final TextAlign? textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: waking,
+      child: child,
+      builder: (context, isWaking, child) {
+        if (!isWaking) return child!;
+        final colors = Theme.of(context).extension<CurreColors>()!;
+        final type = Theme.of(context).extension<CurreType>()!;
+        final align = textAlign ?? TextAlign.start;
+        return Semantics(
+          key: const Key('getting-ready'),
+          liveRegion: true,
+          child: Column(
+            crossAxisAlignment: switch (align) {
+              TextAlign.center => CrossAxisAlignment.center,
+              _ => CrossAxisAlignment.start,
+            },
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(gettingReadyCopy, style: type.body, textAlign: align),
+              const SizedBox(height: CurreSpace.s1),
+              Text(
+                gettingReadyDetail,
+                style: type.caption.copyWith(color: colors.ink2),
+                textAlign: align,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }

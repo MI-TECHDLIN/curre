@@ -244,9 +244,12 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             semanticLabel: 'Reading your reason',
           ),
           const SizedBox(height: CurreSpace.s4),
-          Text(
-            'Reading your reason…',
-            style: type.body.copyWith(color: colors.ink2),
+          GettingReadyNote(
+            waking: controller.waking,
+            child: Text(
+              'Reading your reason…',
+              style: type.body.copyWith(color: colors.ink2),
+            ),
           ),
         ],
       ),

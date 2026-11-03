@@ -821,6 +821,12 @@ class CurreController extends ChangeNotifier {
     await api?.warmUp();
   }
 
+  /// True while a plan, reason or note call is slow, or is the first call
+  /// before anything has answered this session. Screens that wait on one
+  /// show [GettingReadyNote] in place.
+  ValueListenable<bool> get waking => api?.waking ?? _neverWaking;
+  static final ValueNotifier<bool> _neverWaking = ValueNotifier<bool>(false);
+
   Future<PlanBuildResult> buildPlan(String intention) async {
     final candidates = candidateApps;
     if (api == null || candidates.length < 2) {

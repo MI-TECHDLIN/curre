@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:curre/app/checkin_screen.dart';
@@ -78,40 +79,38 @@ void main() {
   }
 
   group('when a plan can’t be made, Curre says why and what to do', () {
-    for (final (name, respond, headline, body) in <(
-      String,
-      Future<http.Response> Function(http.Request),
-      String,
-      String,
-    )>[
-      (
-        'offline',
-        (_) async => throw http.ClientException('Network is unreachable'),
-        'Couldn’t connect just now',
-        'Check your internet and try again, or choose the apps yourself below.',
-      ),
-      (
-        'too slow',
-        (_) => Future<http.Response>.delayed(
-          const Duration(seconds: 2),
-          () => http.Response(_planBody, 200),
-        ),
-        'That took too long',
-        'Try again in a moment, or choose the apps yourself below.',
-      ),
-      (
-        'refused',
-        (_) async => http.Response('unavailable', 503),
-        'Curre couldn’t plan that just now',
-        'Try again in a moment, or choose the apps yourself below.',
-      ),
-      (
-        'garbled',
-        (_) async => http.Response('{"apps": "?"}', 200),
-        'Curre couldn’t read that plan',
-        'Try again in a moment, or choose the apps yourself below.',
-      ),
-    ]) {
+    for (final (name, respond, headline, body)
+        in <
+          (String, Future<http.Response> Function(http.Request), String, String)
+        >[
+          (
+            'offline',
+            (_) async => throw http.ClientException('Network is unreachable'),
+            'Couldn’t connect just now',
+            'Check your internet and try again, or choose the apps yourself below.',
+          ),
+          (
+            'too slow',
+            (_) => Future<http.Response>.delayed(
+              const Duration(seconds: 2),
+              () => http.Response(_planBody, 200),
+            ),
+            'That took too long',
+            'Try again in a moment, or choose the apps yourself below.',
+          ),
+          (
+            'refused',
+            (_) async => http.Response('unavailable', 503),
+            'Curre couldn’t plan that just now',
+            'Try again in a moment, or choose the apps yourself below.',
+          ),
+          (
+            'garbled',
+            (_) async => http.Response('{"apps": "?"}', 200),
+            'Curre couldn’t read that plan',
+            'Try again in a moment, or choose the apps yourself below.',
+          ),
+        ]) {
       testWidgets(name, (tester) async {
         final controller = fakeController(api: api(respond));
         await show(tester, CheckinScreen(controller: controller));
@@ -222,5 +221,119 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
     expect(find.text('Cancel'), findsOneWidget);
   });
-}
 
+  group('a slow first call says things are getting ready', () {
+    CurreApiClient asleep(Future<http.Response> Function(http.Request) post) =>
+        CurreApiClient(
+          baseUrl: Uri.parse('https://curre.test'),
+          appKey: 'test-key',
+          planRetryDelay: Duration.zero,
+          httpClient: MockClient((request) async {
+            // The warm-up ping never gets an answer from a sleeping host.
+            if (request.method == 'GET') {
+              throw http.ClientException('Connection closed');
+            }
+            return post(request);
+          }),
+        );
+
+    Future<void> setMorning(WidgetTester tester) async {
+      await tester.enterText(
+        find.byKey(const Key('checkin-intention')),
+        'Learn the G chord on YouTube till 7',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Set my morning'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('and waits past the usual time for the plan', (tester) async {
+      final controller = fakeController(
+        api: asleep(
+          // A sleeping free host took about 13 s to answer its first plan.
+          (_) => Future<http.Response>.delayed(
+            const Duration(seconds: 13),
+            () => http.Response(_planBody, 200),
+          ),
+        ),
+      );
+      await show(tester, CheckinScreen(controller: controller));
+      await setMorning(tester);
+
+      expect(find.text('Getting things ready…'), findsOneWidget);
+      expect(find.text('This can take a few more seconds.'), findsOneWidget);
+      expect(find.textContaining('Looking through your'), findsNothing);
+
+      // Past the usual 12 s plan budget, still waiting calmly.
+      await tester.pump(const Duration(seconds: 12));
+      expect(find.text('Getting things ready…'), findsOneWidget);
+      expect(find.text('That took too long'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+      await waitFor(tester, find.text('Here’s your plan'));
+      expect(find.text('Here’s your plan'), findsOneWidget);
+      expect(controller.waking.value, isFalse);
+    });
+
+    testWidgets('and still falls back when the wait runs out', (tester) async {
+      final controller = fakeController(
+        api: asleep((_) => Completer<http.Response>().future),
+      );
+      await show(tester, CheckinScreen(controller: controller));
+      await setMorning(tester);
+      expect(find.text('Getting things ready…'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 29));
+      expect(find.text('That took too long'), findsNothing);
+
+      // The client's budget runs on a real stopwatch, so under the test's
+      // fake clock the retry outlasts 30 s; the unit tests pin the total.
+      for (
+        var i = 0;
+        i < 40 && find.text('That took too long').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.text('That took too long'), findsOneWidget);
+      expect(find.text('Use these apps'), findsOneWidget);
+      expect(controller.waking.value, isFalse);
+    });
+
+    testWidgets('while Why now? reads a reason', (tester) async {
+      final controller = fakeController(
+        api: asleep(
+          (_) => Future<http.Response>.delayed(
+            const Duration(seconds: 13),
+            () => http.Response('unavailable', 503),
+          ),
+        ),
+      );
+      final app = controller.apps.firstWhere((app) => app.label == 'Instagram');
+      await show(
+        tester,
+        UnlockGateScreen(
+          controller: controller,
+          app: app,
+          overrideDuration: const Duration(minutes: 1),
+        ),
+      );
+      await tester.enterText(
+        find.byKey(const Key('unlock-reason')),
+        'reply Ada about rehearsal',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Bring it back'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Getting things ready…'), findsOneWidget);
+      expect(find.text('Reading your reason…'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 14));
+      await waitFor(tester, find.text('Instagram opens in 30 seconds'));
+      expect(find.text('Instagram opens in 30 seconds'), findsOneWidget);
+    });
+  });
+}
