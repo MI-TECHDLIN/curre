@@ -24,9 +24,13 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   one-time download pinned by SHA-256: `SpeechInputService`
   (`lib/platform/speech_input.dart`) opens the voice sheet
   (`lib/app/voice_sheet.dart`, bound in `main.dart`); the model store, mic
-  and engine are `lib/platform/voice_*.dart`. Tests use
-  `test/support/voice_fakes.dart` (`fakeController` does), since the real
-  store needs path_provider.
+  and engine are `lib/platform/voice_*.dart`. The files download quietly
+  (`VoicePrefetcher`, `voice_prefetch.dart`): started by
+  `finishOnboarding`/bootstrap, Wi-Fi and enough battery only unless the
+  person taps "Download now" or allows mobile data; the mic never blocks on
+  it. Connection/battery come from `voiceDownloadConditions` in
+  `MainActivity.kt`. Tests use `test/support/voice_fakes.dart`
+  (`fakeController` does), since the real store needs path_provider.
 - Hidden-app foreground checks and notification quieting use the Android
   services beside `MainActivity.kt`; their access adapters and pure policies
   live in `lib/platform/gentle_intercept.dart` and `quiet_notifications.dart`.

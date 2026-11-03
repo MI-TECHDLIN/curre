@@ -162,6 +162,10 @@ class CurreController extends ChangeNotifier {
     );
     await controller.initializeGentleIntercept();
     await controller._prepareReminders();
+    // Later starts: fetch the voice files quietly if they are still missing.
+    if (controller.onboardingComplete) {
+      unawaited(controller.speech.prefetch.start());
+    }
     return controller;
   }
 
@@ -446,6 +450,9 @@ class CurreController extends ChangeNotifier {
     _firstIntention = intention == null || intention.isEmpty ? null : intention;
     _firstCheckinRequested = _firstIntention != null;
     onboardingComplete = true;
+    // Voice typing's files start downloading quietly now (Wi-Fi only by
+    // default), so the mic is usually ready by its first tap.
+    unawaited(speech.prefetch.start());
     await _syncGentleInterceptPolicy();
     try {
       await _syncReminderSettings();
@@ -1808,6 +1815,7 @@ class CurreController extends ChangeNotifier {
   @override
   void dispose() {
     api?.close();
+    speech.prefetch.stop();
     unawaited(gentleIntercept.dispose());
     super.dispose();
   }

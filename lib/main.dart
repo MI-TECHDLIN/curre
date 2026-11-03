@@ -210,6 +210,8 @@ class _CurreRootState extends State<_CurreRoot> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     unawaited(_refreshAndPoll());
+    // Back in front: the connection or battery may have changed.
+    unawaited(controller.speech.prefetch.recheck());
   }
 
   Future<void> _refreshAndPoll() async {

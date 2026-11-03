@@ -199,14 +199,59 @@ class FakeVoiceModelStore implements VoiceModelStore {
   }
 }
 
+/// The phone's connection and battery, set by the test.
+class FakeVoiceConditions implements VoiceConditionsGateway {
+  FakeVoiceConditions({
+    this.network = VoiceNetwork.unmetered,
+    this.batteryLow = false,
+  });
+
+  VoiceNetwork network;
+  bool batteryLow;
+  var reads = 0;
+
+  void wifi() => network = VoiceNetwork.unmetered;
+  void mobileData() => network = VoiceNetwork.metered;
+  void offline() => network = VoiceNetwork.none;
+
+  @override
+  Future<VoiceDownloadConditions> read() async {
+    reads++;
+    return VoiceDownloadConditions(network: network, batteryLow: batteryLow);
+  }
+}
+
+/// A prefetcher over fakes: no timers, and a running download looks at the
+/// conditions on every bit of progress.
+VoicePrefetcher fakePrefetcher({
+  FakeVoiceModelStore? models,
+  FakeVoiceConditions? conditions,
+  MemoryVoicePrefetchChoices? choices,
+}) => VoicePrefetcher(
+  models: models ?? FakeVoiceModelStore(),
+  conditions: conditions ?? FakeVoiceConditions(),
+  choices: choices ?? MemoryVoicePrefetchChoices(),
+  conditionsCheckEvery: Duration.zero,
+);
+
 SpeechInputService fakeSpeech({
   FakeVoiceModelStore? models,
   FakeMicrophone? microphone,
   FakeEngine? engine,
+  FakeVoiceConditions? conditions,
+  MemoryVoicePrefetchChoices? choices,
   String language = 'en',
-}) => SpeechInputService(
-  models: models ?? FakeVoiceModelStore(),
-  microphone: microphone ?? FakeMicrophone(),
-  engine: engine ?? FakeEngine(),
-  language: () => language,
-);
+}) {
+  final store = models ?? FakeVoiceModelStore();
+  return SpeechInputService(
+    models: store,
+    microphone: microphone ?? FakeMicrophone(),
+    engine: engine ?? FakeEngine(),
+    prefetch: fakePrefetcher(
+      models: store,
+      conditions: conditions,
+      choices: choices,
+    ),
+    language: () => language,
+  );
+}

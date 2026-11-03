@@ -1,5 +1,6 @@
 import 'voice_engine.dart';
 import 'voice_model.dart';
+import 'voice_prefetch.dart';
 
 // Web review builds have no files or native code: voice typing is simply
 // not there, and the sheet says so in plain words.
@@ -8,6 +9,16 @@ VoiceModelStore defaultVoiceModelStore() => const _NoVoiceModelStore();
 
 SpeechRecognizerEngine defaultSpeechRecognizerEngine() => const _NoEngine();
 
+VoiceConditionsGateway defaultVoiceConditions() => const _NoConditions();
+
+class _NoConditions implements VoiceConditionsGateway {
+  const _NoConditions();
+
+  @override
+  Future<VoiceDownloadConditions> read() async =>
+      const VoiceDownloadConditions(network: VoiceNetwork.none);
+}
+
 class _NoVoiceModelStore implements VoiceModelStore {
   const _NoVoiceModelStore();
 
@@ -15,7 +26,8 @@ class _NoVoiceModelStore implements VoiceModelStore {
   VoiceModelSpec get spec => whisperTinyInt8;
 
   @override
-  Future<VoiceModelPaths?> installed() async => null;
+  Future<VoiceModelPaths?> installed() async =>
+      throw UnsupportedError('Voice typing needs a phone.');
 
   @override
   Future<int> bytesOnPhone() async => 0;
