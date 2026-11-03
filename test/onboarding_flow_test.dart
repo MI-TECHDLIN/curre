@@ -533,4 +533,155 @@ void main() {
     await settle(tester);
     expect(tester.takeException(), isNull);
   });
+  group('when Android starts Curre afresh mid-onboarding', () {
+    // Making Curre the home screen can start a second Curre (Android's Home
+    // task) or a new process: a new controller and widget tree over the
+    // same saved data. These rebuild exactly that.
+    late SharedPreferences preferences;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      preferences = await SharedPreferences.getInstance();
+    });
+
+    Future<CurreController> startAfresh(
+      WidgetTester tester,
+      FakeHomePlatform home,
+    ) async {
+      await tester.pumpWidget(const SizedBox());
+      final controller = newUser(
+        home: home,
+        platform: FakeDoorPlatform(home: home),
+        store: CurreLocalStore(preferences),
+      );
+      await pump(tester, controller);
+      await settle(tester);
+      return controller;
+    }
+
+    /// Leaves Curre and comes back, through every state Android reports.
+    void leaveAndComeBack(WidgetTester tester) {
+      for (final state in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(state);
+      }
+    }
+
+    Future<void> answerFirstSteps(WidgetTester tester) async {
+      await tapText(tester, 'Show me how');
+      await tester.enterText(find.byType(TextField), 'Ada');
+      await settle(tester);
+      await tester.ensureVisible(
+        find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
+      );
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
+      );
+      await settle(tester);
+      await tapText(tester, 'Call me Ada');
+      await tapText(tester, 'Instagram');
+      await tapText(tester, 'Netflix');
+    }
+
+    testWidgets('it picks up at the apps step with the answers kept', (
+      tester,
+    ) async {
+      final home = FakeHomePlatform(isHome: false);
+      await startAfresh(tester, home);
+      await answerFirstSteps(tester);
+      // Leaving Curre mid-step keeps what was picked on this step too.
+      leaveAndComeBack(tester);
+
+      await startAfresh(tester, home);
+      expect(find.text('What pulls you in?'), findsOneWidget);
+      expect(find.text('3 / 5'), findsOneWidget);
+      expect(find.text('Hide these 2'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Back'));
+      await settle(tester);
+      expect(find.text('Call me Ada'), findsOneWidget);
+    });
+
+    testWidgets('once Curre is Home, it goes on to the first plan', (
+      tester,
+    ) async {
+      final home = FakeHomePlatform(isHome: false);
+      await startAfresh(tester, home);
+      await answerFirstSteps(tester);
+      await tapText(tester, 'Hide these 2');
+      expect(find.text('Make Curre your home screen.'), findsOneWidget);
+      await tapText(tester, 'Make Curre my home screen');
+
+      // Android makes Curre Home and starts it again.
+      final controller = await startAfresh(tester, home);
+      expect(find.text('What’s this morning for?'), findsOneWidget);
+      expect(find.text('5 / 5'), findsOneWidget);
+      await tapText(tester, 'I’ll plan later');
+      await settle(tester);
+
+      expect(controller.onboardingComplete, isTrue);
+      expect(controller.settings.displayName, 'Ada');
+      expect(controller.settings.avatarId, 'avatar-03');
+      expect(controller.settings.candidates, isNot(contains(_instagram)));
+      expect(controller.settings.candidates, isNot(contains(_netflix)));
+      // Finishing forgets the half-way answers.
+      expect(CurreLocalStore(preferences).loadOnboardingDraft(), isNull);
+    });
+
+    testWidgets('if Curre isn’t Home yet, it waits on the Home step', (
+      tester,
+    ) async {
+      final home = FakeHomePlatform(isHome: false);
+      final platform = FakeDoorPlatform(home: home)..grantHome = false;
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      preferences = await SharedPreferences.getInstance();
+      await tester.pumpWidget(const SizedBox());
+      await pump(
+        tester,
+        newUser(
+          home: home,
+          platform: platform,
+          store: CurreLocalStore(preferences),
+        ),
+      );
+      await answerFirstSteps(tester);
+      await tapText(tester, 'Hide these 2');
+
+      await startAfresh(tester, home);
+      expect(find.text('Make Curre your home screen.'), findsOneWidget);
+      expect(find.text('4 / 5'), findsOneWidget);
+    });
+
+    testWidgets('the first Curre catches up when the other one finished', (
+      tester,
+    ) async {
+      final home = FakeHomePlatform(isHome: false);
+      final store = CurreLocalStore(preferences);
+      final first = newUser(home: home, store: store);
+      await pump(tester, first);
+      await walkTo(tester, 'What’s this morning for?');
+
+      // The second Curre (Android's Home) finishes onboarding meanwhile.
+      final second = newUser(home: home, store: store);
+      await second.finishOnboarding(
+        displayName: 'Ada',
+        avatarId: null,
+        essentials: second.suggestedEssentials,
+        candidates: {_youtube, 'com.google.android.gm'},
+        morningStart: const LocalTime(6),
+        firstIntention: null,
+      );
+
+      leaveAndComeBack(tester);
+      await settle(tester);
+      expect(first.onboardingComplete, isTrue);
+      expect(find.byType(OnboardingScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+    });
+  });
 }

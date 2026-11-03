@@ -78,7 +78,47 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _essentials = settings.essentials.isEmpty
         ? controller.suggestedEssentials
         : settings.essentials.toSet();
+    final draft = controller.onboardingDraft;
+    if (draft != null) _restore(draft);
   }
+
+  /// Picks up where an earlier start of Curre left off. Android can start
+  /// Curre afresh once it becomes the home screen; if it is Home now, the
+  /// Home step is done.
+  void _restore(OnboardingDraft draft) {
+    _name.text = draft.displayName;
+    _avatarId = AvatarCatalog.byId(draft.avatarId)?.id;
+    final eligible = {for (final app in _eligibleApps) app.packageName};
+    _pull.addAll(draft.hidden.where(eligible.contains));
+    _showAllPull = draft.showAllApps;
+    _plan.text = draft.plan;
+    _step = _Step.values.asNameMap()[draft.step] ?? _Step.welcome;
+    if (_step == _Step.home) unawaited(_resumeAtHome());
+  }
+
+  Future<void> _resumeAtHome() async {
+    final ready = await controller.isDefaultHome();
+    if (!mounted || _step != _Step.home) return;
+    if (!ready) {
+      unawaited(_recheckHome());
+      return;
+    }
+    setState(() => _homeReady = true);
+    _next();
+  }
+
+  void _saveDraft() => unawaited(
+    controller.saveOnboardingDraft(
+      OnboardingDraft(
+        step: _step.name,
+        displayName: _name.text,
+        avatarId: _avatarId,
+        hidden: {..._pull},
+        showAllApps: _showAllPull,
+        plan: _plan.text,
+      ),
+    ),
+  );
 
   @override
   void dispose() {
@@ -91,9 +131,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Leaving Curre (Android's Home picker included) may be the last this
+    // copy of Curre sees: keep the answers so far.
+    if (state == AppLifecycleState.paused) _saveDraft();
+    if (state != AppLifecycleState.resumed) return;
+    // Another copy of Curre may have finished onboarding meanwhile.
+    unawaited(controller.catchUpOnboarding());
     // Android's home screen choice happens outside Curre. Check the real
     // answer whenever the user comes back to this step.
-    if (state != AppLifecycleState.resumed) return;
     if (_step == _Step.home) unawaited(_recheckHome());
   }
 
@@ -167,6 +212,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _error = null;
       _sinking = false;
     });
+    _saveDraft();
     if (step == _Step.home) unawaited(_recheckHome());
   }
 

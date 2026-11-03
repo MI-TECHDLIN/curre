@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'grants.dart';
 import 'later.dart';
 import 'models.dart';
+import 'onboarding_draft.dart';
 import 'proof.dart';
 import 'prompts.dart';
 import 'sessions.dart';
@@ -19,6 +20,7 @@ class CurreLocalStore {
   static const String _attemptsKey = 'curre.attempts.v1';
   static const String _doorUsesKey = 'curre.doorUses.v1';
   static const String _onboardingKey = 'curre.onboarding.v1';
+  static const String _onboardingDraftKey = 'curre.onboardingDraft.v1';
   static const String _planHistoryKey = 'curre.planHistory.v1';
   static const String _grantHistoryKey = 'curre.grantHistory.v1';
   static const String _taskTracesKey = 'curre.taskTraces.v1';
@@ -49,6 +51,27 @@ class CurreLocalStore {
 
   Future<void> setOnboardingComplete(bool complete) =>
       _preferences.setBool(_onboardingKey, complete);
+
+  /// Onboarding's answers so far, if it is under way.
+  OnboardingDraft? loadOnboardingDraft() {
+    final encoded = _preferences.getString(_onboardingDraftKey);
+    if (encoded == null) return null;
+    try {
+      return OnboardingDraft.fromJson(_decodeObject(encoded));
+    } on Object {
+      _preferences.remove(_onboardingDraftKey);
+      return null;
+    }
+  }
+
+  Future<void> saveOnboardingDraft(OnboardingDraft draft) =>
+      _preferences.setString(_onboardingDraftKey, jsonEncode(draft.toJson()));
+
+  Future<void> clearOnboardingDraft() =>
+      _preferences.remove(_onboardingDraftKey);
+
+  /// Reads again what another copy of Curre may have saved meanwhile.
+  Future<void> reloadFromDisk() => _preferences.reload();
 
   /// Whether the user has put away the Hidden apps explainer.
   bool get isHiddenAppsTipDismissed =>

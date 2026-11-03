@@ -258,7 +258,8 @@ class SceneCanvas extends StatelessWidget {
       child: FittedBox(
         fit: BoxFit.contain,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.noScaling),
           child: SizedBox(
             width: width,
             height: height,
@@ -429,7 +430,9 @@ class ChoiceCard extends StatelessWidget {
                   children: [
                     if (leading != null) ...[
                       leading!,
-                      SizedBox(width: dense ? CurreSpace.s2 + 2 : CurreSpace.s3),
+                      SizedBox(
+                        width: dense ? CurreSpace.s2 + 2 : CurreSpace.s3,
+                      ),
                     ],
                     Expanded(
                       child: Column(
@@ -546,17 +549,16 @@ class AppMonogram extends StatelessWidget {
         decoration: BoxDecoration(
           color: fillFor(packageName),
           borderRadius: BorderRadius.circular(size * .3),
-          border: Border.all(color: sceneInk, width: math.max(1.5, size * .045)),
+          border: Border.all(
+            color: sceneInk,
+            width: math.max(1.5, size * .045),
+          ),
         ),
         child: Text(
           letter,
           style: type.label
               .weight(760)
-              .copyWith(
-                fontSize: size * .44,
-                height: 1,
-                color: sceneInk,
-              ),
+              .copyWith(fontSize: size * .44, height: 1, color: sceneInk),
         ),
       ),
     );
