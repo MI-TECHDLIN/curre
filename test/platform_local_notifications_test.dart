@@ -121,6 +121,24 @@ void main() {
       expect(proof.reference, plan.id);
     });
 
+    test('an ended plan drops both of its reminders', () async {
+      final gateway = _FakeReminderGateway();
+      final now = DateTime.utc(2026, 10, 26, 12);
+      final service = LocalReminderService(gateway, now: () => now);
+      final plan = _plan(DateTime.utc(2026, 10, 26, 13));
+
+      await service.schedulePlanReminders(plan);
+      gateway.cancelled.clear();
+      await service.cancelPlanReminders(plan);
+
+      final (headsUp, proof) = LocalReminderService.planReminderIds(plan.id);
+      expect(gateway.cancelled, <int>[headsUp, proof]);
+      expect(gateway.scheduled.map((reminder) => reminder.id), <int>[
+        headsUp,
+        proof,
+      ]);
+    });
+
     test('does not schedule plan reminders after their useful time', () async {
       final gateway = _FakeReminderGateway();
       final end = DateTime.utc(2026, 10, 26, 13);

@@ -250,12 +250,26 @@ class LocalReminderService {
     }
   }
 
+  /// The ids of a plan's two reminders: its heads-up before the end, and
+  /// the proof reminder after it.
+  static (int headsUp, int proof) planReminderIds(String planId) {
+    final seed = _stableId(planId);
+    return (200000 + seed, 400000 + seed);
+  }
+
+  /// Drops a plan's heads-up and proof reminders, for a plan ended early
+  /// with every task done: there is nothing left to remind about.
+  Future<void> cancelPlanReminders(Plan plan) async {
+    await _gateway.initialize();
+    final (headsUpId, proofId) = planReminderIds(plan.id);
+    await _gateway.cancelReminder(headsUpId);
+    await _gateway.cancelReminder(proofId);
+  }
+
   Future<void> schedulePlanReminders(Plan plan, {Settings? settings}) async {
     await _gateway.initialize();
     final activePolicy = settings == null ? policy : _policyFor(settings);
-    final seed = _stableId(plan.id);
-    final headsUpId = 200000 + seed;
-    final proofId = 400000 + seed;
+    final (headsUpId, proofId) = planReminderIds(plan.id);
     await _gateway.cancelReminder(headsUpId);
     await _gateway.cancelReminder(proofId);
 

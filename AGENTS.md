@@ -83,6 +83,10 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   a missing or unusable Protect result deliberately keeps the original text.
   A note counts only with a `TaskTrace` recorded when its task started
   (`openPlanDoor`, `startOfflineTask`); pending notes keep their plan's day.
+  Home's active/"Done today"/all-done split is `PlanCompletion`
+  (`lib/core/plan_completion.dart`); "End plan now" is
+  `Plan.endedEarlyAt` (keeps `plannedEndsAt`, so undo and History work)
+  and must cancel, never reschedule, that plan's reminders.
 - The check-in card's water is core `DayProgress` (`lib/core/progress.dart`),
   which counts `DoorUse`s: a screen that opens a plan's app must call
   `CurreLocalStore.recordDoorUse`, or the water never rises. Motion (Peek,

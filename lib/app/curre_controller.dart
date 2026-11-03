@@ -971,7 +971,11 @@ class CurreController extends ChangeNotifier {
   }) async {
     await reminders?.scheduleSessionReminders(settings);
     for (final plan in plans) {
-      await reminders?.schedulePlanReminders(plan, settings: settings);
+      if (plan.endedEarly) {
+        await reminders?.cancelPlanReminders(plan);
+      } else {
+        await reminders?.schedulePlanReminders(plan, settings: settings);
+      }
     }
     if (!syncGrantNotifications) return;
     for (final grant in activeGrants) {
@@ -1115,6 +1119,65 @@ class CurreController extends ChangeNotifier {
       }
     }
     return latestStarted ?? unfinished.firstOrNull;
+  }
+
+  /// The active plan's tasks, split into still to do and done.
+  PlanCompletion? get activePlanCompletion {
+    final plan = activePlan;
+    return plan == null ? null : PlanCompletion.of(plan, proofFor);
+  }
+
+  /// Whether every task Home shows is done: all of the active plan's, and
+  /// no earlier task away from the phone still waits for its Done.
+  bool get allTasksDone {
+    final completion = activePlanCompletion;
+    if (completion == null || !completion.allDone) return false;
+    return offlineTasksOnHome.every((task) => proofFor(task) != null);
+  }
+
+  /// Ends the active plan now, once its tasks are done: its apps go back to
+  /// Hidden apps, its reminders are dropped, and History keeps the early
+  /// end. Returns the plan as it was, for [undoEndPlan], or null when no
+  /// plan is running.
+  Future<Plan?> endPlanNow() async {
+    final plan = activePlan;
+    if (plan == null) return null;
+    await _replacePlan(plan.endedEarlyAt(now));
+    try {
+      await reminders?.cancelPlanReminders(plan);
+    } on Object {
+      // The plan has ended either way; reminder delivery is best effort.
+    }
+    return plan;
+  }
+
+  /// Brings back a plan [endPlanNow] ended, as long as its planned end has
+  /// not passed meanwhile. Returns whether it is running again.
+  Future<bool> undoEndPlan(Plan original) async {
+    final current = plans.where((plan) => plan.id == original.id).lastOrNull;
+    if (current == null || !current.endedEarly) return false;
+    final restored = current.withEarlyEndUndone();
+    if (!now.toUtc().isBefore(restored.endsAt)) return false;
+    await _replacePlan(restored);
+    try {
+      await reminders?.schedulePlanReminders(restored, settings: settings);
+    } on Object {
+      // The plan is authoritative; reminder delivery is best effort.
+    }
+    return true;
+  }
+
+  Future<void> _replacePlan(Plan plan) async {
+    plans = <Plan>[for (final item in plans) item.id == plan.id ? plan : item];
+    historyPlans = historyPlans.any((item) => item.id == plan.id)
+        ? <Plan>[
+            for (final item in historyPlans) item.id == plan.id ? plan : item,
+          ]
+        : <Plan>[...historyPlans, plan];
+    await store?.saveTodayPlans(plans, now: now);
+    await store?.appendPlanHistory(plan, now: now);
+    await _syncGentleInterceptPolicy();
+    notifyListeners();
   }
 
   /// The tasks done away from the phone that Home offers: the active plan's

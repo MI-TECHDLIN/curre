@@ -370,6 +370,15 @@ class _PlanHistoryCard extends StatelessWidget {
               style: type.youSmall.copyWith(color: sky.fg),
               highlights: highlights,
             ),
+            if (plan.plannedEndsAt case final planned?) ...[
+              const SizedBox(height: CurreSpace.s2),
+              Text(
+                'Ended early at ${formatClock(plan.endsAt)}, '
+                'planned until ${formatClock(planned)}',
+                key: const Key('history-plan-ended-early'),
+                style: type.meta.copyWith(color: sky.fg),
+              ),
+            ],
             const SizedBox(height: CurreSpace.s3),
             Wrap(
               spacing: CurreSpace.s2,
