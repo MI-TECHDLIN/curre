@@ -69,6 +69,7 @@ class CurreController extends ChangeNotifier {
     List<LaterItem> laterItems = const <LaterItem>[],
     this.onboardingComplete = false,
     this.hiddenAppsTipDismissed = false,
+    Set<ContextPrompt> pendingPrompts = const <ContextPrompt>{},
     DateTime Function()? now,
   }) : speech = speech ?? SpeechInputService(),
        settings = settings ?? Settings(),
@@ -82,6 +83,7 @@ class CurreController extends ChangeNotifier {
        historyGrants = List<Grant>.of(historyGrants),
        historyAttempts = List<Attempt>.of(historyAttempts),
        laterItems = List<LaterItem>.of(laterItems),
+       pendingPrompts = Set<ContextPrompt>.of(pendingPrompts),
        _now = now ?? DateTime.now;
 
   static Future<CurreController> bootstrap() async {
@@ -156,6 +158,7 @@ class CurreController extends ChangeNotifier {
       laterItems: laterItems,
       onboardingComplete: store?.isOnboardingComplete ?? false,
       hiddenAppsTipDismissed: store?.isHiddenAppsTipDismissed ?? false,
+      pendingPrompts: store?.pendingPrompts ?? const <ContextPrompt>{},
     );
     await controller.initializeGentleIntercept();
     await controller._prepareReminders();
@@ -226,6 +229,9 @@ class CurreController extends ChangeNotifier {
 
   /// Whether the Hidden apps explainer has been put away for good.
   bool hiddenAppsTipDismissed;
+
+  /// What setup left to ask in context, until each is answered once.
+  final Set<ContextPrompt> pendingPrompts;
   CallReceipt? lastPlanCall;
   CallReceipt? lastUnlockCall;
   CallReceipt? lastProofCall;
@@ -396,7 +402,8 @@ class CurreController extends ChangeNotifier {
     return intention;
   }
 
-  /// Saves everything onboarding asked for in one step. With a
+  /// Saves everything onboarding asked for in one step, and leaves every
+  /// [ContextPrompt] to be offered in context later. With a
   /// [firstIntention], Home opens the check-in and plans it straight away;
   /// without one ("I'll plan later") Home simply opens.
   Future<void> finishOnboarding({
@@ -405,7 +412,6 @@ class CurreController extends ChangeNotifier {
     required Set<String> essentials,
     required Set<String> candidates,
     LocalTime? morningStart,
-    bool? nudgesEnabled,
     String? firstIntention,
   }) async {
     final next = settings.copyWith(
@@ -420,16 +426,17 @@ class CurreController extends ChangeNotifier {
               ...settings.sessionStarts,
               SessionName.morning: morningStart,
             },
-      checkInNudges: nudgesEnabled,
-      planEndingNudges: nudgesEnabled,
-      unlockTimeUpNudges: nudgesEnabled,
-      proofNudges: nudgesEnabled,
     );
+    const prompts = <ContextPrompt>{...ContextPrompt.values};
     // Save first: if the phone can't store the answers, onboarding stays
     // open with everything still filled in, ready to try again.
     await store?.saveSettings(next);
+    await store?.savePendingPrompts(prompts);
     await store?.setOnboardingComplete(true);
     settings = next;
+    pendingPrompts
+      ..clear()
+      ..addAll(prompts);
     final intention = firstIntention?.trim();
     _firstIntention = intention == null || intention.isEmpty ? null : intention;
     _firstCheckinRequested = _firstIntention != null;
@@ -598,6 +605,51 @@ class CurreController extends ChangeNotifier {
     }
   }
 
+  /// Whether to offer [prompt] now: not answered yet, and Android doesn't
+  /// already allow what it asks for.
+  bool offers(ContextPrompt prompt) =>
+      pendingPrompts.contains(prompt) &&
+      switch (prompt) {
+        ContextPrompt.nudges => true,
+        ContextPrompt.askWhy => !_hasUsageAccess,
+        ContextPrompt.quietHidden => !_hasNotificationAccess,
+      };
+
+  /// Marks [prompt] as answered, so it is never offered in context again
+  /// (Curre settings still has it).
+  Future<void> settlePrompt(ContextPrompt prompt) async {
+    if (!pendingPrompts.remove(prompt)) return;
+    notifyListeners();
+    try {
+      await store?.savePendingPrompts(pendingPrompts);
+    } on Object {
+      // Offering it once more next time is harmless.
+    }
+  }
+
+  /// Answers the quiet nudge offer. Asks Android when [allow]; if the
+  /// answer is no either way, every quiet nudge is saved as off so
+  /// settings tell the truth. Returns whether nudges can appear.
+  Future<bool> answerNudgeOffer({required bool allow}) async {
+    final allowed = allow && await requestNotifications();
+    if (!allowed && settings.hasAnyNudges) {
+      try {
+        await updateSettings(
+          settings.copyWith(
+            checkInNudges: false,
+            planEndingNudges: false,
+            unlockTimeUpNudges: false,
+            proofNudges: false,
+          ),
+        );
+      } on Object {
+        // Settings still offers the switches.
+      }
+    }
+    await settlePrompt(ContextPrompt.nudges);
+    return allowed;
+  }
+
   Future<void> dismissHiddenAppsTip() async {
     hiddenAppsTipDismissed = true;
     notifyListeners();
@@ -660,6 +712,26 @@ class CurreController extends ChangeNotifier {
       final allowed = await notifications?.requestPermission() ?? true;
       if (allowed) await _syncReminderSettings();
       return allowed;
+    } on Object {
+      return false;
+    }
+  }
+
+  /// Whether Android lets Curre's notifications appear; null when Curre
+  /// can't tell.
+  Future<bool?> notificationsAllowed() async {
+    try {
+      return await notifications?.areNotificationsAllowed();
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Opens Curre's App info page, for "Allow restricted settings"; never
+  /// throws.
+  Future<bool> openAppInfo() async {
+    try {
+      return await gentleIntercept.openAppInfo();
     } on Object {
       return false;
     }

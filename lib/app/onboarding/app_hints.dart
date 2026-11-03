@@ -4,6 +4,8 @@
 /// anything anywhere.
 library;
 
+import 'dart:math' as math;
+
 /// Apps that commonly turn a quick look into an hour, most common first.
 /// Onboarding lists the ones installed before every other app.
 const commonPullPackages = <String>[
@@ -65,3 +67,33 @@ const commonTaskPackages = <String>[
   'com.google.android.calendar',
   'com.google.android.keep',
 ];
+
+/// The apps plans can use after setup: every app the user didn't hide,
+/// everyday task apps first, up to [max]. [eligible] is sorted by name and
+/// leaves out Curre and the apps always on Home. Plans need two apps to
+/// choose from, so if hiding left fewer, the defaults come back first.
+Set<String> defaultPlanApps({
+  required List<String> eligible,
+  required Set<String> hidden,
+  int max = 30,
+}) {
+  final kept = eligible.where((package) => !hidden.contains(package)).toSet();
+  final defaultsFirst = [
+    for (final package in commonTaskPackages)
+      if (eligible.contains(package)) package,
+    for (final package in appTaskExamples.keys)
+      if (eligible.contains(package)) package,
+    ...eligible,
+  ];
+  final picked = <String>{};
+  for (final package in defaultsFirst) {
+    if (picked.length >= max) break;
+    if (kept.contains(package)) picked.add(package);
+  }
+  final minimum = math.min(2, eligible.length);
+  for (final package in defaultsFirst) {
+    if (picked.length >= minimum) break;
+    picked.add(package);
+  }
+  return picked;
+}

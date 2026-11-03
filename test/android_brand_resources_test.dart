@@ -59,7 +59,9 @@ void main() {
       for (final styles in <String>[light, dark]) {
         expect(styles, contains('windowSplashScreenBackground'));
         expect(styles, contains('@drawable/ic_splash_peek'));
-        expect(styles, contains('postSplashScreenTheme'));
+        // `android:postSplashScreenTheme` isn't a platform attribute and
+        // breaks release resource linking (41d81cf): keep it out.
+        expect(styles, isNot(contains('postSplashScreenTheme')));
       }
       expect(colors, contains('#FBDCC4'));
       expect(nightColors, contains('#13111A'));

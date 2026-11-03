@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/core.dart';
 import '../design/design.dart';
 import '../platform/platform.dart';
+import 'access_help.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'unlock_gate_screen.dart';
@@ -23,6 +25,15 @@ class HiddenAppsScreen extends StatefulWidget {
 class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
   CurreController get controller => widget.controller;
 
+  /// The one Android access offered on this visit, if any: asking "Why
+  /// now?" first, keeping hidden apps quiet on a later visit.
+  late final ContextPrompt? _offer = controller.offers(ContextPrompt.askWhy)
+      ? ContextPrompt.askWhy
+      : !controller.pendingPrompts.contains(ContextPrompt.askWhy) &&
+            controller.offers(ContextPrompt.quietHidden)
+      ? ContextPrompt.quietHidden
+      : null;
+
   @override
   void initState() {
     super.initState();
@@ -32,14 +43,16 @@ class _HiddenAppsScreenState extends State<HiddenAppsScreen> {
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: controller,
-    builder: (context, _) => _HiddenAppsBody(controller: controller),
+    builder: (context, _) =>
+        _HiddenAppsBody(controller: controller, offer: _offer),
   );
 }
 
 class _HiddenAppsBody extends StatelessWidget {
-  const _HiddenAppsBody({required this.controller});
+  const _HiddenAppsBody({required this.controller, required this.offer});
 
   final CurreController controller;
+  final ContextPrompt? offer;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +115,15 @@ class _HiddenAppsBody extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      );
+    }
+    if (offer case final prompt? when apps.isNotEmpty) {
+      rows.add(
+        Padding(
+          key: ValueKey(prompt),
+          padding: const EdgeInsets.only(top: CurreSpace.s2),
+          child: AccessOffer(controller: controller, prompt: prompt),
         ),
       );
     }

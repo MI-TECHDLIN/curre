@@ -7,6 +7,7 @@ import 'grants.dart';
 import 'later.dart';
 import 'models.dart';
 import 'proof.dart';
+import 'prompts.dart';
 import 'sessions.dart';
 
 class CurreLocalStore {
@@ -23,6 +24,7 @@ class CurreLocalStore {
   static const String _taskTracesKey = 'curre.taskTraces.v1';
   static const String _proofRecordsKey = 'curre.proofRecords.v1';
   static const String _hiddenAppsTipKey = 'curre.hiddenAppsTip.v1';
+  static const String _contextPromptsKey = 'curre.contextPrompts.v1';
   static const String _laterKey = 'curre.later.v1';
   static const String _laterDismissedKey = 'curre.laterDismissed.v1';
   static const Duration historyRetention = Duration(days: 30);
@@ -54,6 +56,22 @@ class CurreLocalStore {
 
   Future<void> dismissHiddenAppsTip() =>
       _preferences.setBool(_hiddenAppsTipKey, true);
+
+  /// The prompts still to offer in context. Nothing is pending for anyone
+  /// who finished the older onboarding, which asked for all of them.
+  Set<ContextPrompt> get pendingPrompts {
+    final names = _preferences.getStringList(_contextPromptsKey);
+    if (names == null) return <ContextPrompt>{};
+    return {
+      for (final prompt in ContextPrompt.values)
+        if (names.contains(prompt.name)) prompt,
+    };
+  }
+
+  Future<void> savePendingPrompts(Set<ContextPrompt> prompts) =>
+      _preferences.setStringList(_contextPromptsKey, [
+        for (final prompt in prompts) prompt.name,
+      ]);
 
   Future<void> saveSettings(Settings settings) async {
     await _preferences.setString(_settingsKey, jsonEncode(settings.toJson()));

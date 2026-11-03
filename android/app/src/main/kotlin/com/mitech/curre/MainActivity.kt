@@ -97,6 +97,7 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(null)
                 }
                 "openHomeSettings" -> result.success(openHomeSettings())
+                "openAppInfo" -> result.success(openAppInfo())
                 "setHomeSurfaceActive" -> {
                     homeSurfaceActive = call.arguments as Boolean
                     result.success(null)
@@ -419,6 +420,27 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
         return NOTHING_OPENED
+    }
+
+    /**
+     * Opens Curre's App info page. On Android 13+ an app installed outside
+     * an app store has Usage access and Notification access marked as
+     * restricted settings; the user allows them once from this page's
+     * three-dot menu ("Allow restricted settings"). Curre only takes the
+     * user there and never tries to get around it.
+     */
+    private fun openAppInfo(): Boolean = try {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName"),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        true
+    } catch (error: ActivityNotFoundException) {
+        false
+    } catch (error: SecurityException) {
+        false
     }
 
     private fun isDefaultHome(): Boolean {

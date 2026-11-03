@@ -227,6 +227,18 @@ flutter build apk --release --split-per-abi \
 universal APK; install the one matching the test phone with
 `adb install -r build/app/outputs/flutter-apk/app-<abi>-release.apk`.
 
+**Installing the APK outside an app store (Android 13 and later).** Android
+marks Usage access and Notification access as *restricted settings* for
+sideloaded apps, so the first time you switch either on for Curre it says
+the setting is restricted or that Curre was denied access. That is Android
+working as intended and Curre never tries to get around it. Allow it once:
+open Curre's **App info** (Curre offers a button for it), tap the
+**three-dot menu** in the top right, tap **Allow restricted settings**,
+confirm with your PIN or fingerprint, then come back to Curre and switch
+access on. Curre stays fully usable if you skip this; only "Ask “Why now?”
+when a hidden app opens" and "Keep hidden apps quiet" need it. Step-by-step
+notes for testers and judges: [`docs/install.md`](docs/install.md).
+
 Both dart-defines are required: without them, `lib/core/api_client.dart`
 deliberately treats the app as offline — planning falls back to a manual
 checklist, unlock becomes `unavailable`, and proof stays `pending` — rather
