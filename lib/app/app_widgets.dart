@@ -357,17 +357,25 @@ class CurreTopBar extends StatelessWidget {
   }
 }
 
+/// An app's real icon from the phone, loaded once and cached by
+/// [CurreController.iconFor], so a list never waits on it.
+///
+/// While the icon loads a neutral tile holds its place. If the phone has no
+/// icon for the app, [fallback] shows instead; without one, Home's plain
+/// door tile stays.
 class InstalledAppIcon extends StatelessWidget {
   const InstalledAppIcon({
     super.key,
     required this.controller,
     required this.packageName,
     this.size = CurreSpace.doorIcon,
+    this.fallback,
   });
 
   final CurreController controller;
   final String packageName;
   final double size;
+  final Widget? fallback;
 
   @override
   Widget build(BuildContext context) {
@@ -385,26 +393,36 @@ class InstalledAppIcon extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               gaplessPlayback: true,
+              errorBuilder: (context, error, stackTrace) =>
+                  fallback ?? _tile(colors, door: true),
             ),
           );
         }
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.raised,
-            borderRadius: BorderRadius.circular(size * .28),
-            border: Border.all(color: colors.hairline),
-          ),
-          child: Center(
+        final loaded = snapshot.connectionState == ConnectionState.done;
+        if (loaded && fallback != null) return fallback!;
+        return _tile(colors, door: fallback == null);
+      },
+    );
+  }
+
+  Widget _tile(CurreColors colors, {required bool door}) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: colors.raised,
+      borderRadius: BorderRadius.circular(size * .28),
+      border: Border.all(color: colors.hairline),
+    ),
+    child: door
+        ? Center(
             child: CurreGlyph(
               CurreGlyphKind.door,
               size: size * .52,
               color: colors.ink2,
             ),
-          ),
-        );
-      },
-    );
-  }
+          )
+        : null,
+  );
 }
 
 class HomeDock extends StatelessWidget {

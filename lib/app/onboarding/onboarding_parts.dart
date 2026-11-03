@@ -498,8 +498,8 @@ class _CheckDot extends StatelessWidget {
 }
 
 /// A plain tile for an app: the first letter of its name on a soft colour
-/// picked from its package, so the same app always looks the same. Used
-/// where Curre lists apps without their real icons (no cue to open them).
+/// picked from its package, so the same app always looks the same. It
+/// stands in when the phone gives no icon, and in Curre settings' app lists.
 class AppMonogram extends StatelessWidget {
   const AppMonogram({
     super.key,

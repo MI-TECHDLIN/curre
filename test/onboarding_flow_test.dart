@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:curre/app/checkin_screen.dart';
 import 'package:curre/app/curre_controller.dart';
 import 'package:curre/app/home_screen.dart';
+import 'package:curre/app/onboarding/onboarding_parts.dart';
 import 'package:curre/app/onboarding_screen.dart';
 import 'package:curre/app/privacy_details_screen.dart';
 import 'package:curre/core/core.dart';
@@ -15,6 +20,27 @@ import 'support/fakes.dart';
 const _instagram = 'com.instagram.android';
 const _netflix = 'com.netflix.mediaclient';
 const _youtube = 'com.google.android.youtube';
+const _dialer = 'com.google.android.dialer';
+const _settings = 'com.android.settings';
+
+/// A 1×1 PNG: enough for an app icon the phone gives.
+final _icon = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+);
+
+/// A phone whose icons arrive only when the test says so.
+class _SlowIconPlatform extends FakeDoorPlatform {
+  _SlowIconPlatform({super.home});
+
+  final pending = <String, Completer<Uint8List?>>{};
+  final asked = <String>[];
+
+  @override
+  Future<Uint8List?> getIcon(String packageName) {
+    asked.add(packageName);
+    return pending.putIfAbsent(packageName, Completer<Uint8List?>.new).future;
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -399,5 +425,112 @@ void main() {
       expect(tester.takeException(), isNull);
     }
     expect(find.text('What’s this morning for?'), findsOneWidget);
+  });
+  Finder chipFor(String packageName) => find.byKey(ValueKey(packageName));
+
+  Finder inside(Finder parent, Finder child) =>
+      find.descendant(of: parent, matching: child);
+
+  testWidgets('the app picker shows each app’s own icon, or its letter', (
+    tester,
+  ) async {
+    final home = FakeHomePlatform(isHome: false);
+    final controller = newUser(
+      home: home,
+      platform: FakeDoorPlatform(
+        home: home,
+        icons: {_instagram: _icon, _youtube: _icon, _dialer: _icon},
+      ),
+    );
+    await pump(tester, controller);
+    await walkTo(tester, 'What pulls you in?');
+    await settle(tester);
+
+    // Apps the phone has icons for show them, as Home does.
+    for (final package in [_instagram, _youtube]) {
+      expect(inside(chipFor(package), find.byType(Image)), findsOneWidget);
+      expect(inside(chipFor(package), find.byType(AppMonogram)), findsNothing);
+    }
+    // Without one, the app's letter stands in.
+    expect(inside(chipFor(_netflix), find.byType(Image)), findsNothing);
+    expect(inside(chipFor(_netflix), find.byType(AppMonogram)), findsOneWidget);
+    // The essentials show theirs too.
+    expect(inside(chipFor(_dialer), find.byType(Image)), findsOneWidget);
+    expect(
+      inside(chipFor(_settings), find.byType(AppMonogram)),
+      findsOneWidget,
+    );
+
+    // Choosing still works and still reads as the app's name.
+    final semantics = tester.ensureSemantics();
+    await tapText(tester, 'Instagram');
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Instagram').first),
+      isSemantics(label: 'Instagram', isSelected: true, isButton: true),
+    );
+    expect(find.text('Hide this one'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('a neutral tile holds an icon’s place while it loads', (
+    tester,
+  ) async {
+    final home = FakeHomePlatform(isHome: false);
+    final platform = _SlowIconPlatform(home: home);
+    final controller = newUser(home: home, platform: platform);
+    await pump(tester, controller);
+    await walkTo(tester, 'What pulls you in?');
+    await settle(tester);
+
+    // Nothing has arrived: the list is there, with plain tiles.
+    expect(find.text('Instagram'), findsOneWidget);
+    expect(inside(chipFor(_instagram), find.byType(Image)), findsNothing);
+    expect(inside(chipFor(_instagram), find.byType(AppMonogram)), findsNothing);
+    await tapText(tester, 'Instagram');
+    expect(find.text('Hide this one'), findsOneWidget);
+
+    platform.pending[_instagram]!.complete(_icon);
+    platform.pending[_netflix]!.complete(null);
+    await settle(tester);
+    expect(inside(chipFor(_instagram), find.byType(Image)), findsOneWidget);
+    expect(inside(chipFor(_netflix), find.byType(AppMonogram)), findsOneWidget);
+    // Each icon is asked for once, however often the list redraws.
+    expect(platform.asked.where((p) => p == _instagram), hasLength(1));
+  });
+
+  testWidgets('icons fit a small phone at twice the text size', (tester) async {
+    final home = FakeHomePlatform(isHome: false);
+    final controller = newUser(
+      home: home,
+      platform: FakeDoorPlatform(
+        home: home,
+        icons: {
+          for (final app in CurreController.fallbackApps)
+            app.packageName: _icon,
+        },
+      ),
+    );
+    tester.view.physicalSize = const Size(360, 740);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
+    await tester.pumpWidget(CurreApp(controller: controller));
+    await settle(tester);
+    await walkTo(tester, 'What pulls you in?');
+    await settle(tester);
+    expect(tester.takeException(), isNull);
+    final showAll = find.textContaining('Show all');
+    if (showAll.evaluate().isNotEmpty) {
+      await tapText(tester, tester.widget<Text>(showAll.last).data!);
+    }
+    await tapText(tester, 'Instagram');
+    await tapText(tester, 'Netflix');
+    expect(find.text('Hide these 2'), findsOneWidget);
+    await tester.ensureVisible(chipFor(_dialer));
+    await settle(tester);
+    expect(tester.takeException(), isNull);
   });
 }

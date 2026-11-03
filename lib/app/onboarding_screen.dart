@@ -544,6 +544,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ),
       const SizedBox(height: CurreSpace.s4),
       _AppChips(
+        controller: controller,
         apps: shown,
         selected: _pull,
         onToggle: (app) => setState(() {
@@ -559,7 +560,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
       ],
       const SizedBox(height: CurreSpace.s4),
-      const _AlwaysOnHome(),
+      _AlwaysOnHome(controller: controller, essentials: _essentials),
       const SizedBox(height: CurreSpace.s2),
       Text(
         'Plans can open the rest. Change any of this in Curre settings.',
@@ -1120,14 +1121,17 @@ class _StatusNote extends StatelessWidget {
 }
 
 /// The apps to choose from as chips that size to their names, so a long
-/// app name never breaks mid-word.
+/// app name never breaks mid-word. Each shows the app's own icon, as Home
+/// does, so it is easy to spot.
 class _AppChips extends StatelessWidget {
   const _AppChips({
+    required this.controller,
     required this.apps,
     required this.selected,
     required this.onToggle,
   });
 
+  final CurreController controller;
   final List<LaunchableApp> apps;
   final Set<String> selected;
   final ValueChanged<LaunchableApp> onToggle;
@@ -1140,6 +1144,8 @@ class _AppChips extends StatelessWidget {
       children: [
         for (final app in apps)
           _AppChip(
+            key: ValueKey(app.packageName),
+            controller: controller,
             app: app,
             selected: selected.contains(app.packageName),
             onTap: () => onToggle(app),
@@ -1151,11 +1157,14 @@ class _AppChips extends StatelessWidget {
 
 class _AppChip extends StatelessWidget {
   const _AppChip({
+    super.key,
+    required this.controller,
     required this.app,
     required this.selected,
     required this.onTap,
   });
 
+  final CurreController controller;
   final LaunchableApp app;
   final bool selected;
   final VoidCallback onTap;
@@ -1203,11 +1212,7 @@ class _AppChip extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppMonogram(
-                      label: app.label,
-                      packageName: app.packageName,
-                      size: 32,
-                    ),
+                    _AppIcon(controller: controller, app: app, size: 32),
                     const SizedBox(width: CurreSpace.s2),
                     Flexible(
                       child: Text(
@@ -1242,20 +1247,80 @@ class _AppChip extends StatelessWidget {
   }
 }
 
+/// An app's real icon, as on Home, or its [AppMonogram] when the phone has
+/// none.
+class _AppIcon extends StatelessWidget {
+  const _AppIcon({
+    required this.controller,
+    required this.app,
+    required this.size,
+  });
+
+  final CurreController controller;
+  final LaunchableApp app;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: InstalledAppIcon(
+      controller: controller,
+      packageName: app.packageName,
+      size: size,
+      fallback: AppMonogram(
+        label: app.label,
+        packageName: app.packageName,
+        size: size,
+      ),
+    ),
+  );
+}
+
 /// The essentials, picked for the user: they stay on Home whatever the
-/// plan.
+/// plan, shown with their icons so they read the way Home will.
 class _AlwaysOnHome extends StatelessWidget {
-  const _AlwaysOnHome();
+  const _AlwaysOnHome({required this.controller, required this.essentials});
+
+  final CurreController controller;
+  final Set<String> essentials;
+
+  static const _plainNames = ['Phone', 'Messages', 'Settings'];
+
+  /// The essentials this phone has, in Home's order (Phone, Messages,
+  /// Settings), then any others by name.
+  List<LaunchableApp> get _apps {
+    final order = controller.suggestedEssentials.toList();
+    int rank(LaunchableApp app) {
+      final index = order.indexOf(app.packageName);
+      return index < 0 ? order.length : index;
+    }
+
+    return [for (final package in essentials) ?controller.appFor(package)]
+      ..sort((a, b) {
+        final byRank = rank(a).compareTo(rank(b));
+        return byRank != 0
+            ? byRank
+            : a.label.toLowerCase().compareTo(b.label.toLowerCase());
+      });
+  }
+
+  static String _spoken(List<String> names) => names.length < 2
+      ? names.join()
+      : '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final apps = _apps;
+    final names = apps.isEmpty
+        ? _plainNames
+        : [for (final app in apps) app.label];
     return Semantics(
       container: true,
-      label: 'Always on Home: Phone, Messages and Settings',
+      label: 'Always on Home: ${_spoken(names)}',
       excludeSemantics: true,
       child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.symmetric(
           horizontal: CurreSpace.s4,
           vertical: CurreSpace.s3,
@@ -1264,26 +1329,50 @@ class _AlwaysOnHome extends StatelessWidget {
           color: colors.sunk,
           borderRadius: CurreShape.md,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CurreGlyph(CurreGlyphKind.check, size: 20, color: colors.emberText),
-            const SizedBox(width: CurreSpace.s3),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Always on Home  ',
-                      style: type.label.weight(680),
-                    ),
-                    TextSpan(
-                      text: 'Phone · Messages · Settings',
-                      style: type.body.copyWith(color: colors.ink2),
-                    ),
-                  ],
+            Row(
+              children: [
+                CurreGlyph(
+                  CurreGlyphKind.check,
+                  size: 20,
+                  color: colors.emberText,
                 ),
-              ),
+                const SizedBox(width: CurreSpace.s3),
+                Expanded(
+                  child: Text('Always on Home', style: type.label.weight(680)),
+                ),
+              ],
             ),
+            const SizedBox(height: CurreSpace.s2),
+            if (apps.isEmpty)
+              Text(
+                names.join(' · '),
+                style: type.body.copyWith(color: colors.ink2),
+              )
+            else
+              Wrap(
+                spacing: CurreSpace.s4,
+                runSpacing: CurreSpace.s2,
+                children: [
+                  for (final app in apps)
+                    Row(
+                      key: ValueKey(app.packageName),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _AppIcon(controller: controller, app: app, size: 24),
+                        const SizedBox(width: CurreSpace.s2),
+                        Flexible(
+                          child: Text(
+                            app.label,
+                            style: type.body.copyWith(color: colors.ink2),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
           ],
         ),
       ),
