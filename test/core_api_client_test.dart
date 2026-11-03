@@ -51,6 +51,9 @@ void main() {
     Duration firstAttemptTimeout = const Duration(milliseconds: 75),
     Duration retryDelay = Duration.zero,
     Duration warmUpTimeout = const Duration(milliseconds: 100),
+    Duration coldStartBudget = Duration.zero,
+    Duration coldStartFirstAttemptTimeout = Duration.zero,
+    Duration slowCallNotice = const Duration(seconds: 4),
     Map<String, String> localTestingHeaders = const <String, String>{},
   }) => CurreApiClient(
     baseUrl: Uri.parse('https://api.example.test/root/'),
@@ -60,6 +63,9 @@ void main() {
     planFirstAttemptTimeout: firstAttemptTimeout,
     planRetryDelay: retryDelay,
     warmUpTimeout: warmUpTimeout,
+    coldStartBudget: coldStartBudget,
+    coldStartFirstAttemptTimeout: coldStartFirstAttemptTimeout,
+    slowCallNotice: slowCallNotice,
     localTestingHeaders: localTestingHeaders,
     unlockTimeout: timeout,
     proofTimeout: timeout,
@@ -475,6 +481,204 @@ void main() {
     expect(api.warmUpTimeout, const Duration(seconds: 3));
     expect(api.proofTimeout, const Duration(seconds: 8));
     expect(api.laterTimeout, const Duration(seconds: 6));
+    // A sleeping free host took about 13 s to answer its first plan.
+    expect(api.coldStartBudget, const Duration(seconds: 30));
+    expect(api.coldStartFirstAttemptTimeout, const Duration(seconds: 24));
+  });
+
+  group('first call of a session while the host may be asleep', () {
+    final planBody = <String, Object?>{
+      'apps': <Object?>[
+        <String, Object?>{'id': 'yt', 'door': null, 'query': null},
+      ],
+      'end_phrase': null,
+      'usage': <String, Object?>{'credits': 3, 'model_ms': 24},
+    };
+
+    CurreApiClient coldClient(http.Client transport) => client(
+      transport,
+      timeout: const Duration(milliseconds: 60),
+      firstAttemptTimeout: const Duration(milliseconds: 40),
+      coldStartBudget: const Duration(milliseconds: 600),
+      coldStartFirstAttemptTimeout: const Duration(milliseconds: 450),
+      slowCallNotice: const Duration(milliseconds: 30),
+    );
+
+    test('a slow first plan gets the longer budget and says so', () async {
+      final keys = <String>[];
+      final transport = MockClient((request) async {
+        keys.add(request.headers['idempotency-key']!);
+        // Longer than the usual 60 ms plan budget, inside the cold one.
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return _jsonResponse(planBody);
+      });
+      final api = coldClient(transport);
+      final seen = <bool>[];
+      api.waking.addListener(() => seen.add(api.waking.value));
+
+      final result = await api.plan(planRequest());
+
+      expect(result.requiresManualChecklist, isFalse);
+      expect(keys, hasLength(1));
+      expect(seen, <bool>[true, false]);
+      expect(api.hasAnswered, isTrue);
+    });
+
+    test('a cold first plan keeps one quiet retry with the same key', () async {
+      final keys = <String>[];
+      final transport = MockClient((request) async {
+        keys.add(request.headers['idempotency-key']!);
+        if (keys.length == 1) {
+          // Hangs past the cold first attempt; the retry gets the rest.
+          return Completer<http.Response>().future;
+        }
+        return _jsonResponse(planBody);
+      });
+
+      final result = await coldClient(transport).plan(planRequest());
+
+      expect(result.requiresManualChecklist, isFalse);
+      expect(keys, hasLength(2));
+      expect(keys.toSet(), hasLength(1));
+    });
+
+    test('a first plan past the longer budget falls back as before', () async {
+      final watch = Stopwatch()..start();
+      final api = coldClient(
+        MockClient((_) => Completer<http.Response>().future),
+      );
+
+      final result = await api.plan(planRequest());
+
+      expect(result.fallbackReason, PlanFallbackReason.timeout);
+      expect(
+        watch.elapsed,
+        greaterThanOrEqualTo(const Duration(milliseconds: 550)),
+      );
+      expect(watch.elapsed, lessThan(const Duration(milliseconds: 900)));
+      expect(api.waking.value, isFalse);
+
+      // Only the first call waits that long: the next keeps its usual time.
+      watch.reset();
+      final again = await api.plan(planRequest());
+      expect(again.fallbackReason, PlanFallbackReason.timeout);
+      expect(watch.elapsed, lessThan(const Duration(milliseconds: 400)));
+    });
+
+    test('calls started during the first wait share its budget', () async {
+      final api = coldClient(
+        MockClient((request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          if (request.url.path.endsWith('proof')) {
+            return http.Response('busy', 503);
+          }
+          return _jsonResponse(planBody);
+        }),
+      );
+
+      // A background note retry goes first; the plan right behind it still
+      // gets the longer wait.
+      final proof = api.proof(
+        ProofRequest(task: 'learn the G chord', note: 'I did it'),
+      );
+      final plan = await api.plan(planRequest());
+      await proof;
+
+      expect(plan.requiresManualChecklist, isFalse);
+    });
+
+    test('once the warm-up answers, calls keep their usual budget', () async {
+      final transport = MockClient((request) async {
+        if (request.method == 'GET') return _jsonResponse(<String, Object?>{});
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return _jsonResponse(<String, Object?>{'outcome': 'open'});
+      });
+      final api = coldClient(transport);
+      await api.warmUp();
+      expect(api.hasAnswered, isTrue);
+
+      final response = await api.unlock(unlockRequest());
+
+      expect(response.outcome, UnlockOutcome.unavailable);
+    });
+
+    test('a warm-up error page does not count as awake', () async {
+      final api = coldClient(
+        MockClient(
+          (_) async => http.Response(
+            '<html>waking</html>',
+            200,
+            headers: <String, String>{'content-type': 'text/html'},
+          ),
+        ),
+      );
+      await api.warmUp();
+      expect(api.hasAnswered, isFalse);
+    });
+
+    test('unlock, proof and Later also get the longer first budget', () async {
+      Future<http.Response> slow(Map<String, Object?> body) async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        return _jsonResponse(body);
+      }
+
+      final unlock = await coldClient(
+        MockClient((_) => slow(<String, Object?>{'outcome': 'open'})),
+      ).unlock(unlockRequest());
+      expect(unlock.outcome, UnlockOutcome.open);
+
+      final proof = await coldClient(
+        MockClient(
+          (_) => slow(<String, Object?>{
+            'outcome': 'accepted',
+            'specific_completion': .9,
+            'result': null,
+            'learning': null,
+            'usage': <String, Object?>{'credits': 1, 'model_ms': 1},
+          }),
+        ),
+      ).proof(ProofRequest(task: 'learn the G chord', note: 'I did it'));
+      expect(proof.outcome, ProofOutcome.accepted);
+
+      final later = await coldClient(
+        MockClient(
+          (_) => slow(<String, Object?>{
+            'items': <Object?>[
+              <String, Object?>{
+                'id': 'saved-guitar',
+                'score': .9,
+                'fits': true,
+              },
+            ],
+            'usage': <String, Object?>{'credits': 1, 'model_ms': 1},
+          }),
+        ),
+      ).later(laterRequest());
+      expect(later, isNotNull);
+    });
+
+    test('a warm call says it is getting ready only once it is slow', () async {
+      final transport = MockClient((request) async {
+        if (request.method == 'GET') return _jsonResponse(<String, Object?>{});
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        return _jsonResponse(<String, Object?>{'outcome': 'open'});
+      });
+      final api = client(
+        transport,
+        timeout: const Duration(milliseconds: 300),
+        slowCallNotice: const Duration(milliseconds: 20),
+      );
+      await api.warmUp();
+      final seen = <bool>[];
+      api.waking.addListener(() => seen.add(api.waking.value));
+
+      final pending = api.unlock(unlockRequest());
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      expect(api.waking.value, isFalse);
+      await pending;
+
+      expect(seen, <bool>[true, false]);
+    });
   });
 }
 

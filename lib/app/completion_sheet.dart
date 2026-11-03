@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/core.dart';
@@ -123,6 +124,7 @@ class _CompletionSheetState extends State<CompletionSheet> {
                   onSpeak: _listen,
                   onMarkDone: _markDone,
                   onClose: () => Navigator.of(context).pop(),
+                  waking: controller.waking,
                 ),
               ),
             ),
@@ -219,6 +221,8 @@ class _CompletionSheetState extends State<CompletionSheet> {
 
 /// Renders one state of the completion sheet. It decides nothing: the
 /// production sheet and the widget tests drive it.
+final ValueNotifier<bool> _notWaking = ValueNotifier<bool>(false);
+
 class CompletionSheetView extends StatelessWidget {
   const CompletionSheetView({
     super.key,
@@ -236,6 +240,7 @@ class CompletionSheetView extends StatelessWidget {
     this.onSubmit,
     this.onSpeak,
     this.onMarkDone,
+    this.waking,
   });
 
   final CompletionSheetState state;
@@ -256,6 +261,9 @@ class CompletionSheetView extends StatelessWidget {
   final VoidCallback? onSpeak;
   final VoidCallback? onMarkDone;
   final VoidCallback onClose;
+
+  /// While on, the thinking state says things are getting ready.
+  final ValueListenable<bool>? waking;
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +426,11 @@ class CompletionSheetView extends StatelessWidget {
             semanticLabel: 'Reading your note',
           ),
           const SizedBox(height: CurreSpace.s3),
-          Text('Reading your note…', style: type.body),
+          GettingReadyNote(
+            waking: waking ?? _notWaking,
+            textAlign: TextAlign.center,
+            child: Text('Reading your note…', style: type.body),
+          ),
         ],
       ),
     );

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:curre/app/completion_sheet.dart';
 import 'package:curre/app/curre_controller.dart';
@@ -9,6 +8,7 @@ import 'package:curre/doors/door_models.dart';
 import 'package:curre/main.dart';
 import 'package:curre/platform/home_refresh.dart';
 import 'package:curre/platform/local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -131,6 +131,31 @@ void main() {
       expect(find.byKey(const Key('proof-thinking')), findsOneWidget);
       expect(find.text('Reading your note…'), findsOneWidget);
       expect(find.byType(HorizonLine), findsOneWidget);
+    });
+
+    testWidgets('a slow first note says things are getting ready', (
+      tester,
+    ) async {
+      final waking = ValueNotifier<bool>(false);
+      addTearDown(waking.dispose);
+      await tester.pumpWidget(
+        _host(
+          _view(CompletionSheetState.thinking, waking: waking),
+          reduceMotion: true,
+        ),
+      );
+      expect(find.text('Reading your note…'), findsOneWidget);
+      expect(find.text('Getting things ready…'), findsNothing);
+
+      waking.value = true;
+      await tester.pump();
+      expect(find.text('Reading your note…'), findsNothing);
+      expect(find.text('Getting things ready…'), findsOneWidget);
+      expect(find.text('This can take a few more seconds.'), findsOneWidget);
+
+      waking.value = false;
+      await tester.pump();
+      expect(find.text('Reading your note…'), findsOneWidget);
     });
   });
 
@@ -596,6 +621,7 @@ CompletionSheetView _view(
   String note = '',
   ProofSubmission? submission,
   VoidCallback? onSubmit = _noop,
+  ValueListenable<bool>? waking,
 }) {
   final plan = _plan('today');
   return CompletionSheetView(
@@ -609,6 +635,7 @@ CompletionSheetView _view(
     onSpeak: _noop,
     onMarkDone: _noop,
     onClose: _noop,
+    waking: waking,
   );
 }
 

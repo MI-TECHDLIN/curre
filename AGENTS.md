@@ -64,7 +64,12 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   `ruff check server`.
 - Phone-owned models, sessions, visibility, grants, the typed backend client
   and local persistence live in `lib/core/`; its client reads
-  `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`.
+  `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`. The host
+  (Render free plan) can sleep and take ~13 s to wake, so the first call
+  before anything has answered gets `coldStartBudget` (30 s) once per
+  session; `CurreApiClient.waking` drives `GettingReadyNote`
+  (`lib/app/app_widgets.dart`) on waiting screens. Its budgets run on a
+  real `Stopwatch`, so pin totals in unit tests, not fake-clock widget tests.
 - Seven-day, phone-owned Later items and their ordering policy live in
   `lib/core/later.dart`; `lib/app/later_shelf_card.dart` renders them after a
   plan, and `/v1/later` makes one Rerank call with newest-first fallback.

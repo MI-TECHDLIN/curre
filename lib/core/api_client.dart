@@ -37,6 +37,9 @@ class CurreApiClient {
     Duration planFirstAttemptTimeout = const Duration(seconds: 9),
     Duration planRetryDelay = const Duration(milliseconds: 250),
     Duration warmUpTimeout = const Duration(seconds: 3),
+    Duration coldStartBudget = const Duration(seconds: 30),
+    Duration coldStartFirstAttemptTimeout = const Duration(seconds: 24),
+    Duration slowCallNotice = const Duration(seconds: 4),
     bool diagnosticsEnabled = const bool.fromEnvironment('CURRE_API_DEBUG'),
     Map<String, String> localTestingHeaders = const <String, String>{},
   }) : this._internal(
@@ -50,6 +53,9 @@ class CurreApiClient {
          planFirstAttemptTimeout: planFirstAttemptTimeout,
          planRetryDelay: planRetryDelay,
          warmUpTimeout: warmUpTimeout,
+         coldStartBudget: coldStartBudget,
+         coldStartFirstAttemptTimeout: coldStartFirstAttemptTimeout,
+         slowCallNotice: slowCallNotice,
          diagnosticsEnabled: diagnosticsEnabled,
          localTestingHeaders: localTestingHeaders,
        );
@@ -65,6 +71,9 @@ class CurreApiClient {
     required this.planFirstAttemptTimeout,
     required this.planRetryDelay,
     required this.warmUpTimeout,
+    required this.coldStartBudget,
+    required this.coldStartFirstAttemptTimeout,
+    required this.slowCallNotice,
     required this.diagnosticsEnabled,
     required Map<String, String> localTestingHeaders,
   }) : _localTestingHeaders = Map.unmodifiable(localTestingHeaders);
@@ -98,8 +107,74 @@ class CurreApiClient {
   final Duration planFirstAttemptTimeout;
   final Duration planRetryDelay;
   final Duration warmUpTimeout;
+
+  /// Total time the first call of a session may take while the deployment
+  /// may still be asleep (a free host can take about 13 s to wake). Calls
+  /// after it keep their normal timeouts.
+  final Duration coldStartBudget;
+
+  /// The first plan attempt's share of [coldStartBudget]; the single quiet
+  /// retry gets the rest.
+  final Duration coldStartFirstAttemptTimeout;
+
+  /// How long a call may run, once the deployment has answered, before
+  /// [waking] turns on.
+  final Duration slowCallNotice;
   final bool diagnosticsEnabled;
   final Map<String, String> _localTestingHeaders;
+
+  /// True while a call is slow, or is running before anything has answered
+  /// this session. Screens show a calm "getting ready" note in place.
+  ValueListenable<bool> get waking => _waking;
+  final ValueNotifier<bool> _waking = ValueNotifier<bool>(false);
+  int _wakingCalls = 0;
+
+  /// Whether the deployment has answered this session (the warm-up ping or
+  /// any call), so it's awake.
+  bool get hasAnswered => _answered;
+  bool _answered = false;
+  bool _coldBudgetSpent = false;
+  int _coldCalls = 0;
+
+  /// Hands the extended budget to the first call made before anything has
+  /// answered, and to any call that starts while that one is still waiting
+  /// (a background note retry mustn't use up a plan's wait). Once that
+  /// first wait is over, a host that's truly down doesn't make every later
+  /// call wait too.
+  bool _claimColdBudget() {
+    if (_answered || (_coldBudgetSpent && _coldCalls == 0)) return false;
+    _coldBudgetSpent = true;
+    return true;
+  }
+
+  Future<T> _watched<T>(Future<T> Function(bool cold) call) async {
+    final cold = _claimColdBudget();
+    if (cold) _coldCalls++;
+    var raised = false;
+    void raise() {
+      if (raised) return;
+      raised = true;
+      _wakingCalls++;
+      _waking.value = true;
+    }
+
+    Timer? timer;
+    if (_answered) {
+      timer = Timer(slowCallNotice, raise);
+    } else {
+      raise();
+    }
+    try {
+      return await call(cold);
+    } finally {
+      if (cold) _coldCalls--;
+      timer?.cancel();
+      if (raised && --_wakingCalls == 0) _waking.value = false;
+    }
+  }
+
+  Duration _budget(Duration normal, bool cold) =>
+      cold ? _longer(normal, coldStartBudget) : normal;
 
   /// Starts the deployment before a check-in needs it. This is deliberately
   /// best-effort: Home and onboarding never wait for the network.
@@ -114,6 +189,7 @@ class CurreApiClient {
       final response = await _httpClient
           .get(endpoint, headers: _headers())
           .timeout(warmUpTimeout);
+      _noteAnswer(response);
       _diagnostic(
         'warmup status=${response.statusCode} elapsed_ms=${watch.elapsedMilliseconds}',
       );
@@ -124,7 +200,20 @@ class CurreApiClient {
     }
   }
 
-  Future<PlanCallResult> plan(PlanRequest request) async {
+  Future<PlanCallResult> plan(PlanRequest request) =>
+      _watched((cold) => _plan(request, cold: cold));
+
+  Future<PlanCallResult> _plan(
+    PlanRequest request, {
+    required bool cold,
+  }) async {
+    final planTimeout = _budget(this.planTimeout, cold);
+    final planFirstAttemptTimeout = cold
+        ? _longer(this.planFirstAttemptTimeout, coldStartFirstAttemptTimeout)
+        : this.planFirstAttemptTimeout;
+    if (cold) {
+      _diagnostic('plan cold_start budget_ms=${planTimeout.inMilliseconds}');
+    }
     final watch = Stopwatch()..start();
     final idempotencyKey = _newIdempotencyKey();
     var fallback = PlanFallbackReason.network;
@@ -210,12 +299,18 @@ class CurreApiClient {
     return PlanCallResult.manualChecklist(fallback);
   }
 
-  Future<UnlockResponse> unlock(UnlockRequest request) async {
+  Future<UnlockResponse> unlock(UnlockRequest request) =>
+      _watched((cold) => _unlock(request, cold: cold));
+
+  Future<UnlockResponse> _unlock(
+    UnlockRequest request, {
+    required bool cold,
+  }) async {
     try {
       final response = await _post(
         'v1/unlock',
         request.toJson(),
-      ).timeout(unlockTimeout);
+      ).timeout(_budget(unlockTimeout, cold));
       if (!_isSuccess(response.statusCode)) {
         return const UnlockResponse.unavailable();
       }
@@ -230,12 +325,18 @@ class CurreApiClient {
   /// Returns pending for every transport, timeout, status, or malformed
   /// response failure. The phone keeps the note and retries it against its
   /// original Curre day.
-  Future<ProofResponse> proof(ProofRequest request) async {
+  Future<ProofResponse> proof(ProofRequest request) =>
+      _watched((cold) => _proof(request, cold: cold));
+
+  Future<ProofResponse> _proof(
+    ProofRequest request, {
+    required bool cold,
+  }) async {
     try {
       final response = await _post(
         'v1/proof',
         request.toJson(),
-      ).timeout(proofTimeout);
+      ).timeout(_budget(proofTimeout, cold));
       if (!_isSuccess(response.statusCode)) {
         return const ProofResponse.pending();
       }
@@ -248,12 +349,18 @@ class CurreApiClient {
   /// Ranks saved "Not now" reasons against a new plan. Returns null for
   /// every transport, timeout, status, or malformed response failure; the
   /// shelf then shows the newest first.
-  Future<LaterResponse?> later(LaterRequest request) async {
+  Future<LaterResponse?> later(LaterRequest request) =>
+      _watched((cold) => _later(request, cold: cold));
+
+  Future<LaterResponse?> _later(
+    LaterRequest request, {
+    required bool cold,
+  }) async {
     try {
       final response = await _post(
         'v1/later',
         request.toJson(),
-      ).timeout(laterTimeout);
+      ).timeout(_budget(laterTimeout, cold));
       if (!_isSuccess(response.statusCode)) return null;
       return LaterResponse.fromJson(_decodeObject(response.body));
     } on Object {
@@ -265,11 +372,23 @@ class CurreApiClient {
     String path,
     Map<String, Object?> body, {
     String? idempotencyKey,
-  }) => _httpClient.post(
-    _endpoint(path),
-    headers: _headers(json: true, idempotencyKey: idempotencyKey),
-    body: jsonEncode(body),
-  );
+  }) async {
+    final response = await _httpClient.post(
+      _endpoint(path),
+      headers: _headers(json: true, idempotencyKey: idempotencyKey),
+      body: jsonEncode(body),
+    );
+    _noteAnswer(response);
+    return response;
+  }
+
+  /// A successful, non-HTML answer means the deployment is awake. A tunnel
+  /// interstitial or an error page from the host in front of it doesn't.
+  void _noteAnswer(http.Response response) {
+    if (_isSuccess(response.statusCode) && !_looksLikeHtml(response)) {
+      _answered = true;
+    }
+  }
 
   Map<String, String> _headers({bool json = false, String? idempotencyKey}) {
     final headers = <String, String>{
@@ -313,6 +432,9 @@ String _contentType(http.Response response) =>
 
 Duration _shorter(Duration first, Duration second) =>
     first <= second ? first : second;
+
+Duration _longer(Duration first, Duration second) =>
+    first >= second ? first : second;
 
 String _newIdempotencyKey() {
   final random = Random.secure();

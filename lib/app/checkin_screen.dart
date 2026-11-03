@@ -228,9 +228,12 @@ class _CheckinScreenState extends State<CheckinScreen> {
           const SizedBox(height: CurreSpace.s6),
           const HorizonLine(scanning: true, semanticLabel: 'Choosing apps'),
           const SizedBox(height: CurreSpace.s3),
-          Text(
-            'Looking through your ${candidates.length} apps',
-            style: type.caption.copyWith(color: colors.ink2),
+          GettingReadyNote(
+            waking: controller.waking,
+            child: Text(
+              'Looking through your ${candidates.length} apps',
+              style: type.caption.copyWith(color: colors.ink2),
+            ),
           ),
           const SizedBox(height: CurreSpace.s5),
           Wrap(
