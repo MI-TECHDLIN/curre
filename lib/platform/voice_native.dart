@@ -11,10 +11,14 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'voice_audio.dart';
 import 'voice_engine.dart';
 import 'voice_model.dart';
+import 'voice_prefetch.dart';
 
 VoiceModelStore defaultVoiceModelStore() => FileVoiceModelStore();
 
 SpeechRecognizerEngine defaultSpeechRecognizerEngine() => const WhisperEngine();
+
+VoiceConditionsGateway defaultVoiceConditions() =>
+    const ChannelVoiceConditions();
 
 /// Keeps the model in the app's private files, where only Curre can read
 /// it and Android removes it with the app. The `voice/` folder is left out

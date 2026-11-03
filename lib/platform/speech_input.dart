@@ -6,6 +6,7 @@ import 'voice_audio.dart';
 import 'voice_engine.dart';
 import 'voice_microphone.dart';
 import 'voice_model.dart';
+import 'voice_prefetch.dart';
 import 'voice_native_stub.dart'
     if (dart.library.io) 'voice_native.dart'
     as native;
@@ -14,6 +15,7 @@ export 'voice_audio.dart' show voiceSampleRate;
 export 'voice_engine.dart';
 export 'voice_microphone.dart';
 export 'voice_model.dart';
+export 'voice_prefetch.dart';
 
 enum SpeechInputStatus { recognized, cancelled, unavailable }
 
@@ -52,19 +54,44 @@ typedef SpeechInputPresenter = Future<SpeechInputResult> Function(
 /// voice sheet is listening, the audio stays in memory, and Whisper turns
 /// it into text without a network.
 class SpeechInputService {
-  SpeechInputService({
+  factory SpeechInputService({
     VoiceModelStore? models,
     MicrophoneGateway? microphone,
     SpeechRecognizerEngine? engine,
+    VoicePrefetcher? prefetch,
     String Function()? language,
-  }) : models = models ?? native.defaultVoiceModelStore(),
-       microphone = microphone ?? DeviceMicrophone(),
-       engine = engine ?? native.defaultSpeechRecognizerEngine(),
-       _language = language ?? _phoneLanguage;
+  }) {
+    final store = models ?? prefetch?.models ?? native.defaultVoiceModelStore();
+    return SpeechInputService._(
+      models: store,
+      microphone: microphone ?? DeviceMicrophone(),
+      engine: engine ?? native.defaultSpeechRecognizerEngine(),
+      prefetch:
+          prefetch ??
+          VoicePrefetcher(
+            models: store,
+            conditions: native.defaultVoiceConditions(),
+            choices: const SharedPreferencesVoicePrefetchChoices(),
+            recheckEvery: const Duration(minutes: 1),
+          ),
+      language: language ?? _phoneLanguage,
+    );
+  }
+
+  SpeechInputService._({
+    required this.models,
+    required this.microphone,
+    required this.engine,
+    required this.prefetch,
+    required this._language,
+  });
 
   final VoiceModelStore models;
   final MicrophoneGateway microphone;
   final SpeechRecognizerEngine engine;
+
+  /// The quiet background download of the voice files.
+  final VoicePrefetcher prefetch;
   final String Function() _language;
 
   SpeechInputPresenter? presenter;

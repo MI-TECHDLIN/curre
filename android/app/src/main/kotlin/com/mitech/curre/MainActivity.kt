@@ -13,8 +13,12 @@ import android.content.pm.ShortcutInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
+import android.os.PowerManager
 import android.os.Process
 import android.provider.CalendarContract
 import android.provider.Settings
@@ -96,6 +100,8 @@ class MainActivity : FlutterFragmentActivity() {
                     QuietNotificationListenerService.clearMissedNotifications(this)
                     result.success(null)
                 }
+                "voiceDownloadConditions" ->
+                    result.success(voiceDownloadConditions())
                 "openHomeSettings" -> result.success(openHomeSettings())
                 "openAppInfo" -> result.success(openAppInfo())
                 "setHomeSurfaceActive" -> {
@@ -166,6 +172,43 @@ class MainActivity : FlutterFragmentActivity() {
         intent.removeExtra(GentleInterceptService.EXTRA_INTERCEPT_PACKAGE)
         intent.removeExtra(GentleInterceptService.EXTRA_INTERCEPT_AT_MILLIS)
         return mapOf("package" to packageName, "atMillis" to atMillis)
+    }
+
+    /**
+     * What the quiet voice download needs to know: whether there is a
+     * connection, whether Android counts it as unmetered (Wi-Fi), and
+     * whether the battery is low or Battery Saver is on. Read fresh each
+     * time; the Dart side decides (`lib/platform/voice_prefetch.dart`).
+     */
+    private fun voiceDownloadConditions(): Map<String, Boolean> {
+        val connectivity = getSystemService(ConnectivityManager::class.java)
+        val capabilities = connectivity?.activeNetwork?.let {
+            connectivity.getNetworkCapabilities(it)
+        }
+        val online = capabilities != null &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        val unmetered = capabilities != null && online && (
+            capabilities.hasCapability(
+                NetworkCapabilities.NET_CAPABILITY_NOT_METERED,
+            ) || (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                    capabilities.hasCapability(
+                        NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED,
+                    )
+                )
+            )
+        val battery = getSystemService(BatteryManager::class.java)
+        val level = battery?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            ?: -1
+        val charging = battery?.isCharging == true
+        val saver = getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+        val batteryLow = !charging &&
+            (saver || level in 0..VOICE_DOWNLOAD_LOW_BATTERY_PERCENT)
+        return mapOf(
+            "online" to online,
+            "unmetered" to unmetered,
+            "batteryLow" to batteryLow,
+        )
     }
 
     private fun hasUsageAccess(): Boolean {
@@ -571,6 +614,7 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val CHANNEL_NAME = "com.mitech.curre/launcher"
+        private const val VOICE_DOWNLOAD_LOW_BATTERY_PERCENT = 15
         private const val HOME_SETTINGS_OPENED = "home"
         private const val DEFAULT_APPS_OPENED = "defaultApps"
         private const val SETTINGS_OPENED = "settings"

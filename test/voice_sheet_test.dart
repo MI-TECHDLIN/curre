@@ -84,45 +84,41 @@ void main() {
     return gesture;
   }
 
-  double ringScale(WidgetTester tester) => tester
-      .widget<AnimatedScale>(find.byKey(const Key('voice-level')))
-      .scale;
+  double ringScale(WidgetTester tester) =>
+      tester.widget<AnimatedScale>(find.byKey(const Key('voice-level'))).scale;
 
-  testWidgets('first use: allow the mic, download once, hold to talk', (
+  double waterLevel(WidgetTester tester) => tester
+      .widget<RisingWater>(find.byKey(const Key('voice-download-water')))
+      .level;
+
+  testWidgets('before the files arrive: a calm note, rising water, then talk', (
     tester,
   ) async {
-    mic
-      ..current = MicAccess.denied
-      ..afterRequest = MicAccess.granted;
     models = FakeVoiceModelStore(installed: false);
     speech = fakeSpeech(microphone: mic, models: models, engine: engine);
 
     final sheet = await open(tester);
 
-    expect(find.text(_prompt), findsOneWidget);
-    expect(find.text(voicePermissionExplanation), findsOneWidget);
+    // No download screen to get past: one note, and typing still works.
+    expect(find.text(voiceGettingReadyMessage), findsOneWidget);
+    expect(find.text('Type instead'), findsOneWidget);
     expect(mic.starts, 0);
-    expectPlainCopy(tester, where: 'the mic prompt');
+    // On Wi-Fi the tap simply lets the quiet download run.
+    expect(models.downloads, 1);
+    expect(find.byKey(const Key('voice-download-now')), findsNothing);
+    expectPlainCopy(tester, where: 'the getting-ready note');
 
-    await tester.tap(find.text('Allow the mic'));
-    await settle(tester);
-    expect(mic.requests, 1);
-    expect(find.text('Download 104 MB'), findsOneWidget);
-    expect(find.textContaining('Wi-Fi is best'), findsOneWidget);
-    expectPlainCopy(tester, where: 'the download offer');
-
-    await tester.tap(find.text('Download 104 MB'));
-    await tester.pump();
     models.progress(52000000);
     await tester.pump();
-    expect(find.text('52 MB of 104 MB'), findsOneWidget);
     expect(find.text('50%'), findsOneWidget);
+    expect(find.textContaining('52 MB of 104 MB'), findsOneWidget);
+    expect(waterLevel(tester), closeTo(.5, .01));
 
     models.finishDownload();
     await settle(tester);
     expect(find.text('Ready. Voice typing now works offline.'), findsOneWidget);
     expect(find.text('Tap or hold the mic, then speak.'), findsOneWidget);
-    // Setting up is not the mic tap: nothing listens yet.
+    // Getting ready is not the mic tap: nothing listens yet.
     expect(mic.starts, 0);
 
     final hold = await pressMic(tester, Duration.zero);
@@ -145,6 +141,70 @@ void main() {
     expect(find.byType(VoiceSheet), findsNothing);
     expect(sheet.result?.status, SpeechInputStatus.recognized);
     expect(sheet.result?.transcript, 'Learn the G chord on YouTube till 7');
+  });
+
+  testWidgets('on mobile data it waits, until a tap that states the size', (
+    tester,
+  ) async {
+    models = FakeVoiceModelStore(installed: false, onPhone: 30000000);
+    final conditions = FakeVoiceConditions(network: VoiceNetwork.metered);
+    speech = fakeSpeech(
+      microphone: mic,
+      models: models,
+      engine: engine,
+      conditions: conditions,
+    );
+    final sheet = await open(tester);
+
+    expect(find.text(voiceGettingReadyMessage), findsOneWidget);
+    expect(
+      find.text('It downloads by itself on Wi-Fi, 104 MB once.'),
+      findsOne,
+    );
+    expect(models.downloads, 0);
+    expect(waterLevel(tester), closeTo(.29, .01));
+
+    // The rest of the files, in megabytes, on the button itself.
+    await tester.tap(find.text('Download now · 74 MB'));
+    await tester.pump();
+    expect(models.downloads, 1);
+
+    // Still on mobile data: the asked-for download keeps going.
+    models.progress(60000000);
+    await tester.pump();
+    expect(models.cancelled, isFalse);
+    expect(find.text('57%'), findsOneWidget);
+
+    // Closing the note leaves it running in the background.
+    await tester.tap(find.text('Type instead'));
+    await settle(tester);
+    expect(sheet.result?.status, SpeechInputStatus.cancelled);
+    expect(models.isDownloading, isTrue);
+  });
+
+  testWidgets('offline, the note says so and the download picks up later', (
+    tester,
+  ) async {
+    models = FakeVoiceModelStore(installed: false);
+    final conditions = FakeVoiceConditions(network: VoiceNetwork.none);
+    speech = fakeSpeech(
+      microphone: mic,
+      models: models,
+      engine: engine,
+      conditions: conditions,
+    );
+    await open(tester);
+
+    expect(find.textContaining('No connection right now'), findsOneWidget);
+    await tester.tap(find.text('Download now · 104 MB'));
+    await settle(tester);
+    expect(models.downloads, 0);
+
+    conditions.wifi();
+    await speech.prefetch.recheck();
+    await tester.pump();
+    expect(models.downloads, 1);
+    expect(find.textContaining('It keeps going if you close this.'), findsOne);
   });
 
   testWidgets('the check-in mic listens at once and fills the plan', (
@@ -278,36 +338,6 @@ void main() {
     expect(mic.requests, 0);
   });
 
-  testWidgets('offline or paused, the download picks up where it stopped', (
-    tester,
-  ) async {
-    models = FakeVoiceModelStore(installed: false);
-    speech = fakeSpeech(microphone: mic, models: models, engine: engine);
-    await open(tester);
-
-    await tester.tap(find.text('Download 104 MB'));
-    await tester.pump();
-    models.progress(30000000);
-    await tester.tap(find.text('Pause'));
-    await settle(tester);
-    expect(models.cancelled, isTrue);
-    expect(find.text('Paused at 30 MB. It picks up from there.'), findsOne);
-    expect(find.text('Resume the download'), findsOneWidget);
-
-    await tester.tap(find.text('Resume the download'));
-    await tester.pump();
-    expect(find.text('30 MB of 104 MB'), findsOneWidget);
-    models.failDownload(VoiceDownloadProblem.offline);
-    await settle(tester);
-    expect(find.textContaining('No connection right now'), findsOneWidget);
-    expectPlainCopy(tester, where: 'a stopped download');
-
-    await tester.tap(find.text('Try again'));
-    await tester.pump();
-    expect(models.downloads, 3);
-    expect(models.isDownloading, isTrue);
-  });
-
   testWidgets('voice files that will not load can be fetched again', (
     tester,
   ) async {
@@ -321,8 +351,10 @@ void main() {
 
     await tester.tap(find.text('Download again'));
     await tester.pump();
+    await tester.pump();
     expect(models.removals, 1);
     expect(models.downloads, 1);
+    expect(find.text(voiceGettingReadyMessage), findsOneWidget);
   });
 
   testWidgets('Curre never listens from the background', (tester) async {
@@ -342,7 +374,28 @@ void main() {
     tester,
   ) async {
     for (final brightness in Brightness.values) {
-      for (final step in VoiceSheetStep.values) {
+      final views = [
+        for (final step in VoiceSheetStep.values)
+          (
+            step,
+            const VoiceDownloadView(
+              phase: VoicePrefetchPhase.downloading,
+              total: 104000000,
+              received: 40000000,
+            ),
+          ),
+        for (final phase in VoicePrefetchPhase.values)
+          (
+            VoiceSheetStep.gettingReady,
+            VoiceDownloadView(
+              phase: phase,
+              total: whisperTinyInt8.bytes,
+              received: 40000000,
+              problem: VoiceDownloadProblem.storage,
+            ),
+          ),
+      ];
+      for (final (step, download) in views) {
         stillMotion(tester);
         tester.view.physicalSize = const Size(320, 640);
         await tester.pumpWidget(
@@ -353,12 +406,9 @@ void main() {
                 child: VoiceSheetView(
                   step: step,
                   prompt: _prompt,
-                  total: whisperTinyInt8.bytes,
-                  received: 40000000,
-                  onPhone: 40000000,
+                  download: download,
                   level: .6,
-                  note: 'Paused at 40 MB. It picks up from there.',
-                  downloadProblem: VoiceDownloadProblem.storage,
+                  note: 'Ready. Voice typing now works offline.',
                   captureProblem: VoiceCaptureProblem.model,
                 ),
               ),
@@ -366,29 +416,54 @@ void main() {
           ),
         );
         await tester.pump();
-        expect(tester.takeException(), isNull, reason: '$step $brightness');
-        expectPlainCopy(tester, where: 'the voice sheet, $step');
+        final where = '$step ${download.phase} $brightness';
+        expect(tester.takeException(), isNull, reason: where);
+        expectPlainCopy(tester, where: 'the voice sheet, $where');
       }
     }
   });
 
   group('the settings line', () {
-    Future<void> show(WidgetTester tester) async {
+    late FakeVoiceConditions conditions;
+
+    Future<void> show(
+      WidgetTester tester, {
+      FakeVoiceModelStore? store,
+      VoiceNetwork network = VoiceNetwork.unmetered,
+    }) async {
       stillMotion(tester);
+      if (store != null) models = store;
+      conditions = FakeVoiceConditions(network: network);
+      speech = fakeSpeech(
+        microphone: mic,
+        models: models,
+        engine: engine,
+        conditions: conditions,
+      );
       await tester.pumpWidget(
         MaterialApp(
           theme: curreTheme(Brightness.light),
-          home: Scaffold(body: VoiceSettingsCard(speech: speech)),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: VoiceSettingsCard(speech: speech),
+            ),
+          ),
         ),
       );
       await tester.pump();
     }
 
-    testWidgets('shows the size on the phone and removes it', (tester) async {
+    String status(WidgetTester tester) =>
+        tester.widget<Text>(find.byKey(const Key('voice-status'))).data!;
+
+    testWidgets('ready; removing stops the download until asked again', (
+      tester,
+    ) async {
       await show(tester);
 
       expect(find.text('Voice: on this phone'), findsOneWidget);
-      expect(find.text('104 MB on this phone · works offline'), findsOne);
+      expect(status(tester), 'Ready · works offline');
+      expect(find.byKey(const Key('voice-download-gauge')), findsNothing);
       expectPlainCopy(tester, where: 'the voice settings line');
 
       await tester.tap(find.text('Remove voice files'));
@@ -399,22 +474,52 @@ void main() {
 
       expect(models.removals, 1);
       expect(
-        find.text(
-          'Not downloaded yet · 104 MB once, the first time you use the mic',
-        ),
-        findsOneWidget,
+        status(tester),
+        'Not on this phone · 104 MB, when you next use the mic',
       );
       expect(find.text('Remove voice files'), findsNothing);
       expect(find.text('Voice files removed.'), findsOneWidget);
+
+      // On Wi-Fi, but off: nothing downloads by itself, even on a new look.
+      await speech.prefetch.recheck();
+      await speech.prefetch.start();
+      expect(models.downloads, 0);
+
+      await tester.tap(find.text('Download voice files'));
+      await tester.pump();
+      expect(models.downloads, 1);
+      expect(speech.prefetch.autoDownload, isTrue);
     });
 
-    testWidgets('a paused download can be cleared too', (tester) async {
-      models = FakeVoiceModelStore(installed: false, onPhone: 52000000);
-      speech = fakeSpeech(microphone: mic, models: models, engine: engine);
-      await show(tester);
+    testWidgets('waiting for Wi-Fi shows the water; mobile data lets it go', (
+      tester,
+    ) async {
+      await show(
+        tester,
+        store: FakeVoiceModelStore(installed: false, onPhone: 52000000),
+        network: VoiceNetwork.metered,
+      );
 
-      expect(find.text('Download paused · 52 MB of 104 MB'), findsOneWidget);
+      expect(status(tester), 'Waiting for Wi-Fi · 52 MB of 104 MB so far');
+      expect(find.byKey(const Key('voice-download-gauge')), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
       expect(find.text('Remove voice files'), findsOneWidget);
+      expect(models.downloads, 0);
+      final toggle = find.byKey(const Key('voice-mobile-data'));
+      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+      expectPlainCopy(tester, where: 'the voice download waiting');
+
+      await tester.tap(toggle);
+      await tester.pump();
+      await tester.pump();
+      expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+      expect(models.downloads, 1);
+      expect(status(tester), 'Getting ready 50% · 52 MB of 104 MB');
+
+      models.progress(78000000);
+      await tester.pump();
+      expect(status(tester), 'Getting ready 75% · 78 MB of 104 MB');
+      expect(find.text('75%'), findsOneWidget);
     });
   });
 }
