@@ -433,6 +433,11 @@ class CurreController extends ChangeNotifier {
     await store?.saveSettings(next);
     await store?.savePendingPrompts(prompts);
     await store?.setOnboardingComplete(true);
+    try {
+      await store?.clearOnboardingDraft();
+    } on Object {
+      // A leftover draft is ignored once onboarding is complete.
+    }
     settings = next;
     pendingPrompts
       ..clear()
@@ -448,6 +453,37 @@ class CurreController extends ChangeNotifier {
       // Reminders are optional; onboarding is already saved.
     }
     notifyListeners();
+  }
+
+  /// Onboarding's answers so far, saved by an earlier start of Curre.
+  OnboardingDraft? get onboardingDraft => store?.loadOnboardingDraft();
+
+  /// Keeps onboarding's answers so far. Best effort: onboarding carries on
+  /// if the phone can't save them.
+  Future<void> saveOnboardingDraft(OnboardingDraft draft) async {
+    try {
+      await store?.saveOnboardingDraft(draft);
+    } on Object {
+      // Only a restart mid-onboarding would miss them.
+    }
+  }
+
+  /// Notices when another copy of Curre (Android's Home, started when Curre
+  /// became the home screen) finished onboarding, and shows Home here too.
+  Future<void> catchUpOnboarding() async {
+    final saved = store;
+    if (onboardingComplete || saved == null) return;
+    try {
+      await saved.reloadFromDisk();
+    } on Object {
+      return;
+    }
+    if (onboardingComplete || !saved.isOnboardingComplete) return;
+    onboardingComplete = true;
+    pendingPrompts
+      ..clear()
+      ..addAll(saved.pendingPrompts);
+    await refresh();
   }
 
   /// Saves [value] and then shows it; a failed save leaves the settings as

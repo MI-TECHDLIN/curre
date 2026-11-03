@@ -18,9 +18,13 @@ class FakeDoorPlatform implements DoorPlatform {
     this.grantHome = true,
     this.launchWorks = true,
     this.home,
+    this.icons = const <String, Uint8List>{},
   }) : apps = apps ?? CurreController.fallbackApps;
 
   final List<LaunchableApp> apps;
+
+  /// The icon the phone gives for each package; any other has none.
+  final Map<String, Uint8List> icons;
   final List<AppShortcut> staticShortcuts;
   final List<AppShortcut> conversationShortcuts;
 
@@ -34,7 +38,7 @@ class FakeDoorPlatform implements DoorPlatform {
   var homeRequests = 0;
 
   @override
-  Future<Uint8List?> getIcon(String packageName) async => null;
+  Future<Uint8List?> getIcon(String packageName) async => icons[packageName];
 
   @override
   Future<List<AppShortcut>> getConversationShortcuts(
