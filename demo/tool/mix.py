@@ -59,9 +59,9 @@ def main():
     seconds = sfx_spec["seconds"]
     tool = DEMO / "tool"
     music, sfx = out / "music.wav", out / "sfx.wav"
-    run([sys.executable, "-I", str(tool / "make_music.py"), str(music), str(seconds),
+    run([sys.executable, str(tool / "make_music.py"), str(music), str(seconds),
          "--lift", str(start_of("arch")), "--resolve", str(start_of("end"))])
-    run([sys.executable, "-I", str(tool / "sfx.py"), str(out / "sfx.json"), str(sfx)])
+    run([sys.executable, str(tool / "sfx.py"), str(out / "sfx.json"), str(sfx)])
     picture = out / "curre-demo-picture.mp4"
 
     # Music only: bed and effects.

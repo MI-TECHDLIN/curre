@@ -159,7 +159,7 @@ def build():
     f.el('<div id="bg"></div>')
     for i, (color, x, y, size) in enumerate([
         (C["marigold"], -200, -260, 1100), (C["rose"], 1100, 520, 1200), (C["blue"], 400, 700, 900)]):
-        f.el(f'<div class="blob" id="blob{i}" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:{color}"></div>')
+        f.el(f'<div class="blob" id="blob{i}" style="left:{x}px;top:{y}px;width:{size}px;height:{size}px;background:radial-gradient(closest-side,{color} 0%,{color}99 45%,{color}00 100%)"></div>')
         dx, dy = [(160, 90), (-140, -70), (120, -110)][i]
         f.tw(f'tl.fromTo("#blob{i}",{{x:0,y:0}},{{x:{dx},y:{dy},duration:{total},ease:"none"}},0);')
 
@@ -476,7 +476,7 @@ CSS = """
 body {{ margin: 0; }}
 #root {{ position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: 'Geologica', sans-serif; color: {ink}; }}
 #bg {{ position: absolute; inset: 0; background: {paper}; }}
-.blob {{ position: absolute; border-radius: 50%; opacity: 0.55; filter: blur(140px); }}
+.blob {{ position: absolute; opacity: 0.55; }}
 #cam {{ position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }}
 #phone {{ position: absolute; border-radius: 58px; background: {ink}; box-shadow: 0 40px 90px rgba(30,26,22,0.28), 0 0 0 1.5px rgba(255,255,255,0.4) inset; }}
 #screen {{ position: absolute; border-radius: 46px; overflow: hidden; background: {paper}; }}
@@ -485,7 +485,7 @@ body {{ margin: 0; }}
 .layer .dipfill {{ position: absolute; inset: 0; background: {paper}; opacity: 0; }}
 .touch {{ position: absolute; width: 44px; height: 44px; }}
 .touch .dot {{ width: 44px; height: 44px; border-radius: 50%; background: rgba(30,26,22,0.30); border: 2.5px solid rgba(255,255,255,0.95); box-shadow: 0 4px 14px rgba(30,26,22,0.25); opacity: 0; }}
-.glass {{ background: rgba(255,253,249,0.78); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1.5px solid rgba(255,255,255,0.9); border-radius: 32px; box-shadow: 0 24px 60px rgba(30,26,22,0.12); }}
+.glass {{ background: rgba(255,253,249,0.9); border: 1.5px solid rgba(255,255,255,0.95); border-radius: 32px; box-shadow: 0 24px 60px rgba(30,26,22,0.12); }}
 .label {{ font-weight: 600; font-size: 22px; letter-spacing: 3px; text-transform: uppercase; color: {emberText}; }}
 .title {{ position: absolute; left: 150px; top: 150px; width: 760px; }}
 .title .label {{ margin-bottom: 18px; }}

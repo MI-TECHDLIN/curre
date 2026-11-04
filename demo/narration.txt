@@ -1,0 +1,47 @@
+Curre demo film: narration, with where each line starts and ends (m:ss.s).
+
+[hook]
+0:00.6-0:04.0  Two weeks before exams, Tobi's phone keeps pulling him away.
+0:04.7-0:06.7  One quick look, and an hour is gone.
+0:07.7-0:10.1  Curre is a home screen for a focus period.
+[setup]
+0:12.4-0:14.0  Setting up takes about a minute.
+0:15.0-0:20.3  Tobi says what the focus is for, passing his finals, and when it ends: two weeks from today.
+0:22.0-0:23.4  Then, what pulls him in.
+0:24.5-0:28.4  Only the apps he picks get hidden. Everything else opens as usual.
+0:30.4-0:32.3  And Curre becomes his home screen.
+[oneline]
+0:36.1-0:39.2  Every session starts with one sentence, in plain words.
+0:42.4-0:49.2  Fill picks the apps this phone really has. Extract copies the exact words: G chord lesson, until seven.
+0:50.5-0:52.3  Each door goes straight to the task.
+0:53.7-0:56.2  YouTube opens on the search, not on the feed.
+[whynow]
+0:59.8-1:02.4  Open a hidden app, and Curre asks: why now?
+1:05.3-1:08.5  Just checking something sounds like browsing, so it can wait.
+1:09.8-1:13.3  There's no hard lock. It still opens after thirty seconds.
+1:15.1-1:17.1  A real reason opens it right away.
+1:18.2-1:22.9  Someone's waiting, so Instagram opens at the chat with Ada, for five minutes.
+1:26.1-1:30.1  And when a reason tries to give Curre orders, Guard calmly flags it.
+[held]
+1:31.9-1:35.1  Hidden apps can't sneak back in through notifications, either.
+1:35.8-1:39.2  Curre holds them quietly, on the phone, and deletes nothing.
+1:42.0-1:44.2  One day a week, Tobi takes a rest day.
+1:44.7-1:48.2  His hidden apps open freely, and what was held is given back.
+[proof]
+1:52.3-1:54.4  A week in, Tobi finishes the lesson.
+1:55.4-1:58.3  A tick isn't proof, so Curre asks what changed.
+1:59.4-2:05.6  Decide checks it's a real completion, Extract finds what he learned, and Verify checks it against the plan.
+2:06.6-2:09.5  Seven proof days. The rest day didn't break the run.
+2:10.5-2:12.8  And on Home, the evening's water rises.
+[later]
+2:14.3-2:17.2  What he saved for later comes back at the next check-in.
+2:19.4-2:23.3  Rerank brings what fits tonight's plan to the top, and leaves the rest.
+[focusend]
+2:25.4-2:27.9  When the exams are over, so is Curre's job.
+2:28.4-2:33.6  Tobi sees what two weeks added up to, then goes back to his old home screen in one tap.
+[arch]
+2:37.5-2:40.8  Under the hood, every screen makes one Clocked pipeline call.
+2:41.4-2:49.7  Fill and Extract build the plan. Protect, Guard, Decide and Extract answer why now. Proof adds Verify. Rerank sorts the shelf.
+2:49.9-2:52.9  The server stores nothing. It all stays on the phone.
+[end]
+2:53.8-2:55.7  Curre. Straight to what you came for.

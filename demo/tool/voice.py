@@ -169,8 +169,21 @@ def place(out):
     for n, row in enumerate(timing, 1):
         srt.append(f"{n}\n{stamp(row['start'])} --> {stamp(row['end'])}\n{row['text']}\n")
     (out / "voice" / "curre-demo.srt").write_text("\n".join(srt))
+    script = ["Curre demo film: narration, with where each line starts and ends (m:ss.s).", ""]
+    scene = None
+    for line, row in zip(lines, timing):
+        if line["scene"] != scene:
+            scene = line["scene"]
+            script.append(f"[{scene}]")
+        script.append(f"{clock(row['start'])}-{clock(row['end'])}  {row['text']}")
+    (out / "voice" / "narration.txt").write_text("\n".join(script) + "\n")
     for row in timing:
         print(f"{row['id']:>3} {row['start']:7.2f}-{row['end']:7.2f} x{row['tempo']}  {row['text'][:60]}")
+
+
+def clock(t):
+    m, s = divmod(t, 60)
+    return f"{int(m)}:{s:04.1f}"
 
 
 def stamp(t):

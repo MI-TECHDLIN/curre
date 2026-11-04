@@ -42,16 +42,16 @@ shots() {
 case "$step" in
   shots) shots false "${1:-}" ;;
   preview) shots true "${1:-}" ;;
-  capture) python3 -I "$demo/tool/capture_live.py" "$FILM_OUT" "$@" ;;
+  capture) python3 "$demo/tool/capture_live.py" "$FILM_OUT" "$@" ;;
   voice) "$demo/tool/voice.sh" "$@" ;;
-  motion) python3 -I "$demo/tool/build_motion.py" "$FILM_OUT" && "$demo/tool/hf.sh" render "$@" ;;
-  mix) python3 -I "$demo/tool/mix.py" "$FILM_OUT" "$@" ;;
+  motion) python3 "$demo/tool/build_motion.py" "$FILM_OUT" && "$demo/tool/hf.sh" render "$@" ;;
+  mix) python3 "$demo/tool/mix.py" "$FILM_OUT" "$@" ;;
   all)
     FILM_STRICT=true shots false
     "$demo/tool/voice.sh"
-    python3 -I "$demo/tool/build_motion.py" "$FILM_OUT"
+    python3 "$demo/tool/build_motion.py" "$FILM_OUT"
     "$demo/tool/hf.sh" render
-    python3 -I "$demo/tool/mix.py" "$FILM_OUT"
+    python3 "$demo/tool/mix.py" "$FILM_OUT"
     ;;
   *) echo "unknown step: $step" >&2; exit 2 ;;
 esac

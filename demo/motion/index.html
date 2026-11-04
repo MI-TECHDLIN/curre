@@ -10,7 +10,7 @@
 body { margin: 0; }
 #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: 'Geologica', sans-serif; color: #1E1A16; }
 #bg { position: absolute; inset: 0; background: #F7F2EA; }
-.blob { position: absolute; border-radius: 50%; opacity: 0.55; filter: blur(140px); }
+.blob { position: absolute; opacity: 0.55; }
 #cam { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
 #phone { position: absolute; border-radius: 58px; background: #1E1A16; box-shadow: 0 40px 90px rgba(30,26,22,0.28), 0 0 0 1.5px rgba(255,255,255,0.4) inset; }
 #screen { position: absolute; border-radius: 46px; overflow: hidden; background: #F7F2EA; }
@@ -19,7 +19,7 @@ body { margin: 0; }
 .layer .dipfill { position: absolute; inset: 0; background: #F7F2EA; opacity: 0; }
 .touch { position: absolute; width: 44px; height: 44px; }
 .touch .dot { width: 44px; height: 44px; border-radius: 50%; background: rgba(30,26,22,0.30); border: 2.5px solid rgba(255,255,255,0.95); box-shadow: 0 4px 14px rgba(30,26,22,0.25); opacity: 0; }
-.glass { background: rgba(255,253,249,0.78); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1.5px solid rgba(255,255,255,0.9); border-radius: 32px; box-shadow: 0 24px 60px rgba(30,26,22,0.12); }
+.glass { background: rgba(255,253,249,0.9); border: 1.5px solid rgba(255,255,255,0.95); border-radius: 32px; box-shadow: 0 24px 60px rgba(30,26,22,0.12); }
 .label { font-weight: 600; font-size: 22px; letter-spacing: 3px; text-transform: uppercase; color: #A8441A; }
 .title { position: absolute; left: 150px; top: 150px; width: 760px; }
 .title .label { margin-bottom: 18px; }
@@ -88,9 +88,9 @@ body { margin: 0; }
 </style></head>
 <body><div id="root" data-composition-id="main" data-start="0" data-duration="179.0" data-width="1920" data-height="1080">
 <div id="bg"></div>
-<div class="blob" id="blob0" style="left:-200px;top:-260px;width:1100px;height:1100px;background:#FCC35A"></div>
-<div class="blob" id="blob1" style="left:1100px;top:520px;width:1200px;height:1200px;background:#F7D3CC"></div>
-<div class="blob" id="blob2" style="left:400px;top:700px;width:900px;height:900px;background:#CFE2F4"></div>
+<div class="blob" id="blob0" style="left:-200px;top:-260px;width:1100px;height:1100px;background:radial-gradient(closest-side,#FCC35A 0%,#FCC35A99 45%,#FCC35A00 100%)"></div>
+<div class="blob" id="blob1" style="left:1100px;top:520px;width:1200px;height:1200px;background:radial-gradient(closest-side,#F7D3CC 0%,#F7D3CC99 45%,#F7D3CC00 100%)"></div>
+<div class="blob" id="blob2" style="left:400px;top:700px;width:900px;height:900px;background:radial-gradient(closest-side,#CFE2F4 0%,#CFE2F499 45%,#CFE2F400 100%)"></div>
 <div id="cam">
 <div id="phone" style="left:1089.6941176470589px;top:98px;width:420.61176470588236px;height:884.0px">
 <div id="screen" style="left:12px;top:12px;width:396.61176470588236px;height:860.0px">

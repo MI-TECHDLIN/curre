@@ -12,7 +12,7 @@ out="${FILM_OUT:-/tmp/curre-film}"
 tts="$demo/.cache/tts"
 if [[ ${1:-} == take || ${1:-} == place ]]; then
   mode="$1"; shift
-  exec python3 -I "$demo/tool/voice.py" "$mode" "$out" "$@"
+  exec python3 "$demo/tool/voice.py" "$mode" "$out" "$@"
 fi
 if [[ ! -x $tts/venv/bin/python ]]; then
   mkdir -p "$tts"
