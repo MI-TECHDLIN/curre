@@ -1,0 +1,12 @@
+# Rendered output, the symlinked engine, the TTS model and node_modules stay local.
+.cache/
+out/
+*.mp4
+*.wav
+__pycache__/
+motion/node_modules/
+motion/public/clips/
+motion/public/audio/
+motion/out/
+motion/.hyperframes/
+motion/assets/

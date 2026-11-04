@@ -1,0 +1,222 @@
+{
+  "voice": "af_heart",
+  "speed": 1.0,
+  "note": "Each line starts at its scene's start plus `at` seconds. demo/tool/voice.py speaks or slices the lines, places them, and fails if one runs into the next. `say` respells words for the synthetic voice only (Curre is said KOO-reh).",
+  "lines": [
+    {
+      "id": "h1",
+      "scene": "hook",
+      "at": 0.6,
+      "text": "Two weeks before exams, Tobi's phone keeps pulling him away."
+    },
+    {
+      "id": "h2",
+      "scene": "hook",
+      "at": 4.7,
+      "text": "One quick look, and an hour is gone."
+    },
+    {
+      "id": "h3",
+      "scene": "hook",
+      "at": 7.7,
+      "text": "Curre is a home screen for a focus period."
+    },
+    {
+      "id": "s1",
+      "scene": "setup",
+      "at": 0.4,
+      "text": "Setting up takes about a minute."
+    },
+    {
+      "id": "s2",
+      "scene": "setup",
+      "at": 3.0,
+      "text": "Tobi says what the focus is for, passing his finals, and when it ends: two weeks from today."
+    },
+    {
+      "id": "s3",
+      "scene": "setup",
+      "at": 10.0,
+      "text": "Then, what pulls him in."
+    },
+    {
+      "id": "s4",
+      "scene": "setup",
+      "at": 12.5,
+      "text": "Only the apps he picks get hidden. Everything else opens as usual."
+    },
+    {
+      "id": "s5",
+      "scene": "setup",
+      "at": 18.4,
+      "text": "And Curre becomes his home screen."
+    },
+    {
+      "id": "o1",
+      "scene": "oneline",
+      "at": 0.6,
+      "text": "Every session starts with one sentence, in plain words."
+    },
+    {
+      "id": "o2",
+      "scene": "oneline",
+      "at": 6.9,
+      "text": "Fill picks the apps this phone really has. Extract copies the exact words: G chord lesson, until seven."
+    },
+    {
+      "id": "o3",
+      "scene": "oneline",
+      "at": 15.0,
+      "text": "Each door goes straight to the task."
+    },
+    {
+      "id": "o4",
+      "scene": "oneline",
+      "at": 18.2,
+      "text": "YouTube opens on the search, not on the feed."
+    },
+    {
+      "id": "w1",
+      "scene": "whynow",
+      "at": 0.3,
+      "text": "Open a hidden app, and Curre asks: why now?"
+    },
+    {
+      "id": "w2",
+      "scene": "whynow",
+      "at": 5.8,
+      "text": "Just checking something sounds like browsing, so it can wait."
+    },
+    {
+      "id": "w3",
+      "scene": "whynow",
+      "at": 10.3,
+      "text": "There's no hard lock. It still opens after thirty seconds."
+    },
+    {
+      "id": "w4",
+      "scene": "whynow",
+      "at": 15.6,
+      "text": "A real reason opens it right away."
+    },
+    {
+      "id": "w5",
+      "scene": "whynow",
+      "at": 18.7,
+      "text": "Someone's waiting, so Instagram opens at the chat with Ada, for five minutes."
+    },
+    {
+      "id": "w6",
+      "scene": "whynow",
+      "at": 26.6,
+      "text": "And when a reason tries to give Curre orders, Guard calmly flags it."
+    },
+    {
+      "id": "n1",
+      "scene": "held",
+      "at": 0.4,
+      "text": "Hidden apps can't sneak back in through notifications, either."
+    },
+    {
+      "id": "n2",
+      "scene": "held",
+      "at": 4.3,
+      "text": "Curre holds them quietly, on the phone, and deletes nothing."
+    },
+    {
+      "id": "n3",
+      "scene": "held",
+      "at": 10.5,
+      "text": "One day a week, Tobi takes a rest day."
+    },
+    {
+      "id": "n4",
+      "scene": "held",
+      "at": 13.2,
+      "text": "His hidden apps open freely, and what was held is given back."
+    },
+    {
+      "id": "p1",
+      "scene": "proof",
+      "at": 0.3,
+      "text": "A week in, Tobi finishes the lesson."
+    },
+    {
+      "id": "p2",
+      "scene": "proof",
+      "at": 3.4,
+      "text": "A tick isn't proof, so Curre asks what changed."
+    },
+    {
+      "id": "p3",
+      "scene": "proof",
+      "at": 7.4,
+      "text": "Decide checks it's a real completion, Extract finds what he learned, and Verify checks it against the plan."
+    },
+    {
+      "id": "p4",
+      "scene": "proof",
+      "at": 14.6,
+      "text": "Seven proof days. The rest day didn't break the run."
+    },
+    {
+      "id": "p5",
+      "scene": "proof",
+      "at": 18.5,
+      "text": "And on Home, the evening's water rises."
+    },
+    {
+      "id": "l1",
+      "scene": "later",
+      "at": 0.3,
+      "text": "What he saved for later comes back at the next check-in."
+    },
+    {
+      "id": "l2",
+      "scene": "later",
+      "at": 5.4,
+      "text": "Rerank brings what fits tonight's plan to the top, and leaves the rest."
+    },
+    {
+      "id": "f1",
+      "scene": "focusend",
+      "at": 0.4,
+      "text": "When the exams are over, so is Curre's job."
+    },
+    {
+      "id": "f2",
+      "scene": "focusend",
+      "at": 3.4,
+      "text": "Tobi sees what two weeks added up to, then goes back to his old home screen in one tap."
+    },
+    {
+      "id": "a1",
+      "scene": "arch",
+      "at": 0.5,
+      "text": "Under the hood, every screen makes one Clocked pipeline call."
+    },
+    {
+      "id": "a2",
+      "scene": "arch",
+      "at": 4.4,
+      "text": "Fill and Extract build the plan. Protect, Guard, Decide and Extract answer why now. Proof adds Verify. Rerank sorts the shelf."
+    },
+    {
+      "id": "a3",
+      "scene": "arch",
+      "at": 12.9,
+      "text": "The server stores nothing. It all stays on the phone."
+    },
+    {
+      "id": "e1",
+      "scene": "end",
+      "at": 0.8,
+      "text": "Curre. Straight to what you came for."
+    }
+  ],
+  "say": {
+    "Curre": "Koo-reh",
+    "Tobi": "Toby",
+    "Rerank": "Re-rank"
+  }
+}

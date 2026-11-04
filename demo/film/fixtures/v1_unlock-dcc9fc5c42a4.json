@@ -1,0 +1,29 @@
+{
+  "route": "/v1/unlock",
+  "captured_at": "2026-11-04T11:19:20Z",
+  "source": "https://curre-zdfr.onrender.com",
+  "round_trip_ms": 429.1,
+  "request": {
+    "app_label": "Instagram",
+    "plan_intention": "Revise chapter 4 in Keep Notes and watch the G chord lesson on YouTube until 7",
+    "reason": "Just checking something quickly",
+    "shortcut_labels": [],
+    "threshold": 0.7
+  },
+  "status": 200,
+  "response": {
+    "outcome": "later",
+    "kind": "browse",
+    "confidence": 0.829,
+    "door": null,
+    "target": null,
+    "person": null,
+    "minutes": null,
+    "guard": null,
+    "redactions": [],
+    "usage": {
+      "credits": 5,
+      "model_ms": 109.90045
+    }
+  }
+}

@@ -123,6 +123,12 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   `CurreLocalStore.recordDoorUse`, or the water never rises. Motion (Peek,
   `LiveSky`, `RisingWater`) belongs to the check-in and moments of choice,
   never Home, and must hold still under reduce-motion.
+- The demo film lives in `demo/` (see `demo/README.md`): widget tests in
+  `demo/film/` film the real app against live-captured server answers in
+  `demo/film/fixtures/`, imported test fakes from `test/support/`, and
+  HyperFrames composes it. A UI copy or flow change can break a shot or
+  need a new capture: re-run `demo/tool/render.sh preview` before a demo
+  render. `flutter test` does not run `demo/`; `flutter analyze` does.
 - clocked-sdk 0.7.0 response shapes are easy to get wrong: Decide answers
   are under `result["answers"]` (a `choice` answer's label is `["choice"]`,
   a `multiselect` answer's labels are `["selected"]`); Fill and Extract
