@@ -540,3 +540,47 @@ def test_unlock_unavailable_without_an_answer_has_no_redactions(make_client):
     body = make_client(handler).post("/v1/unlock", json=_unlock_payload()).json()
     assert body["outcome"] == "unavailable"
     assert body["redactions"] is None
+
+
+def test_unlock_tolerates_odd_shortcut_labels_and_a_long_app_label(make_client):
+    captured: list = []
+
+    async def handler(*, text, steps, **kwargs):
+        captured.append(steps)
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step(
+                    "gate",
+                    "decide",
+                    {"answers": {"kind": decide_choice("task", 0.95)}},
+                ),
+                ok_step("task", "extract", {"fields": {}}),
+            ]
+        )
+
+    client = make_client(handler)
+    resp = client.post(
+        "/v1/unlock",
+        json=_unlock_payload(
+            "learn the G chord",
+            app_label="I" * 70,
+            shortcut_labels=["", "Messages", "x" * 61, "Messages", "app"],
+        ),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["outcome"] == "open"
+    gate = next(step for step in captured[0] if step.get("name") == "gate")
+    door = gate["decide"]["questions"]["door"]
+    assert list(door["criteria"]) == ["Messages", "app"]
+    assert door["instructions"] == f"Which part of {'I' * 60} does the Reason line need?"
+
+
+def test_unlock_rejects_a_blank_app_label(make_client):
+    async def handler(*, text, steps, **kwargs):  # pragma: no cover
+        raise AssertionError("must not call Clocked on invalid input")
+
+    client = make_client(handler)
+    resp = client.post("/v1/unlock", json=_unlock_payload(app_label="   "))
+    assert resp.status_code == 422

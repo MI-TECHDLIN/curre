@@ -257,6 +257,7 @@ class CurreApiClient {
 
       _diagnostic(
         'plan attempt=$attempt status=${response.statusCode} '
+        '${_errorFieldsNote(response)}'
         'elapsed_ms=${watch.elapsedMilliseconds}',
       );
       if (!_isSuccess(response.statusCode)) {
@@ -311,11 +312,16 @@ class CurreApiClient {
         'v1/unlock',
         request.toJson(),
       ).timeout(_budget(unlockTimeout, cold));
+      _diagnostic(
+        'unlock status=${response.statusCode} ${_errorFieldsNote(response)}'
+            .trimRight(),
+      );
       if (!_isSuccess(response.statusCode)) {
         return const UnlockResponse.unavailable();
       }
       return UnlockResponse.fromJson(_decodeObject(response.body));
-    } on Object {
+    } on Object catch (error) {
+      _diagnostic('unlock error=${error.runtimeType}');
       // Every transport, timeout, status, and malformed-response failure must
       // leave the user with the local override wait.
       return const UnlockResponse.unavailable();
@@ -412,7 +418,54 @@ class CurreApiClient {
     if (diagnosticsEnabled) debugPrint('[CurreApi] $message');
   }
 
+  /// For a 4xx answer, names the request fields the backend turned down
+  /// (`fields=candidates.3.label:string_too_long `), so a failure is
+  /// diagnosable. Only field paths and the server's fixed error codes are
+  /// kept: never the rejected values, user text or keys.
+  String _errorFieldsNote(http.Response response) {
+    if (!diagnosticsEnabled) return '';
+    final status = response.statusCode;
+    if (status < 400 || status >= 500) return '';
+    final fields = rejectedFieldNames(response.body);
+    return fields.isEmpty ? '' : 'fields=${fields.join(',')} ';
+  }
+
   void close() => _httpClient.close();
+}
+
+/// The field paths (and error codes) in a FastAPI validation answer, such as
+/// `candidates.3.label:string_too_long`. Anything that isn't a plain field
+/// name, index or code is dropped, so no rejected value or user text can
+/// leak into a log. At most five are kept.
+@visibleForTesting
+List<String> rejectedFieldNames(String body) {
+  Object? decoded;
+  try {
+    decoded = jsonDecode(body);
+  } on FormatException {
+    return const <String>[];
+  }
+  if (decoded is! Map || decoded['detail'] is! List) return const <String>[];
+  final plainName = RegExp(r'^[A-Za-z_][A-Za-z0-9_]{0,40}$');
+  final names = <String>[];
+  for (final entry in decoded['detail'] as List) {
+    if (names.length == 5) break;
+    if (entry is! Map || entry['loc'] is! List) continue;
+    final path = <String>[
+      for (final part in entry['loc'] as List)
+        if (part is int)
+          '$part'
+        else if (part is String && plainName.hasMatch(part))
+          part
+        else
+          '?',
+    ];
+    if (path.isNotEmpty && path.first == 'body') path.removeAt(0);
+    final type = entry['type'];
+    final code = type is String && plainName.hasMatch(type) ? ':$type' : '';
+    names.add('${path.join('.')}$code');
+  }
+  return names;
 }
 
 bool _isSuccess(int status) => status >= 200 && status < 300;

@@ -879,27 +879,20 @@ class CurreController extends ChangeNotifier {
     final shortcutLists = await Future.wait(
       candidates.map((app) => staticShortcutsFor(app.packageName)),
     );
-    final labelsSeen = <String, int>{};
-    final requestCandidates = <PlanCandidate>[];
-    for (var i = 0; i < candidates.length; i++) {
-      final app = candidates[i];
-      final seen = labelsSeen.update(
-        app.label,
-        (value) => value + 1,
-        ifAbsent: () => 1,
-      );
-      final label = seen == 1 ? app.label : '${app.label} $seen';
-      requestCandidates.add(
-        PlanCandidate(
-          id: app.packageName,
-          label: label,
-          shortcutLabels: shortcutLists[i]
-              .map((shortcut) => shortcut.shortLabel)
-              .toSet()
-              .toList(growable: false),
-          hasQueryDoor: QueryDoorAllowlist.forPackage(app.packageName) != null,
+    final requestCandidates = planCandidatesFrom([
+      for (var i = 0; i < candidates.length; i++)
+        (
+          id: candidates[i].packageName,
+          label: candidates[i].label,
+          shortcutLabels: shortcutLists[i].map(
+            (shortcut) => shortcut.shortLabel,
+          ),
+          hasQueryDoor:
+              QueryDoorAllowlist.forPackage(candidates[i].packageName) != null,
         ),
-      );
+    ]);
+    if (requestCandidates.length < 2) {
+      return const PlanBuildResult.manual(PlanFallbackReason.network);
     }
 
     final stopwatch = Stopwatch()..start();
@@ -1587,14 +1580,13 @@ class CurreController extends ChangeNotifier {
         ? const UnlockResponse.unavailable()
         : await api!.unlock(
             UnlockRequest(
-              appLabel: app.label,
+              appLabel: cleanApiLabel(app.label) ?? 'this app',
               planIntention: activePlan?.intention,
               reason: reason,
               threshold: settings.threshold,
-              shortcutLabels: shortcuts
-                  .map((shortcut) => shortcut.shortLabel)
-                  .toSet()
-                  .toList(growable: false),
+              shortcutLabels: cleanShortcutLabels(
+                shortcuts.map((shortcut) => shortcut.shortLabel),
+              ),
             ),
           );
     stopwatch.stop();

@@ -68,7 +68,10 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - The backend (`/v1/plan`, `/v1/unlock` over one `clocked-sdk` Pipeline call
   each) lives in `server/`; see `server/README.md` for setup, tests and the
   endpoint map. Validate backend changes with `server/.venv`'s `pytest` and
-  `ruff check server`.
+  `ruff check server`. Odd app data is cleaned, never a reason to reject a
+  plan or unlock: `server/app/models.py` and the phone's
+  `planCandidatesFrom`/`cleanShortcutLabels` (`lib/core/api_models.dart`)
+  apply the same rules, so keep them in step.
 - Phone-owned models, sessions, visibility, grants, the typed backend client
   and local persistence live in `lib/core/`; its client reads
   `CURRE_API_BASE_URL` and `CURRE_APP_KEY` from `--dart-define`. The host
