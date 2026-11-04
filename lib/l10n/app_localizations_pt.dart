@@ -2166,4 +2166,236 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get backedByApp => 'Apoiada pela app que abriu e pela sua nota';
+
+  @override
+  String get voicePermissionExplanation =>
+      'A Curre só ouve enquanto mantém o microfone premido ou lhe toca. A sua voz nunca sai do telemóvel.';
+
+  @override
+  String get voiceMicNeeded =>
+      'A escrita por voz precisa do microfone. Também pode escrever.';
+
+  @override
+  String get voiceCouldNotStart =>
+      'Não foi possível iniciar a escrita por voz. Também pode escrever.';
+
+  @override
+  String get voiceGettingReady =>
+      'A escrita por voz está a preparar-se. Por agora, pode escrever.';
+
+  @override
+  String get voiceReadyOffline =>
+      'Pronta. A escrita por voz já funciona sem internet.';
+
+  @override
+  String get voiceMicStillOff =>
+      'O microfone continua desligado. Autorize-o para falar ou escreva.';
+
+  @override
+  String get voiceNothingHeard =>
+      'Não ouvi nada. Tente de novo, um pouco mais perto do microfone.';
+
+  @override
+  String get voicePrivacyLine =>
+      'Neste telemóvel · nada do que diz é guardado ou enviado';
+
+  @override
+  String get typeInstead => 'Escrever';
+
+  @override
+  String get gettingVoiceReady => 'A preparar a escrita por voz';
+
+  @override
+  String downloadNowSize(String size) {
+    return 'Transferir agora · $size';
+  }
+
+  @override
+  String get speakInsteadTyping => 'Fale em vez de escrever';
+
+  @override
+  String get allowMic => 'Permitir o microfone';
+
+  @override
+  String get micOffForCurre => 'O microfone está desligado para a Curre';
+
+  @override
+  String micSettingsBody(String privacy) {
+    return 'Ative o microfone para a Curre nas definições do telemóvel e volte. $privacy';
+  }
+
+  @override
+  String get openPhoneSettings => 'Abrir definições do telemóvel';
+
+  @override
+  String get tapOrHoldMic => 'Toque ou mantenha o microfone premido e fale.';
+
+  @override
+  String get listeningHeld => 'A ouvir… solte quando terminar.';
+
+  @override
+  String get listeningPause =>
+      'A ouvir… faça uma pausa quando terminar ou toque no microfone.';
+
+  @override
+  String get writingSaid => 'A escrever o que disse';
+
+  @override
+  String get writingProgress => 'A escrever…';
+
+  @override
+  String get voiceStartFailed => 'Não foi possível iniciar a escrita por voz';
+
+  @override
+  String get micStartFailed => 'O microfone não arrancou';
+
+  @override
+  String voiceModelFix(String size) {
+    return 'Voltar a transferir os ficheiros de voz ($size) costuma resolver.';
+  }
+
+  @override
+  String get voiceMicBusy =>
+      'Se outra app estiver a usar o microfone, feche-a e tente novamente.';
+
+  @override
+  String get downloadAgain => 'Transferir de novo';
+
+  @override
+  String voiceAmount(String received, String total) {
+    return '$received de $total';
+  }
+
+  @override
+  String get voiceStatusReady => 'Pronta · funciona sem internet';
+
+  @override
+  String voiceStatusGetting(int percent, String amount) {
+    return 'A preparar $percent% · $amount';
+  }
+
+  @override
+  String voiceWaitingWifi(String extra) {
+    return 'À espera de Wi-Fi$extra';
+  }
+
+  @override
+  String voiceWaitingConnection(String extra) {
+    return 'À espera de ligação$extra';
+  }
+
+  @override
+  String voiceWaitingBattery(String extra) {
+    return 'À espera de mais bateria$extra';
+  }
+
+  @override
+  String voiceStatusExtra(String amount) {
+    return ' · $amount até agora';
+  }
+
+  @override
+  String voiceStoppedStorage(String size) {
+    return 'Parada · o telemóvel precisa de $size livres';
+  }
+
+  @override
+  String voiceStoppedLater(String extra) {
+    return 'Parada · volta a tentar mais tarde$extra';
+  }
+
+  @override
+  String voiceNotOnPhone(String size) {
+    return 'Não está neste telemóvel · $size quando voltar a usar o microfone';
+  }
+
+  @override
+  String get voiceUnavailable => 'Não disponível neste telemóvel';
+
+  @override
+  String get voiceDownload => 'Transferência de voz';
+
+  @override
+  String voiceKeepsGoing(String amount) {
+    return '$amount. Continua se fechar isto.';
+  }
+
+  @override
+  String voiceDownloadsWifi(String size) {
+    return 'É transferida sozinha por Wi-Fi, $size uma vez.';
+  }
+
+  @override
+  String get voiceNoConnection =>
+      'Sem ligação neste momento. Continua de onde parou.';
+
+  @override
+  String get voiceWaitBattery =>
+      'Espera por mais bateria ou por um carregador.';
+
+  @override
+  String voiceNoSpace(String size) {
+    return 'Falta espaço no telemóvel. A escrita por voz precisa de $size livres.';
+  }
+
+  @override
+  String get voiceDamaged =>
+      'Um ficheiro chegou danificado e foi apagado. Tente novamente.';
+
+  @override
+  String get voiceFilesUnreachable =>
+      'Não foi possível chegar aos ficheiros de voz. Tente daqui a pouco.';
+
+  @override
+  String voiceRunsHere(String size) {
+    return 'A escrita por voz funciona neste telemóvel e precisa de $size uma vez.';
+  }
+
+  @override
+  String get stopAndWrite => 'Parar e escrever';
+
+  @override
+  String get startListening => 'Começar a ouvir';
+
+  @override
+  String get removeVoiceQuestion => 'Remover os ficheiros de voz?';
+
+  @override
+  String removeVoiceBody(String size) {
+    return 'Liberta $size. A escrita por voz só os volta a transferir quando usar o microfone ou a ativar aqui.';
+  }
+
+  @override
+  String get keepFiles => 'Manter';
+
+  @override
+  String get remove => 'Remover';
+
+  @override
+  String get voiceFilesRemoved => 'Ficheiros de voz removidos.';
+
+  @override
+  String get voiceFilesRemoveFailed =>
+      'Não foi possível remover os ficheiros de voz.';
+
+  @override
+  String get voiceOnPhone => 'Voz: neste telemóvel';
+
+  @override
+  String get voiceSettingsBody =>
+      'A escrita por voz não precisa de conta e, depois de transferida, não precisa de internet. Nada do que diz é guardado ou enviado.';
+
+  @override
+  String get downloadMobile => 'Transferir voz com dados móveis';
+
+  @override
+  String mobileOffHelp(String size) {
+    return 'Desligado: espera por Wi-Fi. Cerca de $size, uma vez.';
+  }
+
+  @override
+  String get downloadVoiceFiles => 'Transferir ficheiros de voz';
+
+  @override
+  String get removeVoiceFiles => 'Remover ficheiros de voz';
 }

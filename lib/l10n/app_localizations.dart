@@ -3493,6 +3493,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Backed by the app you opened and your note'**
   String get backedByApp;
+
+  /// No description provided for @voicePermissionExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre listens only while you hold or tap the mic. Your voice never leaves your phone.'**
+  String get voicePermissionExplanation;
+
+  /// No description provided for @voiceMicNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing needs the mic. You can type instead.'**
+  String get voiceMicNeeded;
+
+  /// No description provided for @voiceCouldNotStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing couldn\'t start. You can type instead.'**
+  String get voiceCouldNotStart;
+
+  /// No description provided for @voiceGettingReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice is getting ready. You can type for now.'**
+  String get voiceGettingReady;
+
+  /// No description provided for @voiceReadyOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready. Voice typing now works offline.'**
+  String get voiceReadyOffline;
+
+  /// No description provided for @voiceMicStillOff.
+  ///
+  /// In en, this message translates to:
+  /// **'The mic is still off. Allow it to speak, or type instead.'**
+  String get voiceMicStillOff;
+
+  /// No description provided for @voiceNothingHeard.
+  ///
+  /// In en, this message translates to:
+  /// **'I didn’t catch that. Try again, a little closer to the mic.'**
+  String get voiceNothingHeard;
+
+  /// No description provided for @voicePrivacyLine.
+  ///
+  /// In en, this message translates to:
+  /// **'On this phone · nothing you say is saved or sent'**
+  String get voicePrivacyLine;
+
+  /// No description provided for @typeInstead.
+  ///
+  /// In en, this message translates to:
+  /// **'Type instead'**
+  String get typeInstead;
+
+  /// No description provided for @gettingVoiceReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting voice typing ready'**
+  String get gettingVoiceReady;
+
+  /// No description provided for @downloadNowSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Download now · {size}'**
+  String downloadNowSize(String size);
+
+  /// No description provided for @speakInsteadTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'Speak instead of typing'**
+  String get speakInsteadTyping;
+
+  /// No description provided for @allowMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow the mic'**
+  String get allowMic;
+
+  /// No description provided for @micOffForCurre.
+  ///
+  /// In en, this message translates to:
+  /// **'The mic is off for Curre'**
+  String get micOffForCurre;
+
+  /// No description provided for @micSettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Microphone for Curre in your phone’s settings, then come back. {privacy}'**
+  String micSettingsBody(String privacy);
+
+  /// No description provided for @openPhoneSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open phone settings'**
+  String get openPhoneSettings;
+
+  /// No description provided for @tapOrHoldMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap or hold the mic, then speak.'**
+  String get tapOrHoldMic;
+
+  /// No description provided for @listeningHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening… let go when you’re done.'**
+  String get listeningHeld;
+
+  /// No description provided for @listeningPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening… pause when you’re done, or tap the mic.'**
+  String get listeningPause;
+
+  /// No description provided for @writingSaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing down what you said'**
+  String get writingSaid;
+
+  /// No description provided for @writingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Writing it down…'**
+  String get writingProgress;
+
+  /// No description provided for @voiceStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing couldn’t start'**
+  String get voiceStartFailed;
+
+  /// No description provided for @micStartFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The mic didn’t start'**
+  String get micStartFailed;
+
+  /// No description provided for @voiceModelFix.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading the voice files again ({size}) usually fixes it.'**
+  String voiceModelFix(String size);
+
+  /// No description provided for @voiceMicBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'If another app is using the mic, close it and try again.'**
+  String get voiceMicBusy;
+
+  /// No description provided for @downloadAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Download again'**
+  String get downloadAgain;
+
+  /// No description provided for @voiceAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{received} of {total}'**
+  String voiceAmount(String received, String total);
+
+  /// No description provided for @voiceStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready · works offline'**
+  String get voiceStatusReady;
+
+  /// No description provided for @voiceStatusGetting.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting ready {percent}% · {amount}'**
+  String voiceStatusGetting(int percent, String amount);
+
+  /// No description provided for @voiceWaitingWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Wi-Fi{extra}'**
+  String voiceWaitingWifi(String extra);
+
+  /// No description provided for @voiceWaitingConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a connection{extra}'**
+  String voiceWaitingConnection(String extra);
+
+  /// No description provided for @voiceWaitingBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for more battery{extra}'**
+  String voiceWaitingBattery(String extra);
+
+  /// No description provided for @voiceStatusExtra.
+  ///
+  /// In en, this message translates to:
+  /// **' · {amount} so far'**
+  String voiceStatusExtra(String amount);
+
+  /// No description provided for @voiceStoppedStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped · your phone needs {size} free'**
+  String voiceStoppedStorage(String size);
+
+  /// No description provided for @voiceStoppedLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped · it tries again later{extra}'**
+  String voiceStoppedLater(String extra);
+
+  /// No description provided for @voiceNotOnPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not on this phone · {size}, when you next use the mic'**
+  String voiceNotOnPhone(String size);
+
+  /// No description provided for @voiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available on this phone'**
+  String get voiceUnavailable;
+
+  /// No description provided for @voiceDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice download'**
+  String get voiceDownload;
+
+  /// No description provided for @voiceKeepsGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount}. It keeps going if you close this.'**
+  String voiceKeepsGoing(String amount);
+
+  /// No description provided for @voiceDownloadsWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'It downloads by itself on Wi-Fi, {size} once.'**
+  String voiceDownloadsWifi(String size);
+
+  /// No description provided for @voiceNoConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection right now. It picks up where it stopped.'**
+  String get voiceNoConnection;
+
+  /// No description provided for @voiceWaitBattery.
+  ///
+  /// In en, this message translates to:
+  /// **'It waits for more battery, or a charger.'**
+  String get voiceWaitBattery;
+
+  /// No description provided for @voiceNoSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone is short on space. Voice typing needs {size} free.'**
+  String voiceNoSpace(String size);
+
+  /// No description provided for @voiceDamaged.
+  ///
+  /// In en, this message translates to:
+  /// **'A file arrived damaged, so it was thrown away. Try again.'**
+  String get voiceDamaged;
+
+  /// No description provided for @voiceFilesUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice files couldn’t be reached. Try again in a little while.'**
+  String get voiceFilesUnreachable;
+
+  /// No description provided for @voiceRunsHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing runs on this phone and needs {size} once.'**
+  String voiceRunsHere(String size);
+
+  /// No description provided for @stopAndWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop and write it down'**
+  String get stopAndWrite;
+
+  /// No description provided for @startListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Start listening'**
+  String get startListening;
+
+  /// No description provided for @removeVoiceQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the voice files?'**
+  String get removeVoiceQuestion;
+
+  /// No description provided for @removeVoiceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This frees {size}. Voice typing downloads again only when you next use the mic, or turn it back on here.'**
+  String removeVoiceBody(String size);
+
+  /// No description provided for @keepFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep them'**
+  String get keepFiles;
+
+  /// No description provided for @remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// No description provided for @voiceFilesRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice files removed.'**
+  String get voiceFilesRemoved;
+
+  /// No description provided for @voiceFilesRemoveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The voice files couldn’t be removed.'**
+  String get voiceFilesRemoveFailed;
+
+  /// No description provided for @voiceOnPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice: on this phone'**
+  String get voiceOnPhone;
+
+  /// No description provided for @voiceSettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing needs no account and, once downloaded, no internet. Nothing you say is saved or sent.'**
+  String get voiceSettingsBody;
+
+  /// No description provided for @downloadMobile.
+  ///
+  /// In en, this message translates to:
+  /// **'Download voice on mobile data'**
+  String get downloadMobile;
+
+  /// No description provided for @mobileOffHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Off: it waits for Wi-Fi. About {size}, once.'**
+  String mobileOffHelp(String size);
+
+  /// No description provided for @downloadVoiceFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Download voice files'**
+  String get downloadVoiceFiles;
+
+  /// No description provided for @removeVoiceFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove voice files'**
+  String get removeVoiceFiles;
 }
 
 class _AppLocalizationsDelegate

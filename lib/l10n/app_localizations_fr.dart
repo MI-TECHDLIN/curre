@@ -2182,4 +2182,235 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get backedByApp => 'Appuyée par l’appli ouverte et votre note';
+
+  @override
+  String get voicePermissionExplanation =>
+      'Curre écoute seulement lorsque vous maintenez ou touchez le micro. Votre voix ne quitte jamais votre téléphone.';
+
+  @override
+  String get voiceMicNeeded =>
+      'La saisie vocale a besoin du micro. Vous pouvez aussi écrire.';
+
+  @override
+  String get voiceCouldNotStart =>
+      'La saisie vocale n’a pas pu démarrer. Vous pouvez aussi écrire.';
+
+  @override
+  String get voiceGettingReady =>
+      'La saisie vocale se prépare. Vous pouvez écrire en attendant.';
+
+  @override
+  String get voiceReadyOffline =>
+      'Prête. La saisie vocale fonctionne maintenant hors ligne.';
+
+  @override
+  String get voiceMicStillOff =>
+      'Le micro est toujours désactivé. Autorisez-le pour parler, ou écrivez.';
+
+  @override
+  String get voiceNothingHeard =>
+      'Je n’ai rien entendu. Réessayez un peu plus près du micro.';
+
+  @override
+  String get voicePrivacyLine =>
+      'Sur ce téléphone · rien de ce que vous dites n’est enregistré ni envoyé';
+
+  @override
+  String get typeInstead => 'Écrire plutôt';
+
+  @override
+  String get gettingVoiceReady => 'Préparation de la saisie vocale';
+
+  @override
+  String downloadNowSize(String size) {
+    return 'Télécharger maintenant · $size';
+  }
+
+  @override
+  String get speakInsteadTyping => 'Parlez plutôt que d’écrire';
+
+  @override
+  String get allowMic => 'Autoriser le micro';
+
+  @override
+  String get micOffForCurre => 'Le micro est désactivé pour Curre';
+
+  @override
+  String micSettingsBody(String privacy) {
+    return 'Activez le micro pour Curre dans les réglages du téléphone, puis revenez. $privacy';
+  }
+
+  @override
+  String get openPhoneSettings => 'Ouvrir les réglages du téléphone';
+
+  @override
+  String get tapOrHoldMic => 'Touchez ou maintenez le micro, puis parlez.';
+
+  @override
+  String get listeningHeld => 'Écoute… relâchez quand vous avez fini.';
+
+  @override
+  String get listeningPause =>
+      'Écoute… faites une pause quand vous avez fini, ou touchez le micro.';
+
+  @override
+  String get writingSaid => 'Transcription de ce que vous avez dit';
+
+  @override
+  String get writingProgress => 'Transcription…';
+
+  @override
+  String get voiceStartFailed => 'La saisie vocale n’a pas pu démarrer';
+
+  @override
+  String get micStartFailed => 'Le micro n’a pas démarré';
+
+  @override
+  String voiceModelFix(String size) {
+    return 'Retélécharger les fichiers vocaux ($size) règle généralement le problème.';
+  }
+
+  @override
+  String get voiceMicBusy =>
+      'Si une autre appli utilise le micro, fermez-la et réessayez.';
+
+  @override
+  String get downloadAgain => 'Retélécharger';
+
+  @override
+  String voiceAmount(String received, String total) {
+    return '$received sur $total';
+  }
+
+  @override
+  String get voiceStatusReady => 'Prête · fonctionne hors ligne';
+
+  @override
+  String voiceStatusGetting(int percent, String amount) {
+    return 'Préparation $percent % · $amount';
+  }
+
+  @override
+  String voiceWaitingWifi(String extra) {
+    return 'En attente du Wi-Fi$extra';
+  }
+
+  @override
+  String voiceWaitingConnection(String extra) {
+    return 'En attente d’une connexion$extra';
+  }
+
+  @override
+  String voiceWaitingBattery(String extra) {
+    return 'En attente de plus de batterie$extra';
+  }
+
+  @override
+  String voiceStatusExtra(String amount) {
+    return ' · $amount pour le moment';
+  }
+
+  @override
+  String voiceStoppedStorage(String size) {
+    return 'Arrêtée · le téléphone a besoin de $size libres';
+  }
+
+  @override
+  String voiceStoppedLater(String extra) {
+    return 'Arrêtée · nouvel essai plus tard$extra';
+  }
+
+  @override
+  String voiceNotOnPhone(String size) {
+    return 'Absente du téléphone · $size à la prochaine utilisation du micro';
+  }
+
+  @override
+  String get voiceUnavailable => 'Indisponible sur ce téléphone';
+
+  @override
+  String get voiceDownload => 'Téléchargement vocal';
+
+  @override
+  String voiceKeepsGoing(String amount) {
+    return '$amount. Il continue si vous fermez ceci.';
+  }
+
+  @override
+  String voiceDownloadsWifi(String size) {
+    return 'Le téléchargement se fait tout seul en Wi-Fi, $size une fois.';
+  }
+
+  @override
+  String get voiceNoConnection =>
+      'Pas de connexion pour le moment. Il reprendra là où il s’est arrêté.';
+
+  @override
+  String get voiceWaitBattery => 'Il attend plus de batterie ou un chargeur.';
+
+  @override
+  String voiceNoSpace(String size) {
+    return 'Le téléphone manque d’espace. La saisie vocale a besoin de $size libres.';
+  }
+
+  @override
+  String get voiceDamaged =>
+      'Un fichier est arrivé endommagé et a été supprimé. Réessayez.';
+
+  @override
+  String get voiceFilesUnreachable =>
+      'Les fichiers vocaux sont inaccessibles. Réessayez un peu plus tard.';
+
+  @override
+  String voiceRunsHere(String size) {
+    return 'La saisie vocale fonctionne sur ce téléphone et demande $size une fois.';
+  }
+
+  @override
+  String get stopAndWrite => 'Arrêter et transcrire';
+
+  @override
+  String get startListening => 'Commencer l’écoute';
+
+  @override
+  String get removeVoiceQuestion => 'Supprimer les fichiers vocaux ?';
+
+  @override
+  String removeVoiceBody(String size) {
+    return 'Cela libère $size. La saisie vocale ne les retéléchargera qu’à la prochaine utilisation du micro ou si vous la réactivez ici.';
+  }
+
+  @override
+  String get keepFiles => 'Les garder';
+
+  @override
+  String get remove => 'Supprimer';
+
+  @override
+  String get voiceFilesRemoved => 'Fichiers vocaux supprimés.';
+
+  @override
+  String get voiceFilesRemoveFailed =>
+      'Les fichiers vocaux n’ont pas pu être supprimés.';
+
+  @override
+  String get voiceOnPhone => 'Voix : sur ce téléphone';
+
+  @override
+  String get voiceSettingsBody =>
+      'La saisie vocale ne demande aucun compte et, après téléchargement, aucune connexion. Rien de ce que vous dites n’est enregistré ni envoyé.';
+
+  @override
+  String get downloadMobile => 'Télécharger la voix avec les données mobiles';
+
+  @override
+  String mobileOffHelp(String size) {
+    return 'Désactivé : attend le Wi-Fi. Environ $size, une fois.';
+  }
+
+  @override
+  String get downloadVoiceFiles => 'Télécharger les fichiers vocaux';
+
+  @override
+  String get removeVoiceFiles => 'Supprimer les fichiers vocaux';
 }

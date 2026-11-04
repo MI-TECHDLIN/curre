@@ -2146,4 +2146,233 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backedByApp => 'Backed by the app you opened and your note';
+
+  @override
+  String get voicePermissionExplanation =>
+      'Curre listens only while you hold or tap the mic. Your voice never leaves your phone.';
+
+  @override
+  String get voiceMicNeeded =>
+      'Voice typing needs the mic. You can type instead.';
+
+  @override
+  String get voiceCouldNotStart =>
+      'Voice typing couldn\'t start. You can type instead.';
+
+  @override
+  String get voiceGettingReady =>
+      'Voice is getting ready. You can type for now.';
+
+  @override
+  String get voiceReadyOffline => 'Ready. Voice typing now works offline.';
+
+  @override
+  String get voiceMicStillOff =>
+      'The mic is still off. Allow it to speak, or type instead.';
+
+  @override
+  String get voiceNothingHeard =>
+      'I didn’t catch that. Try again, a little closer to the mic.';
+
+  @override
+  String get voicePrivacyLine =>
+      'On this phone · nothing you say is saved or sent';
+
+  @override
+  String get typeInstead => 'Type instead';
+
+  @override
+  String get gettingVoiceReady => 'Getting voice typing ready';
+
+  @override
+  String downloadNowSize(String size) {
+    return 'Download now · $size';
+  }
+
+  @override
+  String get speakInsteadTyping => 'Speak instead of typing';
+
+  @override
+  String get allowMic => 'Allow the mic';
+
+  @override
+  String get micOffForCurre => 'The mic is off for Curre';
+
+  @override
+  String micSettingsBody(String privacy) {
+    return 'Turn on Microphone for Curre in your phone’s settings, then come back. $privacy';
+  }
+
+  @override
+  String get openPhoneSettings => 'Open phone settings';
+
+  @override
+  String get tapOrHoldMic => 'Tap or hold the mic, then speak.';
+
+  @override
+  String get listeningHeld => 'Listening… let go when you’re done.';
+
+  @override
+  String get listeningPause =>
+      'Listening… pause when you’re done, or tap the mic.';
+
+  @override
+  String get writingSaid => 'Writing down what you said';
+
+  @override
+  String get writingProgress => 'Writing it down…';
+
+  @override
+  String get voiceStartFailed => 'Voice typing couldn’t start';
+
+  @override
+  String get micStartFailed => 'The mic didn’t start';
+
+  @override
+  String voiceModelFix(String size) {
+    return 'Downloading the voice files again ($size) usually fixes it.';
+  }
+
+  @override
+  String get voiceMicBusy =>
+      'If another app is using the mic, close it and try again.';
+
+  @override
+  String get downloadAgain => 'Download again';
+
+  @override
+  String voiceAmount(String received, String total) {
+    return '$received of $total';
+  }
+
+  @override
+  String get voiceStatusReady => 'Ready · works offline';
+
+  @override
+  String voiceStatusGetting(int percent, String amount) {
+    return 'Getting ready $percent% · $amount';
+  }
+
+  @override
+  String voiceWaitingWifi(String extra) {
+    return 'Waiting for Wi-Fi$extra';
+  }
+
+  @override
+  String voiceWaitingConnection(String extra) {
+    return 'Waiting for a connection$extra';
+  }
+
+  @override
+  String voiceWaitingBattery(String extra) {
+    return 'Waiting for more battery$extra';
+  }
+
+  @override
+  String voiceStatusExtra(String amount) {
+    return ' · $amount so far';
+  }
+
+  @override
+  String voiceStoppedStorage(String size) {
+    return 'Stopped · your phone needs $size free';
+  }
+
+  @override
+  String voiceStoppedLater(String extra) {
+    return 'Stopped · it tries again later$extra';
+  }
+
+  @override
+  String voiceNotOnPhone(String size) {
+    return 'Not on this phone · $size, when you next use the mic';
+  }
+
+  @override
+  String get voiceUnavailable => 'Not available on this phone';
+
+  @override
+  String get voiceDownload => 'Voice download';
+
+  @override
+  String voiceKeepsGoing(String amount) {
+    return '$amount. It keeps going if you close this.';
+  }
+
+  @override
+  String voiceDownloadsWifi(String size) {
+    return 'It downloads by itself on Wi-Fi, $size once.';
+  }
+
+  @override
+  String get voiceNoConnection =>
+      'No connection right now. It picks up where it stopped.';
+
+  @override
+  String get voiceWaitBattery => 'It waits for more battery, or a charger.';
+
+  @override
+  String voiceNoSpace(String size) {
+    return 'Your phone is short on space. Voice typing needs $size free.';
+  }
+
+  @override
+  String get voiceDamaged =>
+      'A file arrived damaged, so it was thrown away. Try again.';
+
+  @override
+  String get voiceFilesUnreachable =>
+      'The voice files couldn’t be reached. Try again in a little while.';
+
+  @override
+  String voiceRunsHere(String size) {
+    return 'Voice typing runs on this phone and needs $size once.';
+  }
+
+  @override
+  String get stopAndWrite => 'Stop and write it down';
+
+  @override
+  String get startListening => 'Start listening';
+
+  @override
+  String get removeVoiceQuestion => 'Remove the voice files?';
+
+  @override
+  String removeVoiceBody(String size) {
+    return 'This frees $size. Voice typing downloads again only when you next use the mic, or turn it back on here.';
+  }
+
+  @override
+  String get keepFiles => 'Keep them';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String get voiceFilesRemoved => 'Voice files removed.';
+
+  @override
+  String get voiceFilesRemoveFailed => 'The voice files couldn’t be removed.';
+
+  @override
+  String get voiceOnPhone => 'Voice: on this phone';
+
+  @override
+  String get voiceSettingsBody =>
+      'Voice typing needs no account and, once downloaded, no internet. Nothing you say is saved or sent.';
+
+  @override
+  String get downloadMobile => 'Download voice on mobile data';
+
+  @override
+  String mobileOffHelp(String size) {
+    return 'Off: it waits for Wi-Fi. About $size, once.';
+  }
+
+  @override
+  String get downloadVoiceFiles => 'Download voice files';
+
+  @override
+  String get removeVoiceFiles => 'Remove voice files';
 }
