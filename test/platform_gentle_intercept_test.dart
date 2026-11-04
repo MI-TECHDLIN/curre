@@ -10,6 +10,7 @@ void main() {
   const essential = 'com.example.phone';
   const planned = 'com.example.maps';
   const granted = 'com.example.messages';
+  const notHidden = 'com.example.camera';
   final baseTime = DateTime.utc(2026, 10, 26, 8);
 
   GentleInterceptSnapshot snapshot({
@@ -29,8 +30,15 @@ void main() {
   }) => GentleInterceptSnapshot(
     enabled: enabled,
     hasUsageAccess: hasUsageAccess,
-    launchablePackages: const <String>{hidden, essential, planned, granted},
+    launchablePackages: const <String>{
+      hidden,
+      essential,
+      planned,
+      granted,
+      notHidden,
+    },
     essentialPackages: essentials,
+    hiddenPackages: const <String>{hidden, planned, granted},
     planPackages: plan,
     grantPackages: grants,
     loopGuardPackages: loopGuards,
@@ -73,6 +81,18 @@ void main() {
           current,
         ),
         GentleInterceptDecision.activeGrant,
+      );
+    });
+
+    test('never asks about an app the user did not hide', () {
+      final engine = GentleInterceptDecisionEngine();
+
+      expect(
+        engine.evaluate(
+          ForegroundAppEvent(packageName: notHidden, at: baseTime),
+          snapshot(),
+        ),
+        GentleInterceptDecision.notHidden,
       );
     });
 
@@ -190,8 +210,15 @@ void main() {
     }) => QuietNotificationSnapshot(
       enabled: enabled,
       hasNotificationAccess: access,
-      launchablePackages: const <String>{hidden, essential, planned, granted},
+      launchablePackages: const <String>{
+        hidden,
+        essential,
+        planned,
+        granted,
+        notHidden,
+      },
       essentialPackages: const <String>{essential},
+      hiddenPackages: const <String>{hidden, planned, granted},
       planPackages: const <String>{planned},
       grantPackages: const <String>{granted},
     );
@@ -226,6 +253,10 @@ void main() {
       expect(
         engine.evaluate(notification(granted), notificationSnapshot()),
         QuietNotificationDecision.activeGrant,
+      );
+      expect(
+        engine.evaluate(notification(notHidden), notificationSnapshot()),
+        QuietNotificationDecision.notHidden,
       );
     });
 

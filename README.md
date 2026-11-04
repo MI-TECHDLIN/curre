@@ -12,9 +12,10 @@ While the focus runs, you tell Curre what you're about to do — "learn
 the G chord on YouTube and find a music shop on Maps until 7" — and it
 builds you a small Home made only of the apps that task needs, each one
 landing on an allowlisted search or a conversation shortcut the phone
-actually exposes instead of promising a path that may not exist. Apps you've
-chosen to keep off your Home stay hidden until you say, in your own words,
-why you need one right now.
+actually exposes instead of promising a path that may not exist. Only the
+few apps you chose to hide — the ones that pull you in — stay hidden until
+you say, in your own words, why you need one right now; every other app
+opens as usual.
 
 Built for the [Clocked Build Challenge](https://clocked.rezolve.ai/challenge),
 entering Best Overall and Best Use of Decide, Extract or Fill.
@@ -77,9 +78,20 @@ days and an exhausting one for months. So Curre is built around a time-bound
   needs verification on the submission phone. A chat is named only after a
   matching conversation shortcut is found on that phone; otherwise Curre
   says it will open the app.
-- **"Why now?"** Apps you hide stay off Home. Opening one asks why, in your
-  own words. Decide sorts that reason into `task`, `person`,
-  `time_sensitive`, `browse`, or `unclear`; Guard screens the text first.
+- **Only the apps you pick are hidden.** Setup asks "What pulls you in?"
+  (Instagram, TikTok…); exactly those leave Home, ask "Why now?" when they
+  open and have their notifications held. Every other app — Camera, Maps,
+  your bank, Clock — stays in **All apps** on Home and opens as usual, no
+  question. "Hide this app" in All apps (or **Hidden apps → Hide another
+  app**, or Curre settings → Your apps → Hidden apps) adds one; the same
+  list stops hiding one. Phone, Messages, Settings and anything "Always on
+  Home" can't be hidden. Plans choose only from apps you didn't hide, and a
+  hidden app a plan uses is out for that plan. People who set Curre up when
+  every unplanned app was hidden keep only their old picks hidden
+  (`legacyHiddenApps` in `lib/core/visibility.dart`).
+- **"Why now?"** Opening a hidden app asks why, in your own words. Decide
+  sorts that reason into `task`, `person`, `time_sensitive`, `browse`, or
+  `unclear`; Guard screens the text first.
   The gate answers with one of five outcomes — **open** (with a time-bound
   grant), **later**, **specify**, **flagged**, or **unavailable** — and
   every outcome except a flagged one still has an escape: "Not now," with
@@ -122,11 +134,34 @@ the first time a nudge would help.
 
 "Plan your day", "Plan ending" and "Add your proof" offer **Snooze 10 min**.
 Reminders are set a few days ahead and set again each new day, and Android
-puts them back after a restart. Separately, **Keep hidden apps quiet** (with
-notification access) removes notifications from hidden apps and lists them
-under *Missed notifications* in Hidden apps; calls, alarms, system and
-full-screen notifications are never touched. Turn it off under Curre
-settings → Hidden apps.
+puts them back after a restart.
+
+### Notifications from hidden apps are held, never deleted
+
+With notification access, **Keep hidden apps quiet** holds ordinary
+notifications from the apps you chose to hide — and only those; every other
+app notifies as usual. Calls, alarms, system, ongoing and full-screen
+notifications are never touched. Turn it off under Curre settings → Hidden
+apps.
+
+- **Held:** Android snoozes the original, so it comes back whole (its own
+  tap action and replies). Curre also keeps a copy on the phone — app,
+  title, text and time — saved to disk, so a restart loses nothing.
+- **Given back** as soon as any of these happens: you open that app through
+  "Why now?" or a plan, you stop hiding it, you take a rest day, your focus
+  period ends (Android knows the end time and gives back by itself), you
+  switch "Keep hidden apps quiet" off, or Curre stops being your home
+  screen. Curre ends the snooze so the original reappears; anything Android
+  no longer has (after a restart, or if it refused the snooze) comes back as
+  one quiet Curre notification per app that opens it.
+- **Missed notifications** (in Hidden apps) lists them: held ones with
+  their text, given-back ones with app, title and time for 30 days. Tapping
+  one opens it — through "Why now?" while the app is still hidden, straight
+  once it's back. Text is kept only while a notification is held, and
+  nothing leaves the phone.
+
+The rule lives in `QuietNotificationListenerService.kt`, mirrored for
+tests by `QuietNotificationPolicy` in `lib/platform/quiet_notifications.dart`.
 
 ## Screenshots
 

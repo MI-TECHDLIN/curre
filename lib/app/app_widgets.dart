@@ -431,11 +431,15 @@ class HomeDock extends StatelessWidget {
     required this.controller,
     required this.onHidden,
     required this.onCurreSettings,
+    this.onAllApps,
   });
 
   final CurreController controller;
   final VoidCallback onHidden;
   final VoidCallback onCurreSettings;
+
+  /// Opens "All apps": every app the user didn't hide.
+  final VoidCallback? onAllApps;
 
   @override
   Widget build(BuildContext context) {
@@ -538,43 +542,37 @@ class HomeDock extends StatelessWidget {
                 ],
               ),
             ),
-            Semantics(
-              button: true,
-              label:
-                  '${hiddenAppsLabel(controller.hiddenApps.length)}. Open the list to bring one back.',
-              excludeSemantics: true,
-              child: InkWell(
-                onTap: onHidden,
-                splashFactory: NoSplash.splashFactory,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: CurreSpace.s2,
-                          ),
-                          child: Text(
-                            hiddenAppsLabel(controller.hiddenApps.length),
-                            style: type.listItem
-                                .weight(520)
-                                .copyWith(fontSize: 15),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: CurreSpace.s2),
-                      CurreGlyph(
-                        CurreGlyphKind.rise,
-                        size: 19,
-                        color: colors.ink2,
-                      ),
-                    ],
+            Row(
+              children: [
+                if (onAllApps case final openAll?) ...[
+                  Expanded(
+                    child: _DockLink(
+                      key: const Key('home-all-apps'),
+                      label: 'All apps',
+                      semanticLabel:
+                          'All apps. Every app you didn’t hide, ready to open.',
+                      glyph: CurreGlyphKind.door,
+                      onTap: openAll,
+                    ),
+                  ),
+                  ExcludeSemantics(
+                    child: Text(
+                      '·',
+                      style: type.listItem.copyWith(color: colors.ink3),
+                    ),
+                  ),
+                ],
+                Expanded(
+                  child: _DockLink(
+                    key: const Key('home-hidden-apps'),
+                    label: hiddenAppsLabel(controller.hiddenApps.length),
+                    semanticLabel:
+                        '${hiddenAppsLabel(controller.hiddenApps.length)}. Open the list to bring one back.',
+                    glyph: CurreGlyphKind.rise,
+                    onTap: onHidden,
                   ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -584,6 +582,57 @@ class HomeDock extends StatelessWidget {
 
   void _launch(String? packageName) {
     if (packageName != null) controller.plainLaunch(packageName);
+  }
+}
+
+/// One quiet text link under the dock.
+class _DockLink extends StatelessWidget {
+  const _DockLink({
+    super.key,
+    required this.label,
+    required this.semanticLabel,
+    required this.glyph,
+    required this.onTap,
+  });
+
+  final String label;
+  final String semanticLabel;
+  final CurreGlyphKind glyph;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CurreColors>()!;
+    final type = Theme.of(context).extension<CurreType>()!;
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        splashFactory: NoSplash.splashFactory,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: CurreSpace.s2),
+                  child: Text(
+                    label,
+                    style: type.listItem.weight(520).copyWith(fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              const SizedBox(width: CurreSpace.s2),
+              CurreGlyph(glyph, size: 19, color: colors.ink2),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

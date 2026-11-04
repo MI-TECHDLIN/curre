@@ -155,6 +155,19 @@ class FakeGentleIntercept extends DisabledGentleInterceptGateway {
   Future<List<MissedWhileHiddenNotification>> loadMissedNotifications() async =>
       missed;
 
+  /// Held notifications Curre asked Android to open, and whether Android
+  /// could ([opensMissed]).
+  final openedMissed = <MissedWhileHiddenNotification>[];
+  bool opensMissed = true;
+
+  @override
+  Future<bool> openMissedNotification(
+    MissedWhileHiddenNotification item,
+  ) async {
+    openedMissed.add(item);
+    return opensMissed;
+  }
+
   @override
   Future<bool> hasUsageAccess() async => usage;
 
@@ -305,6 +318,8 @@ CurreController fakeController({
             'com.instagram.android',
             'com.whatsapp',
           },
+          // What pulled Chidi in; every other app opens as usual.
+          hiddenApps: const {'com.android.chrome', 'com.netflix.mediaclient'},
         ),
     apps: launcher.apps,
     appInventoryState: appInventoryState,

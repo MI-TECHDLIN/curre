@@ -168,9 +168,19 @@ void main() {
     await settle(tester);
     await tapText(tester, 'Call me Ada');
 
-    // 3 · What pulls you in: those go to Hidden apps.
+    // 3 · What pulls you in: only those go to Hidden apps.
     expect(find.text('What pulls you in?'), findsOneWidget);
     expect(find.text('3 / 5'), findsOneWidget);
+    expect(
+      find.text(
+        'Pick the ones where a quick look turns into an hour. Curre hides only these: they leave your Home, and opening one asks “Why now?” first. Every other app opens as usual.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Nothing hidden yet. Every app opens as usual.'),
+      findsOneWidget,
+    );
     expect(
       find.bySemanticsLabel('Always on Home: Phone, Messages and Settings'),
       findsOneWidget,
@@ -183,11 +193,24 @@ void main() {
       tester.getSemantics(find.bySemanticsLabel('Instagram').first),
       isSemantics(label: 'Instagram', isSelected: true, isButton: true),
     );
+    expect(
+      find.text(
+        'Hidden: Instagram and Netflix. Every other app opens as usual.',
+      ),
+      findsOneWidget,
+    );
     await tapText(tester, 'Hide these 2');
 
-    // 4 · Home: Android's answer is what counts.
+    // 4 · Home: Android's answer is what counts, and the promise is exact.
     expect(find.text('Make Curre your home screen.'), findsOneWidget);
     expect(find.text('4 / 5'), findsOneWidget);
+    expect(
+      find.text(
+        'Only the apps you picked are hidden. Opening one asks “Why now?” first.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Every other app stays hidden'), findsNothing);
     await tapText(tester, 'Make Curre my home screen');
     expect(platform.homeRequests, 1);
     expect(find.text('Curre is your home screen now.'), findsOneWidget);
@@ -225,6 +248,11 @@ void main() {
     expect(settings.candidates, isNot(contains(_netflix)));
     expect(settings.candidates, contains(_youtube));
     expect(settings.candidates.length, inInclusiveRange(2, 30));
+    // Exactly the picks are hidden; everything else opens as usual.
+    expect(settings.hiddenApps, {_instagram, _netflix});
+    expect(controller.chosenHiddenPackages, {_instagram, _netflix});
+    expect(controller.visiblePackages, contains(_youtube));
+    expect(controller.visiblePackages, isNot(contains(_instagram)));
     // Nothing was asked of Android beyond the home screen: each of these
     // waits for its moment.
     expect(access.usageRequests, 0);
@@ -357,6 +385,13 @@ void main() {
     // With nothing running yet, quiet nudges wait for a later moment.
     expect(find.text('Want a quiet nudge when time’s up?'), findsNothing);
     expect(controller.settings.candidates.length, greaterThanOrEqualTo(2));
+    // "None of these" hides nothing at all: every app opens as usual.
+    expect(controller.settings.hiddenApps, isEmpty);
+    expect(controller.hiddenApps, isEmpty);
+    expect(
+      controller.openApps.map((app) => app.packageName),
+      containsAll(<String>[_instagram, _youtube, _netflix]),
+    );
   });
 
   testWidgets('if the phone can’t save, every answer stays for a retry', (

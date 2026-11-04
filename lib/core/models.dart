@@ -177,6 +177,7 @@ class Settings {
     Map<SessionName, LocalTime>? sessionStarts,
     Set<String> essentials = const <String>{},
     Set<String> candidates = const <String>{},
+    Set<String> hiddenApps = const <String>{},
     this.unlockMinutes = 5,
     this.threshold = 0.7,
     this.askWhyOnHiddenAppOpen = true,
@@ -201,7 +202,8 @@ class Settings {
              },
        ),
        essentials = Set.unmodifiable(essentials),
-       candidates = Set.unmodifiable(candidates) {
+       candidates = Set.unmodifiable(candidates),
+       hiddenApps = Set.unmodifiable(hiddenApps) {
     _validate();
   }
 
@@ -217,6 +219,12 @@ class Settings {
       sessionStarts: starts,
       essentials: _stringSet(json['essentials'], 'essentials'),
       candidates: _stringSet(json['candidates'], 'candidates'),
+      // Absent in settings saved before only the chosen apps were hidden;
+      // the controller fills it once from what the user picked back then
+      // ([legacyHiddenApps]).
+      hiddenApps: json.containsKey(hiddenAppsKey)
+          ? _stringSet(json[hiddenAppsKey], hiddenAppsKey)
+          : const <String>{},
       unlockMinutes: _int(json['unlockMinutes'], 'unlockMinutes'),
       // Older builds allowed the slider to reach 0.95 and accepted values
       // outside the useful range. Preserve the rest of those settings while
@@ -272,6 +280,15 @@ class Settings {
   final Map<SessionName, LocalTime> sessionStarts;
   final Set<String> essentials;
   final Set<String> candidates;
+
+  /// The apps the user chose to hide ("What pulls you in?", then "Hide this
+  /// app"): only these leave Home, ask "Why now?" and have their
+  /// notifications held. Every other app opens as usual.
+  final Set<String> hiddenApps;
+
+  /// The JSON key for [hiddenApps]; settings saved without it predate the
+  /// explicit hidden list.
+  static const hiddenAppsKey = 'hiddenApps';
   final int unlockMinutes;
   final double threshold;
   final bool askWhyOnHiddenAppOpen;
@@ -312,6 +329,7 @@ class Settings {
     Map<SessionName, LocalTime>? sessionStarts,
     Set<String>? essentials,
     Set<String>? candidates,
+    Set<String>? hiddenApps,
     int? unlockMinutes,
     double? threshold,
     bool? askWhyOnHiddenAppOpen,
@@ -332,6 +350,7 @@ class Settings {
     sessionStarts: sessionStarts ?? this.sessionStarts,
     essentials: essentials ?? this.essentials,
     candidates: candidates ?? this.candidates,
+    hiddenApps: hiddenApps ?? this.hiddenApps,
     unlockMinutes: unlockMinutes ?? this.unlockMinutes,
     threshold: threshold ?? this.threshold,
     askWhyOnHiddenAppOpen: askWhyOnHiddenAppOpen ?? this.askWhyOnHiddenAppOpen,
@@ -394,6 +413,7 @@ class Settings {
     },
     'essentials': essentials.toList()..sort(),
     'candidates': candidates.toList()..sort(),
+    hiddenAppsKey: hiddenApps.toList()..sort(),
     'unlockMinutes': unlockMinutes,
     'threshold': threshold,
     'askWhyOnHiddenAppOpen': askWhyOnHiddenAppOpen,

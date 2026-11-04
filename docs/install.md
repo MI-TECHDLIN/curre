@@ -14,8 +14,9 @@ an app store.
       with a link to the full privacy details.
    2. **You**: your name and, if you like, a face (otherwise your initial).
    3. **What pulls you in?**: tick the apps where a quick look turns into
-      an hour. They go to Hidden apps. Phone, Messages and Settings are
-      always on Home.
+      an hour. Only those go to Hidden apps (and ask "Why now?" when
+      opened); every other app stays in All apps and opens as usual. Phone,
+      Messages and Settings are always on Home.
    4. **Make Curre your home screen**: Android asks which home screen to
       use; choose Curre.
    5. **Your first plan**: one sentence ("Learn the G chord on YouTube till

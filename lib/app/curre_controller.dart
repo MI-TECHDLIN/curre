@@ -9,6 +9,7 @@ import '../doors/door_router.dart';
 import '../doors/launcher_channel.dart';
 import '../doors/query_door_allowlist.dart';
 import '../platform/platform.dart';
+import 'onboarding/app_hints.dart';
 
 class CallReceipt {
   const CallReceipt({
@@ -124,7 +125,17 @@ class CurreController extends ChangeNotifier {
     }
 
     final now = DateTime.now();
-    final settings = store?.loadSettings() ?? Settings();
+    var settings = store?.loadSettings() ?? Settings();
+    if (store != null &&
+        store.isOnboardingComplete &&
+        store.settingsPredateHiddenApps &&
+        appInventoryState == AppInventoryState.ready) {
+      settings = await migrateHiddenApps(
+        store: store,
+        settings: settings,
+        installed: apps.map((app) => app.packageName),
+      );
+    }
     final plans = await store?.loadTodayPlans(now: now) ?? <Plan>[];
     final grants = await store?.loadActiveGrants(now: now) ?? <Grant>[];
     final uses = await store?.loadTodayDoorUses(now: now) ?? <DoorUse>[];
@@ -172,6 +183,32 @@ class CurreController extends ChangeNotifier {
       unawaited(controller.speech.prefetch.start());
     }
     return controller;
+  }
+
+  /// Fills the explicit hidden list once for someone who set Curre up when
+  /// every app outside a plan was hidden: their "What pulls you in?" picks
+  /// stay hidden ([legacyHiddenApps]) and every other app comes back. Saved
+  /// at once so it happens only one time; if saving fails, the next start
+  /// tries again.
+  @visibleForTesting
+  static Future<Settings> migrateHiddenApps({
+    required CurreLocalStore store,
+    required Settings settings,
+    required Iterable<String> installed,
+  }) async {
+    final next = settings.copyWith(
+      hiddenApps: legacyHiddenApps(
+        settings: settings,
+        installed: installed,
+        pullPackages: commonPullPackages,
+      ),
+    );
+    try {
+      await store.saveSettings(next);
+    } on Object {
+      // Still use it for this start.
+    }
+    return next;
   }
 
   static const fallbackApps = <LaunchableApp>[
@@ -266,12 +303,32 @@ class CurreController extends ChangeNotifier {
       !pausedAwayFromHome &&
       !isRestDay;
 
-  /// Whether hidden apps' notifications are quieted at this moment.
+  /// Whether hidden apps' notifications are held at this moment. Once a
+  /// focus has ended Curre gives them all back and holds no more, until
+  /// another focus starts.
   bool get _quieting =>
       onboardingComplete &&
       settings.quietNotificationsFromHiddenApps &&
       !pausedAwayFromHome &&
-      !isRestDay;
+      !isRestDay &&
+      !focusIsOver;
+
+  /// When the running focus ends (its last day's morning start), so Android
+  /// stops holding notifications then by itself; null without a running
+  /// focus.
+  DateTime? get focusEndsAt {
+    final current = focus;
+    if (current == null || focusIsOver) return null;
+    final morning = settings.sessionStarts[SessionName.morning]!;
+    final end = current.endsOn;
+    return DateTime(
+      end.year,
+      end.month,
+      end.day,
+      morning.hour,
+      morning.minute,
+    ).toUtc();
+  }
 
   /// What setup left to ask in context, until each is answered once.
   final Set<ContextPrompt> pendingPrompts;
@@ -386,6 +443,7 @@ class CurreController extends ChangeNotifier {
         ...settings.essentials,
         ...suggestedEssentials,
       },
+      hiddenPackages: chosenHiddenPackages,
       planPackages: plan == null
           ? const <String>{}
           : plan.apps.map((app) => app.packageName).toSet(),
@@ -403,12 +461,30 @@ class CurreController extends ChangeNotifier {
         ...settings.essentials,
         ...suggestedEssentials,
       },
+      hiddenPackages: chosenHiddenPackages,
       planPackages: plan == null
           ? const <String>{}
           : plan.apps.map((app) => app.packageName).toSet(),
       grantPackages: activeGrants.map((grant) => grant.packageName).toSet(),
     );
   }
+
+  /// The installed apps the user chose to hide (never Curre or an app
+  /// always on Home), whether or not a plan or grant has them out now.
+  Set<String> get chosenHiddenPackages {
+    final alwaysOn = <String>{...settings.essentials, ...suggestedEssentials};
+    return <String>{
+      for (final app in apps)
+        if (settings.hiddenApps.contains(app.packageName) &&
+            app.packageName != currePackageName &&
+            !alwaysOn.contains(app.packageName))
+          app.packageName,
+    };
+  }
+
+  /// Whether the user chose to hide [packageName].
+  bool isHiddenApp(String packageName) =>
+      chosenHiddenPackages.contains(packageName);
 
   LaunchableApp? appFor(String packageName) {
     for (final app in apps) {
@@ -417,8 +493,10 @@ class CurreController extends ChangeNotifier {
     return null;
   }
 
+  /// The apps plans can use: never one the user hid.
   List<LaunchableApp> get candidateApps =>
       settings.candidates
+          .where((package) => !settings.hiddenApps.contains(package))
           .map(appFor)
           .whereType<LaunchableApp>()
           .toList(growable: false)
@@ -438,16 +516,65 @@ class CurreController extends ChangeNotifier {
     };
   }
 
+  /// The apps the user hid that are hidden right now (a plan or a grant
+  /// can bring one out for a while), by name.
   List<LaunchableApp> get hiddenApps {
     final visible = visiblePackages;
+    final chosen = chosenHiddenPackages;
     return apps
         .where(
           (app) =>
-              !visible.contains(app.packageName) &&
-              app.packageName != 'com.mitech.curre',
+              chosen.contains(app.packageName) &&
+              !visible.contains(app.packageName),
         )
         .toList(growable: false)
       ..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+  }
+
+  /// Every app that opens as usual: all but Curre and the apps the user
+  /// hid, by name. Home's "All apps" lists them.
+  List<LaunchableApp> get openApps {
+    final chosen = chosenHiddenPackages;
+    return apps
+        .where(
+          (app) =>
+              app.packageName != currePackageName &&
+              !chosen.contains(app.packageName),
+        )
+        .toList(growable: false)
+      ..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+  }
+
+  /// Whether the user may hide [packageName]: not Curre, and not an app
+  /// always on Home (Phone, Messages, Settings and any they added).
+  bool canHide(String packageName) =>
+      packageName != currePackageName &&
+      !settings.essentials.contains(packageName) &&
+      !suggestedEssentials.contains(packageName);
+
+  /// "Hide this app": it leaves Home and plans, asks "Why now?" and has its
+  /// notifications held from now on. Throws if it can't be saved.
+  Future<void> hideApp(String packageName) async {
+    if (!canHide(packageName) || settings.hiddenApps.contains(packageName)) {
+      return;
+    }
+    await updateSettings(
+      settings.copyWith(
+        hiddenApps: <String>{...settings.hiddenApps, packageName},
+        candidates: <String>{...settings.candidates}..remove(packageName),
+      ),
+    );
+  }
+
+  /// Stops hiding [packageName] for good: it opens as usual again and any
+  /// notifications held for it come back. Throws if it can't be saved.
+  Future<void> stopHidingApp(String packageName) async {
+    if (!settings.hiddenApps.contains(packageName)) return;
+    await updateSettings(
+      settings.copyWith(
+        hiddenApps: <String>{...settings.hiddenApps}..remove(packageName),
+      ),
+    );
   }
 
   String? _findSystemPackage(RegExp packagePattern, RegExp labelPattern) {
@@ -504,6 +631,7 @@ class CurreController extends ChangeNotifier {
     required String? avatarId,
     required Set<String> essentials,
     required Set<String> candidates,
+    Set<String> hidden = const <String>{},
     LocalTime? morningStart,
     String? firstIntention,
     FocusChoice? focus,
@@ -513,7 +641,8 @@ class CurreController extends ChangeNotifier {
       avatarId: avatarId,
       clearAvatarId: avatarId == null,
       essentials: essentials,
-      candidates: candidates,
+      candidates: candidates.difference(hidden),
+      hiddenApps: hidden.difference(essentials),
       sessionStarts: morningStart == null
           ? null
           : <SessionName, LocalTime>{
@@ -522,7 +651,9 @@ class CurreController extends ChangeNotifier {
             },
     );
     if (focus != null) {
-      final day = SessionSchedule.fromSettings(next).current(now).localStartDate;
+      final day = SessionSchedule.fromSettings(next)
+          .current(now)
+          .localStartDate;
       next = next.copyWith(focus: focus.periodFrom(day));
     }
     const prompts = <ContextPrompt>{...ContextPrompt.values};
@@ -670,6 +801,22 @@ class CurreController extends ChangeNotifier {
     return granted;
   }
 
+  /// Opens what a held notification pointed at, once its app opens as
+  /// usual (a hidden app asks "Why now?" first, on the screen's side).
+  Future<bool> openMissedNotification(
+    MissedWhileHiddenNotification item,
+  ) async {
+    var opened = false;
+    try {
+      opened = await gentleIntercept.openMissedNotification(item);
+    } on Object {
+      opened = false;
+    }
+    if (!opened) opened = await plainLaunch(item.packageName);
+    unawaited(refreshMissedNotifications());
+    return opened;
+  }
+
   Future<void> refreshMissedNotifications({bool notify = true}) async {
     try {
       missedWhileHidden = await gentleIntercept.loadMissedNotifications();
@@ -705,13 +852,12 @@ class CurreController extends ChangeNotifier {
     for (final grant in activeGrants) {
       extend(grant.packageName, grant.expiresAt);
     }
-    final monitoredPackages = apps
-        .map((app) => app.packageName)
-        .where((packageName) => packageName != currePackageName)
-        .toSet();
-    // A rest day lets every app open without asking, and its notifications
-    // through, until the next morning start; Android picks both up again by
-    // itself after that.
+    // Only the apps the user chose to hide are watched and held; every other
+    // app opens and notifies as usual.
+    final monitoredPackages = chosenHiddenPackages;
+    // A rest day lets every hidden app open without asking, and its
+    // notifications through, until the next morning start; Android picks
+    // both up again by itself after that.
     if (isRestDay) {
       final until = restEndsAt;
       for (final packageName in monitoredPackages) {
@@ -746,10 +892,12 @@ class CurreController extends ChangeNotifier {
           enabled:
               onboardingComplete &&
               settings.quietNotificationsFromHiddenApps &&
-              !pausedAwayFromHome,
+              !pausedAwayFromHome &&
+              !focusIsOver,
           monitoredPackages: monitoredPackages,
           alwaysAllowedPackages: alwaysAllowedPackages,
           allowedUntilUtc: allowedUntil,
+          holdUntilUtc: focusEndsAt,
         ),
       );
     } on Object {
@@ -1003,6 +1151,17 @@ class CurreController extends ChangeNotifier {
     final instant = now;
     if (store != null) {
       settings = store!.loadSettings();
+      // Bootstrap fills the hidden list once; this covers a start whose
+      // app list hadn't loaded yet.
+      if (onboardingComplete &&
+          store!.settingsPredateHiddenApps &&
+          appInventoryState == AppInventoryState.ready) {
+        settings = await migrateHiddenApps(
+          store: store!,
+          settings: settings,
+          installed: apps.map((app) => app.packageName),
+        );
+      }
       plans = await store!.loadTodayPlans(now: instant);
       grants = await store!.loadActiveGrants(now: instant);
       doorUses = await store!.loadTodayDoorUses(now: instant);

@@ -163,7 +163,8 @@ void main() {
       for (final label in <String>['Phone', 'Messages', 'Settings', 'Curre']) {
         expect(find.text(label), findsOneWidget);
       }
-      expect(find.text('12 hidden apps'), findsOneWidget);
+      expect(find.text('2 hidden apps'), findsOneWidget);
+      expect(find.text('All apps'), findsOneWidget);
     },
   );
 
@@ -725,7 +726,7 @@ void main() {
     expect(find.text('Hidden apps'), findsOneWidget);
     expect(
       find.text(
-        'Apps you didn’t plan for wait here. Tap one to bring it back.',
+        'Only the apps you chose to hide wait here. Tap one to bring it back for a while.',
       ),
       findsOneWidget,
     );
@@ -1620,6 +1621,8 @@ CurreController _controller({
       displayName: 'Chidi',
       essentials: essentials,
       candidates: candidates,
+      // What pulled Chidi in; every other app opens as usual.
+      hiddenApps: const {'com.android.chrome', 'com.netflix.mediaclient'},
     ),
     apps: CurreController.fallbackApps,
     onboardingComplete: onboardingComplete,

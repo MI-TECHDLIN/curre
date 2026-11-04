@@ -16,6 +16,10 @@ enum AppChoiceKind {
 
   /// Apps a plan may put on Home (2 to 30).
   planApps,
+
+  /// The apps the user hides: only these leave Home, ask "Why now?" and
+  /// have their notifications held.
+  hidden,
 }
 
 /// Edits one of Curre's app lists from Curre settings. Each tap saves at
@@ -43,21 +47,37 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
 
   CurreController get controller => widget.controller;
   bool get _planApps => widget.kind == AppChoiceKind.planApps;
+  bool get _hidden => widget.kind == AppChoiceKind.hidden;
 
   Set<String> get _fixed => controller.suggestedEssentials;
 
-  Set<String> get _chosen => _planApps
-      ? controller.settings.candidates
-      : {...controller.settings.essentials, ..._fixed};
+  Set<String> get _chosen => switch (widget.kind) {
+    AppChoiceKind.planApps => controller.settings.candidates,
+    AppChoiceKind.hidden => controller.chosenHiddenPackages,
+    AppChoiceKind.alwaysOnHome => {
+      ...controller.settings.essentials,
+      ..._fixed,
+    },
+  };
 
   List<LaunchableApp> get _choices {
     final essentials = {...controller.settings.essentials, ..._fixed};
+    final hidden = controller.settings.hiddenApps;
     final apps =
         controller.apps
             .where(
               (app) =>
                   app.packageName != 'com.mitech.curre' &&
-                  (!_planApps || !essentials.contains(app.packageName)),
+                  switch (widget.kind) {
+                    // Plans never use an app the user hid.
+                    AppChoiceKind.planApps =>
+                      !essentials.contains(app.packageName) &&
+                          !hidden.contains(app.packageName),
+                    AppChoiceKind.hidden => !essentials.contains(
+                      app.packageName,
+                    ),
+                    AppChoiceKind.alwaysOnHome => true,
+                  },
             )
             .toList()
           ..sort(
@@ -73,6 +93,24 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
   Future<void> _toggle(LaunchableApp app) async {
     final settings = controller.settings;
     final package = app.packageName;
+    if (_hidden) {
+      try {
+        if (controller.isHiddenApp(package)) {
+          await controller.stopHidingApp(package);
+        } else {
+          await controller.hideApp(package);
+        }
+        if (mounted) setState(() {});
+      } on Object {
+        if (mounted) {
+          showCurreSnack(
+            context,
+            'Curre couldn’t save that on this phone. Please try again.',
+          );
+        }
+      }
+      return;
+    }
     final Settings next;
     if (_planApps) {
       final candidates = settings.candidates.toSet();
@@ -103,12 +141,19 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
       }
       final essentials = {...settings.essentials, ..._fixed};
       final candidates = settings.candidates.toSet();
+      final hidden = settings.hiddenApps.toSet();
       if (!essentials.remove(package)) {
         essentials.add(package);
-        // An app that is always on Home doesn't need a plan to bring it.
+        // An app that is always on Home doesn't need a plan to bring it,
+        // and is never hidden.
         candidates.remove(package);
+        hidden.remove(package);
       }
-      next = settings.copyWith(essentials: essentials, candidates: candidates);
+      next = settings.copyWith(
+        essentials: essentials,
+        candidates: candidates,
+        hiddenApps: hidden,
+      );
     }
     try {
       await controller.updateSettings(next);
@@ -140,10 +185,18 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
               0,
             ),
             child: CurreTopBar(
-              title: _planApps ? 'Apps your plans can use' : 'Always on Home',
-              subtitle: _planApps
-                  ? 'When you plan, Curre picks from these. Choose 2 to 30.'
-                  : 'These stay on Home all day, no plan needed.',
+              title: switch (widget.kind) {
+                AppChoiceKind.planApps => 'Apps your plans can use',
+                AppChoiceKind.hidden => 'Hidden apps',
+                AppChoiceKind.alwaysOnHome => 'Always on Home',
+              },
+              subtitle: switch (widget.kind) {
+                AppChoiceKind.planApps =>
+                  'When you plan, Curre picks from these. Choose 2 to 30.',
+                AppChoiceKind.hidden => 'Only these leave Home and ask “Why now?” first. Every other app opens as usual.',
+                AppChoiceKind.alwaysOnHome =>
+                  'These stay on Home all day, no plan needed.',
+              },
             ),
           ),
           Expanded(
@@ -152,12 +205,11 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
               children: [
                 Semantics(
                   liveRegion: true,
-                  child: Text(
-                    _planApps
-                        ? '${chosen.length} picked'
-                        : '${chosen.length} on Home',
-                    style: type.meta,
-                  ),
+                  child: Text(switch (widget.kind) {
+                    AppChoiceKind.planApps => '${chosen.length} picked',
+                    AppChoiceKind.hidden => '${chosen.length} hidden',
+                    AppChoiceKind.alwaysOnHome => '${chosen.length} on Home',
+                  }, style: type.meta),
                 ),
                 const SizedBox(height: CurreSpace.s3),
                 TextField(

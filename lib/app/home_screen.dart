@@ -8,6 +8,7 @@ import '../doors/door_models.dart';
 import '../doors/door_router.dart';
 import '../platform/home_refresh.dart';
 import 'access_help.dart';
+import 'all_apps_screen.dart';
 import 'app_widgets.dart';
 import 'checkin_screen.dart';
 import 'completion_sheet.dart';
@@ -80,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: controller,
           openCheckin: () => _push(CheckinScreen(controller: controller)),
           openHidden: () => _push(HiddenAppsScreen(controller: controller)),
+          openAllApps: () => _push(AllAppsScreen(controller: controller)),
           openSettings: () => _push(SettingsScreen(controller: controller)),
           openProfile: () => _showProfile(context),
         ),
@@ -100,6 +102,7 @@ class _HomeBody extends StatelessWidget {
     required this.controller,
     required this.openCheckin,
     required this.openHidden,
+    required this.openAllApps,
     required this.openSettings,
     required this.openProfile,
   });
@@ -107,6 +110,7 @@ class _HomeBody extends StatelessWidget {
   final CurreController controller;
   final VoidCallback openCheckin;
   final VoidCallback openHidden;
+  final VoidCallback openAllApps;
   final VoidCallback openSettings;
   final VoidCallback openProfile;
 
@@ -344,6 +348,7 @@ class _HomeBody extends StatelessWidget {
           HomeDock(
             controller: controller,
             onHidden: openHidden,
+            onAllApps: openAllApps,
             onCurreSettings: openSettings,
           ),
         ],
@@ -1126,7 +1131,7 @@ class _DoneTodayGroupState extends State<_DoneTodayGroup> {
 
 /// The calm close of a plan whose tasks are all done: today's small, still
 /// sun (it rises once, on the completion sheet, never here) and a way to
-/// end the plan early so its apps go back to Hidden apps.
+/// end the plan early.
 class _AllDoneCard extends StatelessWidget {
   const _AllDoneCard({
     required this.session,
@@ -1177,7 +1182,7 @@ class _AllDoneCard extends StatelessWidget {
                       ),
                       const SizedBox(height: CurreSpace.s1),
                       Text(
-                        'Every task in this plan is done. End it now and its apps go back to Hidden apps.',
+                        'Every task in this plan is done. You can end it now and plan again whenever you like.',
                         style: type.body.copyWith(color: colors.ink2),
                       ),
                     ],
@@ -1204,7 +1209,7 @@ Future<void> _confirmEndPlan(
     builder: (context) => AlertDialog(
       title: const Text('End this plan now?'),
       content: const Text(
-        'Its apps go back to Hidden apps. You can plan again whenever you like.',
+        'Its tasks leave Home. You can plan again whenever you like.',
       ),
       actions: [
         TextButton(
@@ -1234,7 +1239,7 @@ Future<void> _confirmEndPlan(
   final type = Theme.of(context).extension<CurreType>()!;
   showCurreSnack(
     context,
-    'Plan ended. Its apps are back in Hidden apps.',
+    'Plan ended.',
     actionLabel: 'Undo',
     duration: endPlanUndoWindow,
     onAction: () async {

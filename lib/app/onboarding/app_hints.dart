@@ -97,3 +97,17 @@ Set<String> defaultPlanApps({
   }
   return picked;
 }
+
+/// The live line under "What pulls you in?": exactly what Curre will hide,
+/// and that nothing else is.
+String hiddenSummary(List<String> labels) {
+  if (labels.isEmpty) return 'Nothing hidden yet. Every app opens as usual.';
+  final shown = labels.length <= 3 ? labels : labels.take(2).toList();
+  final more = labels.length - shown.length;
+  final names = more > 0
+      ? '${shown.join(', ')} and $more more'
+      : shown.length == 1
+      ? shown.single
+      : '${shown.sublist(0, shown.length - 1).join(', ')} and ${shown.last}';
+  return 'Hidden: $names. Every other app opens as usual.';
+}
