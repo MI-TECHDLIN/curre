@@ -73,6 +73,12 @@ from `Result.credits` / `Result.model_ms` on the Clocked call. Logs carry
 route, status, latency and credits only -- never the intention, reason,
 saved item, task, or completion note text.
 
+Every POST body may include an optional two-letter `language` code; it
+defaults to `en`. Curre currently sends `en`, `es`, `fr`, `pt`, or `de`.
+Pipeline instructions tell every step to interpret that language while
+keeping response labels as stable internal codes and copied spans in the
+person's exact original words. The Later route gives Rerank the same hint.
+
 The app starts a non-blocking `GET /healthz` when it boots and whenever a
 check-in opens, so a sleeping deployment can wake while the user types. A plan
 call gets one automatic retry inside its existing 12-second total budget: the

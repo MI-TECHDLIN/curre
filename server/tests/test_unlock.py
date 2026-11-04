@@ -32,6 +32,36 @@ def _benign_guard_step() -> dict:
     return ok_step("guard", "injection", injection_result("benign", 0.02))
 
 
+def test_unlock_passes_each_app_language_to_every_text_step(make_client):
+    async def handler(*, text, steps, **kwargs):
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step(
+                    "gate",
+                    "decide",
+                    {"answers": {"kind": decide_choice("task", 0.95)}},
+                ),
+                ok_step("task", "extract", {"fields": {}}),
+            ]
+        )
+
+    client = make_client(handler)
+    languages = ("en", "es", "fr", "pt", "de")
+    for language in languages:
+        response = client.post(
+            "/v1/unlock",
+            json=_unlock_payload(language=language),
+        )
+        assert response.status_code == 200
+
+    for language, call in zip(languages, client.fake.calls, strict=True):
+        by_name = {step["name"]: step for step in call["steps"]}
+        assert f"language code {language}" in by_name["guard"]["injection"]["instructions"]
+        assert f"language code {language}" in by_name["gate"]["decide"]["instructions"]
+        assert f"language code {language}" in by_name["task"]["extract"]["instructions"]
+
+
 def test_unlock_open_for_task(make_client):
     async def handler(*, text, steps, **kwargs):
         decide_fields = {"kind": decide_choice("task", 0.95), "door": decide_choice("app", 0.8)}
@@ -521,11 +551,7 @@ def test_unlock_merges_overlapping_findings_and_ignores_other_kinds(make_client)
             ]
         )
 
-    body = (
-        make_client(handler)
-        .post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS))
-        .json()
-    )
+    body = make_client(handler).post("/v1/unlock", json=_unlock_payload(REASON_WITH_DETAILS)).json()
 
     assert body["redactions"] == [
         {"kind": "person", "start": 6, "end": 9},

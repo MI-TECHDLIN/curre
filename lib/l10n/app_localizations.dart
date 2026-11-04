@@ -131,25 +131,25 @@ abstract class AppLocalizations {
   /// No description provided for @languageSpanish.
   ///
   /// In en, this message translates to:
-  /// **'Spanish'**
+  /// **'Español'**
   String get languageSpanish;
 
   /// No description provided for @languageFrench.
   ///
   /// In en, this message translates to:
-  /// **'French'**
+  /// **'Français'**
   String get languageFrench;
 
   /// No description provided for @languagePortuguese.
   ///
   /// In en, this message translates to:
-  /// **'Portuguese'**
+  /// **'Português'**
   String get languagePortuguese;
 
   /// No description provided for @languageGerman.
   ///
   /// In en, this message translates to:
-  /// **'German'**
+  /// **'Deutsch'**
   String get languageGerman;
 
   /// No description provided for @back.
@@ -1639,6 +1639,1338 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use example: {text}'**
   String useExample(String text);
+
+  /// No description provided for @findApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Find an app'**
+  String get findApp;
+
+  /// No description provided for @noAppMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No app matches “{query}”.'**
+  String noAppMatches(String query);
+
+  /// No description provided for @everyAppHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Every app on this phone is hidden.'**
+  String get everyAppHidden;
+
+  /// No description provided for @openApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {app}'**
+  String openApp(String app);
+
+  /// No description provided for @hideThisApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this app'**
+  String get hideThisApp;
+
+  /// No description provided for @hideApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide {app}'**
+  String hideApp(String app);
+
+  /// No description provided for @appHiddenAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'{app} is hidden. Opening it asks “Why now?” first.'**
+  String appHiddenAsk(String app);
+
+  /// No description provided for @planApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps your plans can use'**
+  String get planApps;
+
+  /// No description provided for @planAppsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'When you plan, Curre picks from these. Choose 2 to 30.'**
+  String get planAppsHelp;
+
+  /// No description provided for @hiddenAppsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Only these leave Home and ask “Why now?” first. Every other app opens as usual.'**
+  String get hiddenAppsHelp;
+
+  /// No description provided for @alwaysOnHomeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'These stay on Home all day, no plan needed.'**
+  String get alwaysOnHomeHelp;
+
+  /// No description provided for @pickedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} picked'**
+  String pickedCount(int count);
+
+  /// No description provided for @hiddenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hidden'**
+  String hiddenCount(int count);
+
+  /// No description provided for @onHomeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} on Home'**
+  String onHomeCount(int count);
+
+  /// No description provided for @planAppsMinimum.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans need at least {count} apps to choose from.'**
+  String planAppsMinimum(int count);
+
+  /// No description provided for @planAppsMaximum.
+  ///
+  /// In en, this message translates to:
+  /// **'That’s {count} already. Untick one to add another.'**
+  String planAppsMaximum(int count);
+
+  /// No description provided for @appAlwaysOnHome.
+  ///
+  /// In en, this message translates to:
+  /// **'{app} is always on Home.'**
+  String appAlwaysOnHome(String app);
+
+  /// No description provided for @privacyDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy details'**
+  String get privacyDetails;
+
+  /// No description provided for @privacySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What leaves this phone, and for how long.'**
+  String get privacySubtitle;
+
+  /// No description provided for @privacyReadOnline.
+  ///
+  /// In en, this message translates to:
+  /// **'What is read online'**
+  String get privacyReadOnline;
+
+  /// No description provided for @privacyReadOnlineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan, app names, the reason you give for opening a hidden app and a note you send after a task are read online so Curre can answer you.'**
+  String get privacyReadOnlineBody;
+
+  /// No description provided for @privacyCopyTime.
+  ///
+  /// In en, this message translates to:
+  /// **'How long a copy may remain'**
+  String get privacyCopyTime;
+
+  /// No description provided for @privacyCopyTimeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre keeps no online copy. The AI service that reads your words may keep a successful answer, including quoted words, for about a day so a retry can return the same answer. It then deletes that copy.'**
+  String get privacyCopyTimeBody;
+
+  /// No description provided for @privacyStaysHere.
+  ///
+  /// In en, this message translates to:
+  /// **'What stays here'**
+  String get privacyStaysHere;
+
+  /// No description provided for @privacyStaysHereBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your contacts, chat names, app use and history stay on this phone. You can clear plans, reasons and notes from Curre settings.'**
+  String get privacyStaysHereBody;
+
+  /// No description provided for @privacyHistoryHides.
+  ///
+  /// In en, this message translates to:
+  /// **'What History hides'**
+  String get privacyHistoryHides;
+
+  /// No description provided for @privacyHistoryHidesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Before History saves a checked reason or note, Curre looks for names, phone numbers, email and address or payment details. What it finds becomes a label such as [name] or [phone]. If that check isn’t available, your words stay as they are.'**
+  String get privacyHistoryHidesBody;
+
+  /// No description provided for @privacyLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre records only whether a request worked and how long it took. It does not put your words in online logs.'**
+  String get privacyLogs;
+
+  /// No description provided for @savedForLaterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for later'**
+  String get savedForLaterTitle;
+
+  /// No description provided for @laterNoneFits.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing you saved fits this plan, so it waits for a better time.'**
+  String get laterNoneFits;
+
+  /// No description provided for @laterBestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Best match for this plan first.'**
+  String get laterBestFirst;
+
+  /// No description provided for @laterNewestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first.'**
+  String get laterNewestFirst;
+
+  /// No description provided for @laterOneMore.
+  ///
+  /// In en, this message translates to:
+  /// **'1 more keeps for another time.'**
+  String get laterOneMore;
+
+  /// No description provided for @laterMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more keep for another time.'**
+  String laterMore(int count);
+
+  /// No description provided for @notToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Not today'**
+  String get notToday;
+
+  /// No description provided for @sectionYourFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Your focus'**
+  String get sectionYourFocus;
+
+  /// No description provided for @sectionYourDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Your day'**
+  String get sectionYourDay;
+
+  /// No description provided for @dayStartsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'When each part of your day starts, Curre asks what it’s for.'**
+  String get dayStartsHelp;
+
+  /// No description provided for @startsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts at {time}'**
+  String startsAt(String time);
+
+  /// No description provided for @sectionYourApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Your apps'**
+  String get sectionYourApps;
+
+  /// No description provided for @defaultEssentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone, Messages and Settings'**
+  String get defaultEssentials;
+
+  /// No description provided for @defaultEssentialsMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone, Messages, Settings and {count} more'**
+  String defaultEssentialsMore(int count);
+
+  /// No description provided for @strictQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How strict should Curre be?'**
+  String get strictQuestion;
+
+  /// No description provided for @sectionHiddenApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden apps'**
+  String get sectionHiddenApps;
+
+  /// No description provided for @askWhyHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask “Why now?” when a hidden app opens'**
+  String get askWhyHidden;
+
+  /// No description provided for @needsAndroidOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs your OK in Android first'**
+  String get needsAndroidOk;
+
+  /// No description provided for @pausedOtherHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused while another home screen is in use'**
+  String get pausedOtherHome;
+
+  /// No description provided for @restingToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Resting today. Back tomorrow morning.'**
+  String get restingToday;
+
+  /// No description provided for @askWhyOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On, even from recent apps, notifications and links'**
+  String get askWhyOn;
+
+  /// No description provided for @keepHiddenQuiet.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep hidden apps quiet'**
+  String get keepHiddenQuiet;
+
+  /// No description provided for @focusEndedNothingHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Your focus has ended, so nothing is held'**
+  String get focusEndedNothingHeld;
+
+  /// No description provided for @heldUntilBack.
+  ///
+  /// In en, this message translates to:
+  /// **'On. Held until their app comes back.'**
+  String get heldUntilBack;
+
+  /// No description provided for @turnOnUsageAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on Usage access'**
+  String get turnOnUsageAccess;
+
+  /// No description provided for @turnOnNotificationAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notification access'**
+  String get turnOnNotificationAccess;
+
+  /// No description provided for @sectionQuietNudges.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet nudges'**
+  String get sectionQuietNudges;
+
+  /// No description provided for @allowNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow notifications'**
+  String get allowNotifications;
+
+  /// No description provided for @notificationsAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Allowed. The quiet nudges you choose can appear.'**
+  String get notificationsAllowed;
+
+  /// No description provided for @notificationsNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed yet. Tap to allow.'**
+  String get notificationsNotAllowed;
+
+  /// No description provided for @notificationsAndroidControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Android controls whether the quiet nudges you choose can appear'**
+  String get notificationsAndroidControls;
+
+  /// No description provided for @sectionVoiceTyping.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice typing'**
+  String get sectionVoiceTyping;
+
+  /// No description provided for @sectionYourName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name'**
+  String get sectionYourName;
+
+  /// No description provided for @nameInGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Name in your greeting'**
+  String get nameInGreeting;
+
+  /// No description provided for @sectionHomeScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Your home screen'**
+  String get sectionHomeScreen;
+
+  /// No description provided for @sectionHistoryPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'History and privacy'**
+  String get sectionHistoryPrivacy;
+
+  /// No description provided for @historySettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plans and the apps you brought back, from the last 30 days. Only on this phone.'**
+  String get historySettingsBody;
+
+  /// No description provided for @privacySettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'What is read online, what stays here and when online copies are deleted'**
+  String get privacySettingsBody;
+
+  /// No description provided for @clearHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear history'**
+  String get clearHistory;
+
+  /// No description provided for @clearHistorySettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete past plans, reasons, notes and missed notifications from this phone'**
+  String get clearHistorySettingsBody;
+
+  /// No description provided for @sectionAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get sectionAbout;
+
+  /// No description provided for @licences.
+  ///
+  /// In en, this message translates to:
+  /// **'Licences'**
+  String get licences;
+
+  /// No description provided for @licencesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The fonts, icons, illustrations and voice typing Curre uses'**
+  String get licencesBody;
+
+  /// No description provided for @appLegalese.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre opens the task, not the app.'**
+  String get appLegalese;
+
+  /// No description provided for @sessionStartsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {session} starts at'**
+  String sessionStartsAt(String session);
+
+  /// No description provided for @sessionOrderError.
+  ///
+  /// In en, this message translates to:
+  /// **'Mornings start before afternoons, and afternoons before evenings. Try a different time.'**
+  String get sessionOrderError;
+
+  /// No description provided for @sessionStartSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {session} now starts at {time}.'**
+  String sessionStartSaved(String session, String time);
+
+  /// No description provided for @nameSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved. Curre will greet you by this name.'**
+  String get nameSaved;
+
+  /// No description provided for @usageAccessDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Curre will ask “Why now?” when a hidden app opens.'**
+  String get usageAccessDone;
+
+  /// No description provided for @accessStillOff.
+  ///
+  /// In en, this message translates to:
+  /// **'It’s still off. You can turn it on here any time.'**
+  String get accessStillOff;
+
+  /// No description provided for @notificationAccessDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done. Hidden apps will stay quiet until you bring them back.'**
+  String get notificationAccessDone;
+
+  /// No description provided for @notificationsPermissionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are allowed. Curre will use the quiet nudge choices above.'**
+  String get notificationsPermissionDone;
+
+  /// No description provided for @notificationsPermissionOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are not allowed. You can allow them for Curre in your phone’s Settings.'**
+  String get notificationsPermissionOff;
+
+  /// No description provided for @chooseHomeApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Home app”, then choose the one you want.'**
+  String get chooseHomeApp;
+
+  /// No description provided for @searchHomeApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone opened Settings. Search for “Home app” (or open Apps, then Default apps), then choose the one you want.'**
+  String get searchHomeApp;
+
+  /// No description provided for @openSettingsHomeApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your phone’s Settings app and search for “Home app”. Choose the one you want there.'**
+  String get openSettingsHomeApp;
+
+  /// No description provided for @curreNotHomeSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre isn’t your home screen yet. Open your phone’s Settings, search for “Home app” and choose Curre.'**
+  String get curreNotHomeSettings;
+
+  /// No description provided for @clearHistoryQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear your history?'**
+  String get clearHistoryQuestion;
+
+  /// No description provided for @clearHistoryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes your past plans, the reasons you gave for bringing apps back, the notes you wrote after tasks and your missed notifications. Your proof days, today’s plan and any time already running stay as they are.'**
+  String get clearHistoryBody;
+
+  /// No description provided for @historyCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'History cleared.'**
+  String get historyCleared;
+
+  /// No description provided for @historyClearFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre couldn’t clear your history. Please try again.'**
+  String get historyClearFailed;
+
+  /// No description provided for @switchHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to another home screen'**
+  String get switchHome;
+
+  /// No description provided for @curreNotHomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre isn’t your home screen right now. Your plans and history are still here, ready when you want them.'**
+  String get curreNotHomeBody;
+
+  /// No description provided for @switchHomeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Want a different home screen for a while? That’s okay. Android lets you choose which app opens when you press Home. Your plans and history stay on this phone, and you can switch back any time.'**
+  String get switchHomeBody;
+
+  /// No description provided for @openHomeScreenSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open home screen settings'**
+  String get openHomeScreenSettings;
+
+  /// No description provided for @chooseHomeScreenApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a home screen app'**
+  String get chooseHomeScreenApp;
+
+  /// No description provided for @homeSettingsPath.
+  ///
+  /// In en, this message translates to:
+  /// **'If your phone opens its Settings instead, look for Apps, then Default apps, then Home app.'**
+  String get homeSettingsPath;
+
+  /// No description provided for @nudgesHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which silent notes Curre sends. Turning one off also cancels any of that kind already waiting.'**
+  String get nudgesHelp;
+
+  /// No description provided for @planYourDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan your day'**
+  String get planYourDay;
+
+  /// No description provided for @eachSessionBegins.
+  ///
+  /// In en, this message translates to:
+  /// **'When each part of your day begins'**
+  String get eachSessionBegins;
+
+  /// No description provided for @morningBegins.
+  ///
+  /// In en, this message translates to:
+  /// **'Once a day, when your morning begins'**
+  String get morningBegins;
+
+  /// No description provided for @afternoonEveningToo.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon and evening too'**
+  String get afternoonEveningToo;
+
+  /// No description provided for @afternoonEveningBegins.
+  ///
+  /// In en, this message translates to:
+  /// **'Also when your afternoon and evening begin'**
+  String get afternoonEveningBegins;
+
+  /// No description provided for @planEnding.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan ending'**
+  String get planEnding;
+
+  /// No description provided for @tenMinutesBeforePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Ten minutes before your plan ends'**
+  String get tenMinutesBeforePlan;
+
+  /// No description provided for @appTimeUp.
+  ///
+  /// In en, this message translates to:
+  /// **'App time up'**
+  String get appTimeUp;
+
+  /// No description provided for @hiddenAppTimeEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'When time for a hidden app runs out'**
+  String get hiddenAppTimeEnds;
+
+  /// No description provided for @addProofLater.
+  ///
+  /// In en, this message translates to:
+  /// **'A few minutes after your plan ends'**
+  String get addProofLater;
+
+  /// No description provided for @focusEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus ends'**
+  String get focusEnds;
+
+  /// No description provided for @focusEndsMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'On the morning your focus period ends'**
+  String get focusEndsMorning;
+
+  /// No description provided for @turnAllNudgesOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn all quiet nudges off'**
+  String get turnAllNudgesOff;
+
+  /// No description provided for @turnAllNudgesOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn all quiet nudges on'**
+  String get turnAllNudgesOn;
+
+  /// No description provided for @gentle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gentle'**
+  String get gentle;
+
+  /// No description provided for @balanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get balanced;
+
+  /// No description provided for @strict.
+  ///
+  /// In en, this message translates to:
+  /// **'Strict'**
+  String get strict;
+
+  /// No description provided for @strictnessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When you bring back a hidden app, Curre checks your reason. The stricter it is, the clearer your reason needs to be before the app opens.'**
+  String get strictnessBody;
+
+  /// No description provided for @hiddenChoiceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None. Every app opens as usual.'**
+  String get hiddenChoiceNone;
+
+  /// No description provided for @hiddenChoiceOne.
+  ///
+  /// In en, this message translates to:
+  /// **'1 app. Only it asks “Why now?”.'**
+  String get hiddenChoiceOne;
+
+  /// No description provided for @hiddenChoiceMany.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} apps. Only these ask “Why now?”.'**
+  String hiddenChoiceMany(int count);
+
+  /// No description provided for @missedNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed notifications'**
+  String get missedNotifications;
+
+  /// No description provided for @missedFromHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 notification from hidden apps} other{{count} notifications from hidden apps}}'**
+  String missedFromHidden(int count);
+
+  /// No description provided for @heldUntilAppBack.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} held until their app comes back'**
+  String heldUntilAppBack(int count);
+
+  /// No description provided for @bringBackApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring back {app}'**
+  String bringBackApp(String app);
+
+  /// No description provided for @restDayTheyOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest day: they open without asking'**
+  String get restDayTheyOpen;
+
+  /// No description provided for @nothingHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is hidden. Every app opens as usual from All apps.'**
+  String get nothingHidden;
+
+  /// No description provided for @hiddenAppsOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Your hidden apps are out for your plan or for a while right now.'**
+  String get hiddenAppsOut;
+
+  /// No description provided for @hideAnotherApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide another app'**
+  String get hideAnotherApp;
+
+  /// No description provided for @notificationsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 notification} other{{count} notifications}}'**
+  String notificationsCount(int count);
+
+  /// No description provided for @hiddenAppsTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the apps you chose to hide wait here. Tap one to bring it back for a while.'**
+  String get hiddenAppsTip;
+
+  /// No description provided for @gotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
+
+  /// No description provided for @appOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That app didn’t open. It may not be installed.'**
+  String get appOpenFailed;
+
+  /// No description provided for @missedNotificationsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Held quietly while their apps were hidden, and given back when the app comes back. Nothing leaves this phone.'**
+  String get missedNotificationsBody;
+
+  /// No description provided for @nothingHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing held right now.'**
+  String get nothingHeld;
+
+  /// No description provided for @held.
+  ///
+  /// In en, this message translates to:
+  /// **'Held'**
+  String get held;
+
+  /// No description provided for @givenBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Given back'**
+  String get givenBack;
+
+  /// No description provided for @openNotificationApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {app}'**
+  String openNotificationApp(String app);
+
+  /// No description provided for @openCurreAppInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Curre’s App info'**
+  String get openCurreAppInfo;
+
+  /// No description provided for @openSettingsAppsCurre.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your phone’s Settings, then Apps, then Curre.'**
+  String get openSettingsAppsCurre;
+
+  /// No description provided for @restrictedStillOff.
+  ///
+  /// In en, this message translates to:
+  /// **'It’s still off. That’s okay, Curre works without it. If Android said the setting is restricted, allow it once:'**
+  String get restrictedStillOff;
+
+  /// No description provided for @restrictedHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'If Android says the setting is restricted, allow it once:'**
+  String get restrictedHelp;
+
+  /// No description provided for @restrictedStepOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Curre’s App info.'**
+  String get restrictedStepOne;
+
+  /// No description provided for @restrictedStepTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the three dots in the top right corner.'**
+  String get restrictedStepTwo;
+
+  /// No description provided for @restrictedStepThree.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Allow restricted settings”.'**
+  String get restrictedStepThree;
+
+  /// No description provided for @restrictedStepFour.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm with your PIN or fingerprint.'**
+  String get restrictedStepFour;
+
+  /// No description provided for @restrictedStepFive.
+  ///
+  /// In en, this message translates to:
+  /// **'Come back here and switch access on.'**
+  String get restrictedStepFive;
+
+  /// No description provided for @noProblemSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'No problem. It’s in Curre settings any time.'**
+  String get noProblemSettings;
+
+  /// No description provided for @allSet.
+  ///
+  /// In en, this message translates to:
+  /// **'All set.'**
+  String get allSet;
+
+  /// No description provided for @usageAccessAllSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre will ask “Why now?” when a hidden app opens.'**
+  String get usageAccessAllSet;
+
+  /// No description provided for @notificationAccessAllSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden apps will stay quiet until you bring them back.'**
+  String get notificationAccessAllSet;
+
+  /// No description provided for @askWhyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask “Why now?” when a hidden app opens?'**
+  String get askWhyPrompt;
+
+  /// No description provided for @quietPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep hidden apps quiet?'**
+  String get quietPrompt;
+
+  /// No description provided for @askWhyPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden apps can sneak back in through recent apps, links or notifications. Curre can ask “Why now?” then too. It only checks which app opened, never what’s on your screen.'**
+  String get askWhyPromptBody;
+
+  /// No description provided for @tryAgainAccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgainAccess;
+
+  /// No description provided for @hiddenNamesFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'the apps you hide'**
+  String get hiddenNamesFallback;
+
+  /// No description provided for @hiddenNamesTwo.
+  ///
+  /// In en, this message translates to:
+  /// **'{first} and {second}'**
+  String hiddenNamesTwo(String first, String second);
+
+  /// No description provided for @hiddenNamesMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{first}, {second} and {count} more'**
+  String hiddenNamesMore(String first, String second, int count);
+
+  /// No description provided for @quietPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre can hold notifications from {apps} quietly and give every one back when you open the app. Other apps notify as usual, and calls and alarms always come through.'**
+  String quietPromptBody(String apps);
+
+  /// No description provided for @focusPurposeExams.
+  ///
+  /// In en, this message translates to:
+  /// **'Exams'**
+  String get focusPurposeExams;
+
+  /// No description provided for @focusPurposeDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'A deadline'**
+  String get focusPurposeDeadline;
+
+  /// No description provided for @focusPurposeHabit.
+  ///
+  /// In en, this message translates to:
+  /// **'Breaking a habit'**
+  String get focusPurposeHabit;
+
+  /// No description provided for @focusPurposeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else'**
+  String get focusPurposeOther;
+
+  /// No description provided for @focusHintExams.
+  ///
+  /// In en, this message translates to:
+  /// **'Pass my maths finals'**
+  String get focusHintExams;
+
+  /// No description provided for @focusHintDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish the portfolio'**
+  String get focusHintDeadline;
+
+  /// No description provided for @focusHintHabit.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop opening social apps in bed'**
+  String get focusHintHabit;
+
+  /// No description provided for @focusHintOther.
+  ///
+  /// In en, this message translates to:
+  /// **'What I want to change'**
+  String get focusHintOther;
+
+  /// No description provided for @focusEndExams.
+  ///
+  /// In en, this message translates to:
+  /// **'You made room for the work that mattered.'**
+  String get focusEndExams;
+
+  /// No description provided for @focusEndDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'You carried this work to its finish line.'**
+  String get focusEndDeadline;
+
+  /// No description provided for @focusEndHabit.
+  ///
+  /// In en, this message translates to:
+  /// **'You gave the new habit room to grow.'**
+  String get focusEndHabit;
+
+  /// No description provided for @focusEndOther.
+  ///
+  /// In en, this message translates to:
+  /// **'You kept coming back to what mattered.'**
+  String get focusEndOther;
+
+  /// No description provided for @focusLengthWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'1 week'**
+  String get focusLengthWeek;
+
+  /// No description provided for @focusLengthTwoWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'2 weeks'**
+  String get focusLengthTwoWeeks;
+
+  /// No description provided for @focusLengthThreeWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'3 weeks'**
+  String get focusLengthThreeWeeks;
+
+  /// No description provided for @focusLengthThirtyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'30 days'**
+  String get focusLengthThirtyDays;
+
+  /// No description provided for @focusGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Your goal, in a few words (optional)'**
+  String get focusGoalLabel;
+
+  /// No description provided for @untilWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'Until when?'**
+  String get untilWhen;
+
+  /// No description provided for @pickDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date'**
+  String get pickDate;
+
+  /// No description provided for @focusEndsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}, in {days}. You can change it later.'**
+  String focusEndsSummary(String date, String days);
+
+  /// No description provided for @focusEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus ends on'**
+  String get focusEndsOn;
+
+  /// No description provided for @focusSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre couldn’t save your focus. Please try again.'**
+  String get focusSaveFailed;
+
+  /// No description provided for @focusQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What’s this focus for?'**
+  String get focusQuestion;
+
+  /// No description provided for @focusPickerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre helps most for a stretch with an end: exams, a deadline, a habit you want to break.'**
+  String get focusPickerBody;
+
+  /// No description provided for @pickFocusPurpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what it’s for'**
+  String get pickFocusPurpose;
+
+  /// No description provided for @startMyFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Start my focus'**
+  String get startMyFocus;
+
+  /// No description provided for @setFocusQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a focus?'**
+  String get setFocusQuestion;
+
+  /// No description provided for @focusOfferBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Curre helps most for a stretch with an end: exams, a deadline, a habit to break. Pick one and when it ends.'**
+  String get focusOfferBody;
+
+  /// No description provided for @maybeLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe later'**
+  String get maybeLater;
+
+  /// No description provided for @setFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a focus'**
+  String get setFocus;
+
+  /// No description provided for @restDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest day'**
+  String get restDay;
+
+  /// No description provided for @yourFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Your focus'**
+  String get yourFocus;
+
+  /// No description provided for @restDayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden apps open without asking today, their notifications come through, and reminders stay quiet. Your proof days are safe. Back to focus tomorrow.'**
+  String get restDayBody;
+
+  /// No description provided for @focusLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} left · ends {date}'**
+  String focusLeft(String days, String date);
+
+  /// No description provided for @backToFocusNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to focus now'**
+  String get backToFocusNow;
+
+  /// No description provided for @takeTodayOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Take today off'**
+  String get takeTodayOff;
+
+  /// No description provided for @nextRestDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Next rest day: {date}'**
+  String nextRestDay(String date);
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get today;
+
+  /// No description provided for @tomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'tomorrow'**
+  String get tomorrow;
+
+  /// No description provided for @takeTodayOffQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Take today off?'**
+  String get takeTodayOffQuestion;
+
+  /// No description provided for @takeTodayOffBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Until tomorrow morning, hidden apps open without asking why, their notifications come through and Curre sends no reminders. Your proof days stay safe. You can take one rest day a week.'**
+  String get takeTodayOffBody;
+
+  /// No description provided for @keepGoing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going'**
+  String get keepGoing;
+
+  /// No description provided for @enjoyRestDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoy your rest day. Back to focus tomorrow.'**
+  String get enjoyRestDay;
+
+  /// No description provided for @focusSummaryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} of focus.'**
+  String focusSummaryDays(String days);
+
+  /// No description provided for @focusSummaryWithRest.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} of focus, {rests}.'**
+  String focusSummaryWithRest(String days, String rests);
+
+  /// No description provided for @restDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 rest day} other{{count} rest days}}'**
+  String restDaysCount(int count);
+
+  /// No description provided for @daysWithProof.
+  ///
+  /// In en, this message translates to:
+  /// **'days with proof'**
+  String get daysWithProof;
+
+  /// No description provided for @tasksProved.
+  ///
+  /// In en, this message translates to:
+  /// **'tasks proved'**
+  String get tasksProved;
+
+  /// No description provided for @hiddenAppsLeftClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'hidden apps left closed'**
+  String get hiddenAppsLeftClosed;
+
+  /// No description provided for @startAnotherFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Start another focus period'**
+  String get startAnotherFocus;
+
+  /// No description provided for @oldHomeScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back to my old home screen'**
+  String get oldHomeScreen;
+
+  /// No description provided for @focusHistoryStays.
+  ///
+  /// In en, this message translates to:
+  /// **'Your history and proof days stay on this phone either way.'**
+  String get focusHistoryStays;
+
+  /// No description provided for @chooseOldHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your old home screen in the list. Curre stops asking why and lets every notification through.'**
+  String get chooseOldHome;
+
+  /// No description provided for @tapOldHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap “Home app”, then choose your old home screen.'**
+  String get tapOldHome;
+
+  /// No description provided for @searchOldHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone opened Settings. Search for “Home app”, then choose your old home screen.'**
+  String get searchOldHome;
+
+  /// No description provided for @openSettingsOldHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Open your phone’s Settings app and search for “Home app”. Choose your old home screen there.'**
+  String get openSettingsOldHome;
+
+  /// No description provided for @noFocusSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No focus set'**
+  String get noFocusSet;
+
+  /// No description provided for @focusSettingsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick what this stretch is for and when it ends.'**
+  String get focusSettingsEmpty;
+
+  /// No description provided for @focusEndedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended {date}. See how it went on Home.'**
+  String focusEndedOn(String date);
+
+  /// No description provided for @focusEndsLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}, {days} left'**
+  String focusEndsLeft(String date, String days);
+
+  /// No description provided for @changeEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Change end date'**
+  String get changeEndDate;
+
+  /// No description provided for @weeklyRestNext.
+  ///
+  /// In en, this message translates to:
+  /// **'One rest day a week. Next one: {date}.'**
+  String weeklyRestNext(String date);
+
+  /// No description provided for @endFocusNow.
+  ///
+  /// In en, this message translates to:
+  /// **'End focus now'**
+  String get endFocusNow;
+
+  /// No description provided for @focusNowEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Your focus now ends {date}.'**
+  String focusNowEnds(String date);
+
+  /// No description provided for @endFocusQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'End your focus now?'**
+  String get endFocusQuestion;
+
+  /// No description provided for @endFocusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Home shows how it went, then you choose what’s next. Your history and proof days stay.'**
+  String get endFocusBody;
+
+  /// No description provided for @endFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'End focus'**
+  String get endFocus;
 }
 
 class _AppLocalizationsDelegate

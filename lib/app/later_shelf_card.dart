@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
@@ -50,7 +51,10 @@ class LaterShelfCard extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     header: true,
-                    child: Text('Saved for later', style: type.title),
+                    child: Text(
+                      context.l10n.savedForLaterTitle,
+                      style: type.title,
+                    ),
                   ),
                 ),
               ],
@@ -58,10 +62,10 @@ class LaterShelfCard extends StatelessWidget {
             const SizedBox(height: CurreSpace.s1),
             Text(
               doors.isEmpty
-                  ? 'Nothing you saved fits this plan, so it waits for a better time.'
+                  ? context.l10n.laterNoneFits
                   : shelf.ranked
-                  ? 'Best match for this plan first.'
-                  : 'Newest first.',
+                  ? context.l10n.laterBestFirst
+                  : context.l10n.laterNewestFirst,
               style: type.caption.copyWith(color: colors.ink2),
             ),
             for (final item in doors) ...[
@@ -84,14 +88,17 @@ class LaterShelfCard extends StatelessWidget {
               const SizedBox(height: CurreSpace.s2),
               Text(
                 shelf.waiting == 1
-                    ? '1 more keeps for another time.'
-                    : '${shelf.waiting} more keep for another time.',
+                    ? context.l10n.laterOneMore
+                    : context.l10n.laterMore(shelf.waiting),
                 style: type.meta,
               ),
             ],
             if (doors.isNotEmpty) ...[
               const SizedBox(height: CurreSpace.s3),
-              CurreSecondaryButton(label: 'Not today', onPressed: onDismiss),
+              CurreSecondaryButton(
+                label: context.l10n.notToday,
+                onPressed: onDismiss,
+              ),
             ],
           ],
         ),

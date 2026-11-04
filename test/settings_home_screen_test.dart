@@ -63,6 +63,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Phone language'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Language'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tapText(tester, 'Language');
     await tapText(tester, 'Español');
 

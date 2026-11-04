@@ -208,11 +208,30 @@ def test_proof_is_one_pipeline_call_protect_guard_decide_extract_verify(make_cli
     # plan, so a stopping Verify would end every honest note too.
     assert verify["grounding"]["documents"] == [{"id": "plan", "text": TASK}]
     assert verify["grounding"]["answer"] == NOTE
-    assert verify["grounding"]["instructions"].startswith(
-        clocked_pipeline.VERIFY_INSTRUCTIONS
-    )
+    assert verify["grounding"]["instructions"].startswith(clocked_pipeline.VERIFY_INSTRUCTIONS)
     assert "language code en" in verify["grounding"]["instructions"]
     assert "stop" not in verify
+
+
+def test_proof_passes_each_app_language_to_judgment_and_verify(make_client):
+    async def handler(*, text, steps, **kwargs):
+        return _proof_result()
+
+    client = make_client(handler)
+    languages = ("en", "es", "fr", "pt", "de")
+    for language in languages:
+        response = client.post(
+            "/v1/proof",
+            json={**_payload(), "language": language},
+        )
+        assert response.status_code == 200
+
+    for language, call in zip(languages, client.fake.calls, strict=True):
+        by_name = {step["name"]: step for step in call["steps"]}
+        assert f"language code {language}" in by_name["guard"]["injection"]["instructions"]
+        assert f"language code {language}" in by_name["proof"]["decide"]["instructions"]
+        assert f"language code {language}" in by_name["caption"]["extract"]["instructions"]
+        assert f"language code {language}" in by_name["verify"]["grounding"]["instructions"]
 
 
 def test_a_specific_note_that_contradicts_its_plan_gets_the_follow_up(make_client):

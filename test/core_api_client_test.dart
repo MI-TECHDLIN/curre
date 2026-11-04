@@ -99,7 +99,7 @@ void main() {
       expect(
         UnlockRequest(
           appLabel: 'A',
-          reason: 'reason',
+          reason: 'a reason',
           language: language,
         ).toJson()['language'],
         language,

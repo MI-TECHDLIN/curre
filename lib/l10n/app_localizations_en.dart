@@ -22,16 +22,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageEnglish => 'English';
 
   @override
-  String get languageSpanish => 'Spanish';
+  String get languageSpanish => 'Español';
 
   @override
-  String get languageFrench => 'French';
+  String get languageFrench => 'Français';
 
   @override
-  String get languagePortuguese => 'Portuguese';
+  String get languagePortuguese => 'Português';
 
   @override
-  String get languageGerman => 'German';
+  String get languageGerman => 'Deutsch';
 
   @override
   String get back => 'Back';
@@ -992,4 +992,811 @@ class AppLocalizationsEn extends AppLocalizations {
   String useExample(String text) {
     return 'Use example: $text';
   }
+
+  @override
+  String get findApp => 'Find an app';
+
+  @override
+  String noAppMatches(String query) {
+    return 'No app matches “$query”.';
+  }
+
+  @override
+  String get everyAppHidden => 'Every app on this phone is hidden.';
+
+  @override
+  String openApp(String app) {
+    return 'Open $app';
+  }
+
+  @override
+  String get hideThisApp => 'Hide this app';
+
+  @override
+  String hideApp(String app) {
+    return 'Hide $app';
+  }
+
+  @override
+  String appHiddenAsk(String app) {
+    return '$app is hidden. Opening it asks “Why now?” first.';
+  }
+
+  @override
+  String get planApps => 'Apps your plans can use';
+
+  @override
+  String get planAppsHelp =>
+      'When you plan, Curre picks from these. Choose 2 to 30.';
+
+  @override
+  String get hiddenAppsHelp =>
+      'Only these leave Home and ask “Why now?” first. Every other app opens as usual.';
+
+  @override
+  String get alwaysOnHomeHelp => 'These stay on Home all day, no plan needed.';
+
+  @override
+  String pickedCount(int count) {
+    return '$count picked';
+  }
+
+  @override
+  String hiddenCount(int count) {
+    return '$count hidden';
+  }
+
+  @override
+  String onHomeCount(int count) {
+    return '$count on Home';
+  }
+
+  @override
+  String planAppsMinimum(int count) {
+    return 'Plans need at least $count apps to choose from.';
+  }
+
+  @override
+  String planAppsMaximum(int count) {
+    return 'That’s $count already. Untick one to add another.';
+  }
+
+  @override
+  String appAlwaysOnHome(String app) {
+    return '$app is always on Home.';
+  }
+
+  @override
+  String get privacyDetails => 'Privacy details';
+
+  @override
+  String get privacySubtitle => 'What leaves this phone, and for how long.';
+
+  @override
+  String get privacyReadOnline => 'What is read online';
+
+  @override
+  String get privacyReadOnlineBody =>
+      'Your plan, app names, the reason you give for opening a hidden app and a note you send after a task are read online so Curre can answer you.';
+
+  @override
+  String get privacyCopyTime => 'How long a copy may remain';
+
+  @override
+  String get privacyCopyTimeBody =>
+      'Curre keeps no online copy. The AI service that reads your words may keep a successful answer, including quoted words, for about a day so a retry can return the same answer. It then deletes that copy.';
+
+  @override
+  String get privacyStaysHere => 'What stays here';
+
+  @override
+  String get privacyStaysHereBody =>
+      'Your contacts, chat names, app use and history stay on this phone. You can clear plans, reasons and notes from Curre settings.';
+
+  @override
+  String get privacyHistoryHides => 'What History hides';
+
+  @override
+  String get privacyHistoryHidesBody =>
+      'Before History saves a checked reason or note, Curre looks for names, phone numbers, email and address or payment details. What it finds becomes a label such as [name] or [phone]. If that check isn’t available, your words stay as they are.';
+
+  @override
+  String get privacyLogs =>
+      'Curre records only whether a request worked and how long it took. It does not put your words in online logs.';
+
+  @override
+  String get savedForLaterTitle => 'Saved for later';
+
+  @override
+  String get laterNoneFits =>
+      'Nothing you saved fits this plan, so it waits for a better time.';
+
+  @override
+  String get laterBestFirst => 'Best match for this plan first.';
+
+  @override
+  String get laterNewestFirst => 'Newest first.';
+
+  @override
+  String get laterOneMore => '1 more keeps for another time.';
+
+  @override
+  String laterMore(int count) {
+    return '$count more keep for another time.';
+  }
+
+  @override
+  String get notToday => 'Not today';
+
+  @override
+  String get sectionYourFocus => 'Your focus';
+
+  @override
+  String get sectionYourDay => 'Your day';
+
+  @override
+  String get dayStartsHelp =>
+      'When each part of your day starts, Curre asks what it’s for.';
+
+  @override
+  String startsAt(String time) {
+    return 'Starts at $time';
+  }
+
+  @override
+  String get sectionYourApps => 'Your apps';
+
+  @override
+  String get defaultEssentials => 'Phone, Messages and Settings';
+
+  @override
+  String defaultEssentialsMore(int count) {
+    return 'Phone, Messages, Settings and $count more';
+  }
+
+  @override
+  String get strictQuestion => 'How strict should Curre be?';
+
+  @override
+  String get sectionHiddenApps => 'Hidden apps';
+
+  @override
+  String get askWhyHidden => 'Ask “Why now?” when a hidden app opens';
+
+  @override
+  String get needsAndroidOk => 'Needs your OK in Android first';
+
+  @override
+  String get pausedOtherHome => 'Paused while another home screen is in use';
+
+  @override
+  String get restingToday => 'Resting today. Back tomorrow morning.';
+
+  @override
+  String get askWhyOn => 'On, even from recent apps, notifications and links';
+
+  @override
+  String get keepHiddenQuiet => 'Keep hidden apps quiet';
+
+  @override
+  String get focusEndedNothingHeld =>
+      'Your focus has ended, so nothing is held';
+
+  @override
+  String get heldUntilBack => 'On. Held until their app comes back.';
+
+  @override
+  String get turnOnUsageAccess => 'Turn on Usage access';
+
+  @override
+  String get turnOnNotificationAccess => 'Turn on notification access';
+
+  @override
+  String get sectionQuietNudges => 'Quiet nudges';
+
+  @override
+  String get allowNotifications => 'Allow notifications';
+
+  @override
+  String get notificationsAllowed =>
+      'Allowed. The quiet nudges you choose can appear.';
+
+  @override
+  String get notificationsNotAllowed => 'Not allowed yet. Tap to allow.';
+
+  @override
+  String get notificationsAndroidControls =>
+      'Android controls whether the quiet nudges you choose can appear';
+
+  @override
+  String get sectionVoiceTyping => 'Voice typing';
+
+  @override
+  String get sectionYourName => 'Your name';
+
+  @override
+  String get nameInGreeting => 'Name in your greeting';
+
+  @override
+  String get sectionHomeScreen => 'Your home screen';
+
+  @override
+  String get sectionHistoryPrivacy => 'History and privacy';
+
+  @override
+  String get historySettingsBody =>
+      'Your plans and the apps you brought back, from the last 30 days. Only on this phone.';
+
+  @override
+  String get privacySettingsBody =>
+      'What is read online, what stays here and when online copies are deleted';
+
+  @override
+  String get clearHistory => 'Clear history';
+
+  @override
+  String get clearHistorySettingsBody =>
+      'Delete past plans, reasons, notes and missed notifications from this phone';
+
+  @override
+  String get sectionAbout => 'About';
+
+  @override
+  String get licences => 'Licences';
+
+  @override
+  String get licencesBody =>
+      'The fonts, icons, illustrations and voice typing Curre uses';
+
+  @override
+  String get appLegalese => 'Curre opens the task, not the app.';
+
+  @override
+  String sessionStartsAt(String session) {
+    return 'Your $session starts at';
+  }
+
+  @override
+  String get sessionOrderError =>
+      'Mornings start before afternoons, and afternoons before evenings. Try a different time.';
+
+  @override
+  String sessionStartSaved(String session, String time) {
+    return 'Your $session now starts at $time.';
+  }
+
+  @override
+  String get nameSaved => 'Saved. Curre will greet you by this name.';
+
+  @override
+  String get usageAccessDone =>
+      'Done. Curre will ask “Why now?” when a hidden app opens.';
+
+  @override
+  String get accessStillOff =>
+      'It’s still off. You can turn it on here any time.';
+
+  @override
+  String get notificationAccessDone =>
+      'Done. Hidden apps will stay quiet until you bring them back.';
+
+  @override
+  String get notificationsPermissionDone =>
+      'Notifications are allowed. Curre will use the quiet nudge choices above.';
+
+  @override
+  String get notificationsPermissionOff =>
+      'Notifications are not allowed. You can allow them for Curre in your phone’s Settings.';
+
+  @override
+  String get chooseHomeApp => 'Tap “Home app”, then choose the one you want.';
+
+  @override
+  String get searchHomeApp =>
+      'Your phone opened Settings. Search for “Home app” (or open Apps, then Default apps), then choose the one you want.';
+
+  @override
+  String get openSettingsHomeApp =>
+      'Open your phone’s Settings app and search for “Home app”. Choose the one you want there.';
+
+  @override
+  String get curreNotHomeSettings =>
+      'Curre isn’t your home screen yet. Open your phone’s Settings, search for “Home app” and choose Curre.';
+
+  @override
+  String get clearHistoryQuestion => 'Clear your history?';
+
+  @override
+  String get clearHistoryBody =>
+      'This deletes your past plans, the reasons you gave for bringing apps back, the notes you wrote after tasks and your missed notifications. Your proof days, today’s plan and any time already running stay as they are.';
+
+  @override
+  String get historyCleared => 'History cleared.';
+
+  @override
+  String get historyClearFailed =>
+      'Curre couldn’t clear your history. Please try again.';
+
+  @override
+  String get switchHome => 'Switch to another home screen';
+
+  @override
+  String get curreNotHomeBody =>
+      'Curre isn’t your home screen right now. Your plans and history are still here, ready when you want them.';
+
+  @override
+  String get switchHomeBody =>
+      'Want a different home screen for a while? That’s okay. Android lets you choose which app opens when you press Home. Your plans and history stay on this phone, and you can switch back any time.';
+
+  @override
+  String get openHomeScreenSettings => 'Open home screen settings';
+
+  @override
+  String get chooseHomeScreenApp => 'Choose a home screen app';
+
+  @override
+  String get homeSettingsPath =>
+      'If your phone opens its Settings instead, look for Apps, then Default apps, then Home app.';
+
+  @override
+  String get nudgesHelp =>
+      'Choose which silent notes Curre sends. Turning one off also cancels any of that kind already waiting.';
+
+  @override
+  String get planYourDay => 'Plan your day';
+
+  @override
+  String get eachSessionBegins => 'When each part of your day begins';
+
+  @override
+  String get morningBegins => 'Once a day, when your morning begins';
+
+  @override
+  String get afternoonEveningToo => 'Afternoon and evening too';
+
+  @override
+  String get afternoonEveningBegins =>
+      'Also when your afternoon and evening begin';
+
+  @override
+  String get planEnding => 'Plan ending';
+
+  @override
+  String get tenMinutesBeforePlan => 'Ten minutes before your plan ends';
+
+  @override
+  String get appTimeUp => 'App time up';
+
+  @override
+  String get hiddenAppTimeEnds => 'When time for a hidden app runs out';
+
+  @override
+  String get addProofLater => 'A few minutes after your plan ends';
+
+  @override
+  String get focusEnds => 'Focus ends';
+
+  @override
+  String get focusEndsMorning => 'On the morning your focus period ends';
+
+  @override
+  String get turnAllNudgesOff => 'Turn all quiet nudges off';
+
+  @override
+  String get turnAllNudgesOn => 'Turn all quiet nudges on';
+
+  @override
+  String get gentle => 'Gentle';
+
+  @override
+  String get balanced => 'Balanced';
+
+  @override
+  String get strict => 'Strict';
+
+  @override
+  String get strictnessBody =>
+      'When you bring back a hidden app, Curre checks your reason. The stricter it is, the clearer your reason needs to be before the app opens.';
+
+  @override
+  String get hiddenChoiceNone => 'None. Every app opens as usual.';
+
+  @override
+  String get hiddenChoiceOne => '1 app. Only it asks “Why now?”.';
+
+  @override
+  String hiddenChoiceMany(int count) {
+    return '$count apps. Only these ask “Why now?”.';
+  }
+
+  @override
+  String get missedNotifications => 'Missed notifications';
+
+  @override
+  String missedFromHidden(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications from hidden apps',
+      one: '1 notification from hidden apps',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String heldUntilAppBack(int count) {
+    return '$count held until their app comes back';
+  }
+
+  @override
+  String bringBackApp(String app) {
+    return 'Bring back $app';
+  }
+
+  @override
+  String get restDayTheyOpen => 'Rest day: they open without asking';
+
+  @override
+  String get nothingHidden =>
+      'Nothing is hidden. Every app opens as usual from All apps.';
+
+  @override
+  String get hiddenAppsOut =>
+      'Your hidden apps are out for your plan or for a while right now.';
+
+  @override
+  String get hideAnotherApp => 'Hide another app';
+
+  @override
+  String notificationsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications',
+      one: '1 notification',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get hiddenAppsTip =>
+      'Only the apps you chose to hide wait here. Tap one to bring it back for a while.';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
+  String get appOpenFailed => 'That app didn’t open. It may not be installed.';
+
+  @override
+  String get missedNotificationsBody =>
+      'Held quietly while their apps were hidden, and given back when the app comes back. Nothing leaves this phone.';
+
+  @override
+  String get nothingHeld => 'Nothing held right now.';
+
+  @override
+  String get held => 'Held';
+
+  @override
+  String get givenBack => 'Given back';
+
+  @override
+  String openNotificationApp(String app) {
+    return 'Open $app';
+  }
+
+  @override
+  String get openCurreAppInfo => 'Open Curre’s App info';
+
+  @override
+  String get openSettingsAppsCurre =>
+      'Open your phone’s Settings, then Apps, then Curre.';
+
+  @override
+  String get restrictedStillOff =>
+      'It’s still off. That’s okay, Curre works without it. If Android said the setting is restricted, allow it once:';
+
+  @override
+  String get restrictedHelp =>
+      'If Android says the setting is restricted, allow it once:';
+
+  @override
+  String get restrictedStepOne => 'Open Curre’s App info.';
+
+  @override
+  String get restrictedStepTwo => 'Tap the three dots in the top right corner.';
+
+  @override
+  String get restrictedStepThree => 'Tap “Allow restricted settings”.';
+
+  @override
+  String get restrictedStepFour => 'Confirm with your PIN or fingerprint.';
+
+  @override
+  String get restrictedStepFive => 'Come back here and switch access on.';
+
+  @override
+  String get noProblemSettings =>
+      'No problem. It’s in Curre settings any time.';
+
+  @override
+  String get allSet => 'All set.';
+
+  @override
+  String get usageAccessAllSet =>
+      'Curre will ask “Why now?” when a hidden app opens.';
+
+  @override
+  String get notificationAccessAllSet =>
+      'Hidden apps will stay quiet until you bring them back.';
+
+  @override
+  String get askWhyPrompt => 'Ask “Why now?” when a hidden app opens?';
+
+  @override
+  String get quietPrompt => 'Keep hidden apps quiet?';
+
+  @override
+  String get askWhyPromptBody =>
+      'Hidden apps can sneak back in through recent apps, links or notifications. Curre can ask “Why now?” then too. It only checks which app opened, never what’s on your screen.';
+
+  @override
+  String get tryAgainAccess => 'Try again';
+
+  @override
+  String get hiddenNamesFallback => 'the apps you hide';
+
+  @override
+  String hiddenNamesTwo(String first, String second) {
+    return '$first and $second';
+  }
+
+  @override
+  String hiddenNamesMore(String first, String second, int count) {
+    return '$first, $second and $count more';
+  }
+
+  @override
+  String quietPromptBody(String apps) {
+    return 'Curre can hold notifications from $apps quietly and give every one back when you open the app. Other apps notify as usual, and calls and alarms always come through.';
+  }
+
+  @override
+  String get focusPurposeExams => 'Exams';
+
+  @override
+  String get focusPurposeDeadline => 'A deadline';
+
+  @override
+  String get focusPurposeHabit => 'Breaking a habit';
+
+  @override
+  String get focusPurposeOther => 'Something else';
+
+  @override
+  String get focusHintExams => 'Pass my maths finals';
+
+  @override
+  String get focusHintDeadline => 'Finish the portfolio';
+
+  @override
+  String get focusHintHabit => 'Stop opening social apps in bed';
+
+  @override
+  String get focusHintOther => 'What I want to change';
+
+  @override
+  String get focusEndExams => 'You made room for the work that mattered.';
+
+  @override
+  String get focusEndDeadline => 'You carried this work to its finish line.';
+
+  @override
+  String get focusEndHabit => 'You gave the new habit room to grow.';
+
+  @override
+  String get focusEndOther => 'You kept coming back to what mattered.';
+
+  @override
+  String get focusLengthWeek => '1 week';
+
+  @override
+  String get focusLengthTwoWeeks => '2 weeks';
+
+  @override
+  String get focusLengthThreeWeeks => '3 weeks';
+
+  @override
+  String get focusLengthThirtyDays => '30 days';
+
+  @override
+  String get focusGoalLabel => 'Your goal, in a few words (optional)';
+
+  @override
+  String get untilWhen => 'Until when?';
+
+  @override
+  String get pickDate => 'Pick a date';
+
+  @override
+  String focusEndsSummary(String date, String days) {
+    return 'Ends $date, in $days. You can change it later.';
+  }
+
+  @override
+  String get focusEndsOn => 'Focus ends on';
+
+  @override
+  String get focusSaveFailed =>
+      'Curre couldn’t save your focus. Please try again.';
+
+  @override
+  String get focusQuestion => 'What’s this focus for?';
+
+  @override
+  String get focusPickerBody =>
+      'Curre helps most for a stretch with an end: exams, a deadline, a habit you want to break.';
+
+  @override
+  String get pickFocusPurpose => 'Pick what it’s for';
+
+  @override
+  String get startMyFocus => 'Start my focus';
+
+  @override
+  String get setFocusQuestion => 'Set a focus?';
+
+  @override
+  String get focusOfferBody =>
+      'Curre helps most for a stretch with an end: exams, a deadline, a habit to break. Pick one and when it ends.';
+
+  @override
+  String get maybeLater => 'Maybe later';
+
+  @override
+  String get setFocus => 'Set a focus';
+
+  @override
+  String get restDay => 'Rest day';
+
+  @override
+  String get yourFocus => 'Your focus';
+
+  @override
+  String get restDayBody =>
+      'Hidden apps open without asking today, their notifications come through, and reminders stay quiet. Your proof days are safe. Back to focus tomorrow.';
+
+  @override
+  String focusLeft(String days, String date) {
+    return '$days left · ends $date';
+  }
+
+  @override
+  String get backToFocusNow => 'Back to focus now';
+
+  @override
+  String get takeTodayOff => 'Take today off';
+
+  @override
+  String nextRestDay(String date) {
+    return 'Next rest day: $date';
+  }
+
+  @override
+  String get today => 'today';
+
+  @override
+  String get tomorrow => 'tomorrow';
+
+  @override
+  String get takeTodayOffQuestion => 'Take today off?';
+
+  @override
+  String get takeTodayOffBody =>
+      'Until tomorrow morning, hidden apps open without asking why, their notifications come through and Curre sends no reminders. Your proof days stay safe. You can take one rest day a week.';
+
+  @override
+  String get keepGoing => 'Keep going';
+
+  @override
+  String get enjoyRestDay => 'Enjoy your rest day. Back to focus tomorrow.';
+
+  @override
+  String focusSummaryDays(String days) {
+    return '$days of focus.';
+  }
+
+  @override
+  String focusSummaryWithRest(String days, String rests) {
+    return '$days of focus, $rests.';
+  }
+
+  @override
+  String restDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rest days',
+      one: '1 rest day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get daysWithProof => 'days with proof';
+
+  @override
+  String get tasksProved => 'tasks proved';
+
+  @override
+  String get hiddenAppsLeftClosed => 'hidden apps left closed';
+
+  @override
+  String get startAnotherFocus => 'Start another focus period';
+
+  @override
+  String get oldHomeScreen => 'Go back to my old home screen';
+
+  @override
+  String get focusHistoryStays =>
+      'Your history and proof days stay on this phone either way.';
+
+  @override
+  String get chooseOldHome =>
+      'Choose your old home screen in the list. Curre stops asking why and lets every notification through.';
+
+  @override
+  String get tapOldHome => 'Tap “Home app”, then choose your old home screen.';
+
+  @override
+  String get searchOldHome =>
+      'Your phone opened Settings. Search for “Home app”, then choose your old home screen.';
+
+  @override
+  String get openSettingsOldHome =>
+      'Open your phone’s Settings app and search for “Home app”. Choose your old home screen there.';
+
+  @override
+  String get noFocusSet => 'No focus set';
+
+  @override
+  String get focusSettingsEmpty =>
+      'Pick what this stretch is for and when it ends.';
+
+  @override
+  String focusEndedOn(String date) {
+    return 'Ended $date. See how it went on Home.';
+  }
+
+  @override
+  String focusEndsLeft(String date, String days) {
+    return 'Ends $date, $days left';
+  }
+
+  @override
+  String get changeEndDate => 'Change end date';
+
+  @override
+  String weeklyRestNext(String date) {
+    return 'One rest day a week. Next one: $date.';
+  }
+
+  @override
+  String get endFocusNow => 'End focus now';
+
+  @override
+  String focusNowEnds(String date) {
+    return 'Your focus now ends $date.';
+  }
+
+  @override
+  String get endFocusQuestion => 'End your focus now?';
+
+  @override
+  String get endFocusBody =>
+      'Home shows how it went, then you choose what’s next. Your history and proof days stay.';
+
+  @override
+  String get endFocus => 'End focus';
 }
