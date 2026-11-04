@@ -517,35 +517,13 @@ class _CheckinScreenState extends State<CheckinScreen> {
     final label = app == null
         ? 'this plan'
         : controller.appFor(app.packageName)?.label ?? app.packageName;
-    final input = TextEditingController(
-      text: _timePhrase(app?.timing ?? plan.timing),
-    );
     final phrase = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Time for $label'),
-        content: TextField(
-          key: const Key('time-adjustment-field'),
-          controller: input,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: '2 hours, until 7, or from 4 to 6',
-          ),
-          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Keep it'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(input.text.trim()),
-            child: const Text('Apply'),
-          ),
-        ],
+      builder: (context) => _TimeAdjustDialog(
+        label: label,
+        initial: _timePhrase(app?.timing ?? plan.timing),
       ),
     );
-    input.dispose();
     if (phrase == null || phrase.isEmpty || !mounted) return;
     final updated = await controller.adjustPlanTime(
       plan,
@@ -742,4 +720,52 @@ String _timePhrase(PlanTimeExpression? timing) {
   return timing.durationMinutes == null
       ? ''
       : _shortDuration(timing.durationMinutes!);
+}
+
+/// Owns its text controller so the field outlives the dialog's exit
+/// animation; disposing it right after `showDialog` returns would not.
+class _TimeAdjustDialog extends StatefulWidget {
+  const _TimeAdjustDialog({required this.label, required this.initial});
+
+  final String label;
+  final String initial;
+
+  @override
+  State<_TimeAdjustDialog> createState() => _TimeAdjustDialogState();
+}
+
+class _TimeAdjustDialogState extends State<_TimeAdjustDialog> {
+  late final TextEditingController _input = TextEditingController(
+    text: widget.initial,
+  );
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('Time for ${widget.label}'),
+    content: TextField(
+      key: const Key('time-adjustment-field'),
+      controller: _input,
+      autofocus: true,
+      decoration: const InputDecoration(
+        hintText: '2 hours, until 7, or from 4 to 6',
+      ),
+      onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Keep it'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.of(context).pop(_input.text.trim()),
+        child: const Text('Apply'),
+      ),
+    ],
+  );
 }
