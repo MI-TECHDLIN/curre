@@ -12,6 +12,10 @@ class OnboardingDraft {
     this.hidden = const <String>{},
     this.showAllApps = false,
     this.plan = '',
+    this.focusPurpose,
+    this.focusGoal = '',
+    this.focusDays,
+    this.focusEndsOn,
   });
 
   /// The step's name, as onboarding calls it.
@@ -24,6 +28,13 @@ class OnboardingDraft {
   final bool showAllApps;
   final String plan;
 
+  /// The focus picked so far: its purpose's name, the goal, and a length
+  /// in days or an end date ('YYYY-MM-DD').
+  final String? focusPurpose;
+  final String focusGoal;
+  final int? focusDays;
+  final String? focusEndsOn;
+
   Map<String, Object?> toJson() => <String, Object?>{
     'step': step,
     'displayName': displayName,
@@ -31,6 +42,10 @@ class OnboardingDraft {
     'hidden': hidden.toList(growable: false),
     'showAllApps': showAllApps,
     'plan': plan,
+    'focusPurpose': focusPurpose,
+    'focusGoal': focusGoal,
+    'focusDays': focusDays,
+    'focusEndsOn': focusEndsOn,
   };
 
   factory OnboardingDraft.fromJson(Map<String, Object?> json) {
@@ -44,6 +59,10 @@ class OnboardingDraft {
       hidden: hidden is List ? {...hidden.whereType<String>()} : <String>{},
       showAllApps: json['showAllApps'] as bool? ?? false,
       plan: json['plan'] as String? ?? '',
+      focusPurpose: json['focusPurpose'] as String?,
+      focusGoal: json['focusGoal'] as String? ?? '',
+      focusDays: json['focusDays'] as int?,
+      focusEndsOn: json['focusEndsOn'] as String?,
     );
   }
 }

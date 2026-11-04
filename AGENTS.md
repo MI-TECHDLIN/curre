@@ -97,6 +97,20 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   (`lib/core/plan_completion.dart`); "End plan now" is
   `Plan.endedEarlyAt` (keeps `plannedEndsAt`, so undo and History work)
   and must cancel, never reschedule, that plan's reminders.
+- Curre is positioned as a focus-period launcher (exams, a deadline, a habit),
+  not a forever home screen. `FocusPeriod`, rest days (`RestDayRules`, one a
+  week, kept for good under their own store key because
+  `ProoflightRules.summarize(restDays:)` skips them) and `FocusSummary` live
+  in `lib/core/focus.dart`; the focus itself is `Settings.focus`. Its UI
+  (picker, Home cards, Settings card) is `lib/app/focus_widgets.dart`. A rest
+  day relaxes "Why now?" and quieting through `allowedUntilUtc` until the next
+  morning start, so Android resumes by itself; reminders skip rest days.
+  While Curre isn't the default Home, both pause (`pausedAwayFromHome`, and
+  `isCurreDefaultHome` in the Kotlin services).
+- Reminders (`LocalReminderService`) are one-shot alarms set
+  `sessionDaysAhead` days ahead and set again by `refresh()` on each new
+  Curre day; a notification tap must call `ensureVisualUpdate()` before its
+  post-frame navigation (Home has no motion, so no frame may be coming).
 - The check-in card's water is core `DayProgress` (`lib/core/progress.dart`),
   which counts `DoorUse`s: a screen that opens a plan's app must call
   `CurreLocalStore.recordDoorUse`, or the water never rises. Motion (Peek,

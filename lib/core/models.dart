@@ -1,6 +1,7 @@
 import '../doors/door_models.dart' show ReasonKind;
 export '../doors/door_models.dart' show ReasonKind;
 
+import 'focus.dart';
 import 'span.dart';
 
 enum SessionName { morning, afternoon, evening }
@@ -181,9 +182,12 @@ class Settings {
     this.askWhyOnHiddenAppOpen = true,
     this.quietNotificationsFromHiddenApps = true,
     this.checkInNudges = true,
+    this.everySessionNudges = false,
     this.planEndingNudges = true,
     this.unlockTimeUpNudges = true,
-    this.proofNudges = true,
+    this.proofNudges = false,
+    this.focusNudges = true,
+    this.focus,
     String? displayName,
     String? avatarId,
   }) : displayName = normalizeDisplayName(displayName),
@@ -238,6 +242,11 @@ class Settings {
       checkInNudges: json.containsKey('checkInNudges')
           ? _bool(json['checkInNudges'], 'checkInNudges')
           : true,
+      // Saved before the gentler default (one "Plan your day" a morning):
+      // keep the three a day those people already had.
+      everySessionNudges: json.containsKey('everySessionNudges')
+          ? _bool(json['everySessionNudges'], 'everySessionNudges')
+          : true,
       planEndingNudges: json.containsKey('planEndingNudges')
           ? _bool(json['planEndingNudges'], 'planEndingNudges')
           : true,
@@ -247,6 +256,12 @@ class Settings {
       proofNudges: json.containsKey('proofNudges')
           ? _bool(json['proofNudges'], 'proofNudges')
           : true,
+      focusNudges: json.containsKey('focusNudges')
+          ? _bool(json['focusNudges'], 'focusNudges')
+          : true,
+      // Absent for people who set up before focus periods existed; Home
+      // offers them one gently. An unreadable focus is dropped, not fatal.
+      focus: _focus(json['focus']),
       // Absent in settings saved before names existed, which still load.
       displayName: _nullableString(json['displayName'], 'displayName'),
       // Absent in settings saved before avatars existed, which still load.
@@ -262,12 +277,27 @@ class Settings {
   final bool askWhyOnHiddenAppOpen;
   final bool quietNotificationsFromHiddenApps;
   final bool checkInNudges;
+
+  /// "Plan your day" at the start of the afternoon and evening too, not
+  /// only the morning. Off for new setups: one a day is plenty.
+  final bool everySessionNudges;
   final bool planEndingNudges;
   final bool unlockTimeUpNudges;
   final bool proofNudges;
 
+  /// The notification on the day a focus ends.
+  final bool focusNudges;
+
+  /// What this stretch with Curre is for, and when it ends; null when none
+  /// is set.
+  final FocusPeriod? focus;
+
   bool get hasAnyNudges =>
-      checkInNudges || planEndingNudges || unlockTimeUpNudges || proofNudges;
+      checkInNudges ||
+      planEndingNudges ||
+      unlockTimeUpNudges ||
+      proofNudges ||
+      focusNudges;
 
   /// What the greeting calls the user ("Good morning, Chidi"), or null when
   /// they have not given a name. Onboarding will ask for it; until then the
@@ -287,9 +317,13 @@ class Settings {
     bool? askWhyOnHiddenAppOpen,
     bool? quietNotificationsFromHiddenApps,
     bool? checkInNudges,
+    bool? everySessionNudges,
     bool? planEndingNudges,
     bool? unlockTimeUpNudges,
     bool? proofNudges,
+    bool? focusNudges,
+    FocusPeriod? focus,
+    bool clearFocus = false,
     String? displayName,
     bool clearDisplayName = false,
     String? avatarId,
@@ -305,9 +339,12 @@ class Settings {
         quietNotificationsFromHiddenApps ??
         this.quietNotificationsFromHiddenApps,
     checkInNudges: checkInNudges ?? this.checkInNudges,
+    everySessionNudges: everySessionNudges ?? this.everySessionNudges,
     planEndingNudges: planEndingNudges ?? this.planEndingNudges,
     unlockTimeUpNudges: unlockTimeUpNudges ?? this.unlockTimeUpNudges,
     proofNudges: proofNudges ?? this.proofNudges,
+    focusNudges: focusNudges ?? this.focusNudges,
+    focus: clearFocus ? null : focus ?? this.focus,
     displayName: clearDisplayName ? null : displayName ?? this.displayName,
     avatarId: clearAvatarId ? null : avatarId ?? this.avatarId,
   );
@@ -362,9 +399,12 @@ class Settings {
     'askWhyOnHiddenAppOpen': askWhyOnHiddenAppOpen,
     'quietNotificationsFromHiddenApps': quietNotificationsFromHiddenApps,
     'checkInNudges': checkInNudges,
+    'everySessionNudges': everySessionNudges,
     'planEndingNudges': planEndingNudges,
     'unlockTimeUpNudges': unlockTimeUpNudges,
     'proofNudges': proofNudges,
+    'focusNudges': focusNudges,
+    if (focus != null) 'focus': focus!.toJson(),
     if (displayName != null) 'displayName': displayName,
     if (avatarId != null) 'avatarId': avatarId,
   };
@@ -668,6 +708,15 @@ class DoorUse {
 }
 
 DateTime _asUtc(DateTime value) => value.toUtc();
+
+FocusPeriod? _focus(Object? value) {
+  if (value == null) return null;
+  try {
+    return FocusPeriod.fromJson(_map(value, 'focus'));
+  } on Object {
+    return null;
+  }
+}
 
 DateTime _instant(Object? value, String name) {
   final text = _string(value, name);

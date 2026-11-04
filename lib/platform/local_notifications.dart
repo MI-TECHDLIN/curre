@@ -7,7 +7,7 @@ import '../core/models.dart';
 ///
 /// Settings can toggle these values independently without changing the
 /// scheduling implementation.
-enum CurreNotificationType { checkIn, planEnding, unlockTimeUp, proof }
+enum CurreNotificationType { checkIn, planEnding, unlockTimeUp, proof, focus }
 
 enum CurreNotificationDestination { home, checkIn, hiddenApps, proof }
 
@@ -56,6 +56,7 @@ class CurreNotificationPolicy {
           if (settings.planEndingNudges) CurreNotificationType.planEnding,
           if (settings.unlockTimeUpNudges) CurreNotificationType.unlockTimeUp,
           if (settings.proofNudges) CurreNotificationType.proof,
+          if (settings.focusNudges) CurreNotificationType.focus,
         },
       );
 
@@ -163,6 +164,52 @@ class CurreNotificationIntent {
   }
 }
 
+/// The actions a reminder of [type] offers, also when it comes back after
+/// "Snooze 10 min".
+List<CurreNotificationAction> defaultActionsFor(CurreNotificationType type) =>
+    switch (type) {
+      CurreNotificationType.checkIn ||
+      CurreNotificationType.planEnding => const <CurreNotificationAction>[
+        CurreNotificationAction.startCheckIn,
+        CurreNotificationAction.snooze,
+      ],
+      CurreNotificationType.unlockTimeUp => const <CurreNotificationAction>[
+        CurreNotificationAction.bringIntoSight,
+      ],
+      CurreNotificationType.proof => const <CurreNotificationAction>[
+        CurreNotificationAction.addProof,
+        CurreNotificationAction.snooze,
+      ],
+      CurreNotificationType.focus => const <CurreNotificationAction>[],
+    };
+
+/// The same reminder again, ten minutes after [now], for "Snooze 10 min";
+/// null when [payload] isn't one of Curre's.
+CurreReminder? snoozedReminder(String? payload, DateTime now) {
+  if (payload == null) return null;
+  try {
+    final json = jsonDecode(payload);
+    if (json is! Map<String, Object?> || json['version'] != 1) return null;
+    final type = CurreNotificationType.values.byName(json['type']! as String);
+    final destination = CurreNotificationDestination.values.byName(
+      json['destination']! as String,
+    );
+    final at = now.add(LocalReminderService.snoozeFor);
+    return CurreReminder(
+      id: LocalReminderService.snoozeIdFor(at),
+      type: type,
+      title: json['title']! as String,
+      body: json['body']! as String,
+      scheduledAt: at,
+      destination: destination,
+      actions: defaultActionsFor(type),
+      reference: json['reference'] as String?,
+    );
+  } on Object {
+    return null;
+  }
+}
+
 /// Process-wide hand-off between Android's notification callback and the
 /// navigation tree. It deliberately carries only routes and an optional proof
 /// note; product state remains phone-owned by the app controller.
@@ -196,11 +243,30 @@ class LocalReminderService {
   }) : _now = now ?? DateTime.now,
        _policyOverride = policy;
 
-  static const int _morningId = 1101;
-  static const int _afternoonId = 1102;
-  static const int _eveningId = 1103;
+  static const int _firstSessionId = 1101;
+
+  /// The focus-end notification's id.
+  static const int focusEndId = 1201;
   static const Duration planHeadsUp = Duration(minutes: 10);
   static const Duration proofDelay = Duration(minutes: 5);
+  static const Duration snoozeFor = Duration(minutes: 10);
+
+  /// How many days of "Plan your day" reminders are set ahead. Each one
+  /// fires once, and Curre (which stays running as the home screen) sets
+  /// them again each new day, so a few days ahead keeps them coming even if
+  /// Home isn't opened for a day or two.
+  static const int sessionDaysAhead = 3;
+
+  /// Every id a "Plan your day" reminder can use: one per session per day
+  /// ahead, 1101 to 1109.
+  static List<int> get sessionReminderIds => <int>[
+    for (var day = 0; day < sessionDaysAhead; day++)
+      for (final session in SessionName.values) _sessionId(session, day),
+  ];
+
+  /// A snoozed reminder's id, clear of every other range.
+  static int snoozeIdFor(DateTime at) =>
+      800000 + at.millisecondsSinceEpoch.remainder(100000);
 
   final ReminderNotificationGateway _gateway;
   final DateTime Function() _now;
@@ -212,42 +278,110 @@ class LocalReminderService {
   CurreNotificationPolicy _policyFor(Settings settings) =>
       _policyOverride ?? CurreNotificationPolicy.fromSettings(settings);
 
-  Future<void> scheduleSessionReminders(Settings settings) async {
+  /// Sets "Plan your day" for the next morning start (and the afternoon and
+  /// evening starts too with [Settings.everySessionNudges]) and the
+  /// [sessionDaysAhead] days after, skipping [restDays]: a rest day sends
+  /// no reminders.
+  Future<void> scheduleSessionReminders(
+    Settings settings, {
+    Iterable<LocalDate> restDays = const <LocalDate>[],
+  }) async {
     await _gateway.initialize();
     final now = _now();
     final activePolicy = _policyFor(settings);
+    final resting = restDays.toSet();
     for (final session in SessionName.values) {
-      final id = _sessionId(session);
-      await _gateway.cancelReminder(id);
-      if (!activePolicy.allows(CurreNotificationType.checkIn)) continue;
       final start = settings.sessionStarts[session]!;
-      var scheduled = DateTime(
+      var first = DateTime(
         now.year,
         now.month,
         now.day,
         start.hour,
         start.minute,
       );
-      if (!scheduled.isAfter(now)) {
-        scheduled = scheduled.add(const Duration(days: 1));
+      if (!first.isAfter(now)) {
+        first = DateTime(
+          first.year,
+          first.month,
+          first.day + 1,
+          start.hour,
+          start.minute,
+        );
       }
-      scheduled = activePolicy.nextAllowed(scheduled);
-      await _gateway.scheduleReminder(
-        CurreReminder(
-          id: id,
-          type: CurreNotificationType.checkIn,
-          title: 'Plan your ${session.name}',
-          body: 'One sentence, and Curre puts just the apps you need on Home.',
-          scheduledAt: scheduled,
-          destination: CurreNotificationDestination.checkIn,
-          actions: const <CurreNotificationAction>[
-            CurreNotificationAction.startCheckIn,
-            CurreNotificationAction.snooze,
-          ],
-          reference: session.name,
-        ),
-      );
+      for (var day = 0; day < sessionDaysAhead; day++) {
+        final id = _sessionId(session, day);
+        await _gateway.cancelReminder(id);
+        if (!activePolicy.allows(CurreNotificationType.checkIn)) continue;
+        // One a day unless the user asked for every part of the day.
+        if (session != SessionName.morning && !settings.everySessionNudges) {
+          continue;
+        }
+        // Built from the date, not by adding hours, so a clock change
+        // keeps the session's own time.
+        final occurrence = DateTime(
+          first.year,
+          first.month,
+          first.day + day,
+          start.hour,
+          start.minute,
+        );
+        if (resting.contains(LocalDate.fromLocalDateTime(occurrence))) {
+          continue;
+        }
+        await _gateway.scheduleReminder(
+          CurreReminder(
+            id: id,
+            type: CurreNotificationType.checkIn,
+            title: 'Plan your ${session.name}',
+            body:
+                'One sentence, and Curre puts just the apps you need on Home.',
+            scheduledAt: activePolicy.nextAllowed(occurrence),
+            destination: CurreNotificationDestination.checkIn,
+            actions: defaultActionsFor(CurreNotificationType.checkIn),
+            reference: session.name,
+          ),
+        );
+      }
     }
+  }
+
+  /// Drops every "Plan your day" reminder, for a phone that hasn't finished
+  /// setting Curre up yet.
+  Future<void> cancelSessionReminders() async {
+    await _gateway.initialize();
+    for (final id in sessionReminderIds) {
+      await _gateway.cancelReminder(id);
+    }
+  }
+
+  /// Sets the one notification for the day [settings]' focus ends, at that
+  /// day's morning start (after quiet hours), or drops it when there is no
+  /// focus, it is already over, or its switch is off.
+  Future<void> scheduleFocusEnd(Settings settings) async {
+    await _gateway.initialize();
+    await _gateway.cancelReminder(focusEndId);
+    final focus = settings.focus;
+    final activePolicy = _policyFor(settings);
+    if (focus == null || !activePolicy.allows(CurreNotificationType.focus)) {
+      return;
+    }
+    final morning = settings.sessionStarts[SessionName.morning]!;
+    final end = focus.endsOn;
+    final at = DateTime(end.year, end.month, end.day, morning.hour, morning.minute);
+    if (!at.isAfter(_now())) return;
+    final days = focus.lengthInDays;
+    await _gateway.scheduleReminder(
+      CurreReminder(
+        id: focusEndId,
+        type: CurreNotificationType.focus,
+        title: 'Your focus is done',
+        body: 'See how your $days days went, and choose what comes next.',
+        scheduledAt: activePolicy.nextAllowed(at),
+        destination: CurreNotificationDestination.home,
+        actions: defaultActionsFor(CurreNotificationType.focus),
+        reference: end.toJson(),
+      ),
+    );
   }
 
   /// The ids of a plan's two reminders: its heads-up before the end, and
@@ -266,12 +400,19 @@ class LocalReminderService {
     await _gateway.cancelReminder(proofId);
   }
 
-  Future<void> schedulePlanReminders(Plan plan, {Settings? settings}) async {
+  /// Sets a plan's heads-up and proof reminders; a plan made on one of
+  /// [restDays] gets none.
+  Future<void> schedulePlanReminders(
+    Plan plan, {
+    Settings? settings,
+    Iterable<LocalDate> restDays = const <LocalDate>[],
+  }) async {
     await _gateway.initialize();
     final activePolicy = settings == null ? policy : _policyFor(settings);
     final (headsUpId, proofId) = planReminderIds(plan.id);
     await _gateway.cancelReminder(headsUpId);
     await _gateway.cancelReminder(proofId);
+    if (restDays.contains(plan.date)) return;
 
     final now = _now();
     final localEnd = plan.endsAt.toLocal();
@@ -318,11 +459,8 @@ class LocalReminderService {
     }
   }
 
-  int _sessionId(SessionName session) => switch (session) {
-    SessionName.morning => _morningId,
-    SessionName.afternoon => _afternoonId,
-    SessionName.evening => _eveningId,
-  };
+  static int _sessionId(SessionName session, int day) =>
+      _firstSessionId + day * SessionName.values.length + session.index;
 }
 
 int _stableId(String value) {

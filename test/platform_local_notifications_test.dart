@@ -4,6 +4,8 @@ import 'package:curre/core/core.dart';
 import 'package:curre/platform/local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'support/fakes.dart';
+
 void main() {
   group('session reminders', () {
     test('use the three user session starts with rich actions', () async {
@@ -11,6 +13,7 @@ void main() {
       final now = DateTime(2026, 10, 26, 8, 30);
       final service = LocalReminderService(gateway, now: () => now);
       final settings = Settings(
+        everySessionNudges: true,
         sessionStarts: const <SessionName, LocalTime>{
           SessionName.morning: LocalTime(6, 45),
           SessionName.afternoon: LocalTime(13, 15),
@@ -21,15 +24,33 @@ void main() {
       await service.scheduleSessionReminders(settings);
 
       expect(gateway.initializeCalls, 1);
-      expect(gateway.cancelled, <int>[1101, 1102, 1103]);
-      expect(gateway.scheduled, hasLength(3));
       expect(
-        gateway.scheduled.map((reminder) => reminder.scheduledAt),
+        gateway.cancelled.toSet(),
+        LocalReminderService.sessionReminderIds.toSet(),
+      );
+      // Three days ahead, so they keep coming while Home stays open.
+      expect(gateway.scheduled, hasLength(9));
+      expect(
+        gateway.scheduled.take(3).map((reminder) => reminder.scheduledAt),
         <DateTime>[
           DateTime(2026, 10, 27, 7),
-          DateTime(2026, 10, 26, 13, 15),
-          DateTime(2026, 10, 26, 18, 30),
+          DateTime(2026, 10, 28, 7),
+          DateTime(2026, 10, 29, 7),
         ],
+      );
+      expect(
+        gateway.scheduled
+            .where((reminder) => reminder.reference == 'afternoon')
+            .map((reminder) => reminder.scheduledAt),
+        <DateTime>[
+          DateTime(2026, 10, 26, 13, 15),
+          DateTime(2026, 10, 27, 13, 15),
+          DateTime(2026, 10, 28, 13, 15),
+        ],
+      );
+      expect(
+        gateway.scheduled.map((reminder) => reminder.id).toSet(),
+        hasLength(9),
       );
       for (final reminder in gateway.scheduled) {
         expect(reminder.type, CurreNotificationType.checkIn);
@@ -54,6 +75,12 @@ void main() {
       await service.scheduleSessionReminders(Settings());
 
       expect(gateway.scheduled.first.scheduledAt, DateTime(2026, 10, 27, 7));
+      // New setups get one "Plan your day" a day: the morning's.
+      expect(
+        gateway.scheduled.map((reminder) => reminder.reference).toSet(),
+        <String>{'morning'},
+      );
+      expect(gateway.scheduled, hasLength(3));
       expect(service.policy.isQuiet(DateTime(2026, 10, 26, 22, 30)), isTrue);
       expect(service.policy.isQuiet(DateTime(2026, 10, 27, 7)), isFalse);
     });
@@ -72,7 +99,10 @@ void main() {
 
         await service.scheduleSessionReminders(Settings());
 
-        expect(gateway.cancelled, <int>[1101, 1102, 1103]);
+        expect(
+          gateway.cancelled.toSet(),
+          LocalReminderService.sessionReminderIds.toSet(),
+        );
         expect(gateway.scheduled, isEmpty);
       },
     );
@@ -88,10 +118,157 @@ void main() {
 
         await service.scheduleSessionReminders(Settings(checkInNudges: false));
 
-        expect(gateway.cancelled, <int>[1101, 1102, 1103]);
+        expect(
+          gateway.cancelled.toSet(),
+          LocalReminderService.sessionReminderIds.toSet(),
+        );
         expect(gateway.scheduled, isEmpty);
       },
     );
+  });
+
+  group('rest days and the focus', () {
+    test('a rest day sends no "Plan your day"', () async {
+      final gateway = FakeReminderGateway();
+      final service = LocalReminderService(
+        gateway,
+        now: () => DateTime(2026, 10, 26, 8),
+      );
+      await service.scheduleSessionReminders(
+        Settings(everySessionNudges: true),
+        restDays: const [LocalDate(2026, 10, 27)],
+      );
+      final days = gateway.scheduled
+          .map((reminder) => LocalDate.fromLocalDateTime(reminder.scheduledAt))
+          .toSet();
+      expect(days, isNot(contains(const LocalDate(2026, 10, 27))));
+      expect(days, contains(const LocalDate(2026, 10, 26)));
+      expect(days, contains(const LocalDate(2026, 10, 28)));
+    });
+
+    test('a plan on a rest day gets no heads-up or proof reminder', () async {
+      final gateway = FakeReminderGateway();
+      final service = LocalReminderService(
+        gateway,
+        now: () => DateTime.utc(2026, 10, 26, 12),
+      );
+      await service.schedulePlanReminders(
+        _plan(DateTime.utc(2026, 10, 26, 13)),
+        restDays: const [LocalDate(2026, 10, 26)],
+      );
+      expect(gateway.cancelled, hasLength(2));
+      expect(gateway.scheduled, isEmpty);
+    });
+
+    test('the focus end comes on the end date’s morning', () async {
+      final gateway = FakeReminderGateway();
+      final service = LocalReminderService(
+        gateway,
+        now: () => DateTime(2026, 10, 26, 8),
+      );
+      final settings = Settings(
+        sessionStarts: const <SessionName, LocalTime>{
+          SessionName.morning: LocalTime(8),
+          SessionName.afternoon: LocalTime(12),
+          SessionName.evening: LocalTime(17),
+        },
+        focus: FocusPeriod(
+          purpose: FocusPurpose.exams,
+          startsOn: const LocalDate(2026, 10, 26),
+          endsOn: const LocalDate(2026, 11, 2),
+        ),
+      );
+      await service.scheduleFocusEnd(settings);
+      final reminder = gateway.scheduled.single;
+      expect(reminder.id, LocalReminderService.focusEndId);
+      expect(reminder.scheduledAt, DateTime(2026, 11, 2, 8));
+      expect(reminder.body, 'See how your 7 days went, and choose what comes next.');
+      expect(reminder.destination, CurreNotificationDestination.home);
+      expect(reminder.actions, isEmpty);
+
+      gateway.scheduled.clear();
+      await service.scheduleFocusEnd(settings.copyWith(focusNudges: false));
+      await service.scheduleFocusEnd(settings.copyWith(clearFocus: true));
+      expect(gateway.scheduled, isEmpty);
+      expect(
+        gateway.cancelled.where((id) => id == LocalReminderService.focusEndId),
+        hasLength(3),
+      );
+    });
+
+    test('nothing is set before setup is done', () async {
+      final gateway = FakeReminderGateway();
+      final controller = fakeController(
+        onboardingComplete: false,
+        reminders: LocalReminderService(
+          gateway,
+          now: () => DateTime(2026, 10, 26, 6, 40),
+        ),
+      );
+      await controller.requestNotifications();
+      expect(gateway.pendingOf(CurreNotificationType.checkIn), isEmpty);
+      expect(
+        gateway.cancelled.toSet(),
+        containsAll(LocalReminderService.sessionReminderIds),
+      );
+    });
+
+    test('a new day sets the next reminders again', () async {
+      final gateway = FakeReminderGateway();
+      var now = DateTime(2026, 10, 26, 6, 40);
+      final controller = fakeController(
+        clock: () => now,
+        reminders: LocalReminderService(gateway, now: () => now),
+      );
+      await controller.refresh();
+      final first = gateway.scheduled.length;
+      expect(first, greaterThan(0));
+      await controller.refresh();
+      expect(gateway.scheduled.length, first, reason: 'same day: unchanged');
+
+      now = DateTime(2026, 10, 27, 9);
+      await controller.refresh();
+      expect(gateway.scheduled.length, greaterThan(first));
+      expect(
+        gateway
+            .pendingOf(CurreNotificationType.checkIn)
+            .first
+            .scheduledAt,
+        DateTime(2026, 10, 28, 7),
+      );
+    });
+  });
+
+  group('snooze', () {
+    test('brings the same reminder back in ten minutes', () {
+      final reminder = CurreReminder(
+        id: 1101,
+        type: CurreNotificationType.checkIn,
+        title: 'Plan your morning',
+        body: 'One sentence.',
+        scheduledAt: DateTime(2026, 10, 26, 7),
+        destination: CurreNotificationDestination.checkIn,
+        actions: defaultActionsFor(CurreNotificationType.checkIn),
+        reference: 'morning',
+      );
+      final at = DateTime(2026, 10, 26, 7, 2);
+      final snoozed = snoozedReminder(reminder.payload, at)!;
+      expect(snoozed.scheduledAt, DateTime(2026, 10, 26, 7, 12));
+      expect(snoozed.title, 'Plan your morning');
+      expect(snoozed.destination, CurreNotificationDestination.checkIn);
+      expect(snoozed.reference, 'morning');
+      expect(snoozed.actions, contains(CurreNotificationAction.snooze));
+      expect(snoozed.id, inInclusiveRange(800000, 899999));
+      expect(snoozedReminder('nope', at), isNull);
+      expect(snoozedReminder(null, at), isNull);
+    });
+
+    test('every kind of notification has its actions', () {
+      for (final type in CurreNotificationType.values) {
+        expect(() => defaultActionsFor(type), returnsNormally);
+      }
+      expect(defaultActionsFor(CurreNotificationType.focus), isEmpty);
+    });
   });
 
   group('plan reminders', () {

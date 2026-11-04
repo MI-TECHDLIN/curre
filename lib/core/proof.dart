@@ -461,10 +461,16 @@ abstract final class ProoflightRules {
   /// - Today is never empty: it is not over. Nor is a day after it, which a
   ///   proof can carry after the phone moves west across time zones; that
   ///   proof still counts.
+  /// - A rest day ([restDays]: one a week, see RestDayRules in focus.dart)
+  ///   without proof is skipped as if it weren't there: it neither adds to
+  ///   a run nor counts as empty, and it uses no cloud day. Proof on a rest
+  ///   day still counts.
   static ProofSummary summarize({
     required Iterable<ProofRecord> records,
     required LocalDate today,
+    Iterable<LocalDate> restDays = const <LocalDate>[],
   }) {
+    final resting = restDays.toSet();
     final raysByDate = <LocalDate, Set<String>>{};
     final pendingDates = <LocalDate>{};
     for (final record in records) {
@@ -511,6 +517,8 @@ abstract final class ProoflightRules {
         }
       } else if (pendingDates.contains(day)) {
         uncovered = 0;
+      } else if (resting.contains(day)) {
+        continue;
       } else if (run == 0 || day.compareTo(today) >= 0) {
         continue;
       } else if (cloudInHand) {

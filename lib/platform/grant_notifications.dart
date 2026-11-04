@@ -166,7 +166,18 @@ class FlutterGrantNotificationGateway
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),
+        CurreNotificationType.focus: _ChannelSpec(
+          id: 'curre_focus',
+          name: 'Focus period',
+          description: 'On the day your focus ends, a look at how it went.',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
       };
+
+  /// The Android channel each kind of notification posts to.
+  static String channelIdFor(CurreNotificationType type) =>
+      _channels[type]!.id;
 
   final FlutterLocalNotificationsPlugin _plugin;
   final void Function(CurreNotificationIntent intent) _onResponse;
@@ -304,7 +315,7 @@ class FlutterGrantNotificationGateway
   Future<void> _handleResponse(NotificationResponse response) async {
     final action = CurreNotificationActionWire.tryParse(response.actionId);
     if (action == CurreNotificationAction.snooze) {
-      final snoozed = _snoozedReminder(response.payload);
+      final snoozed = snoozedReminder(response.payload, DateTime.now());
       if (snoozed != null) await scheduleReminder(snoozed);
       return;
     }
@@ -315,48 +326,6 @@ class FlutterGrantNotificationGateway
     );
     if (intent != null) _onResponse(intent);
   }
-
-  CurreReminder? _snoozedReminder(String? payload) {
-    if (payload == null) return null;
-    try {
-      final json = jsonDecode(payload);
-      if (json is! Map<String, Object?> || json['version'] != 1) return null;
-      final type = CurreNotificationType.values.byName(json['type']! as String);
-      final destination = CurreNotificationDestination.values.byName(
-        json['destination']! as String,
-      );
-      final at = DateTime.now().add(const Duration(minutes: 10));
-      return CurreReminder(
-        id: 800000 + at.millisecondsSinceEpoch.remainder(100000),
-        type: type,
-        title: json['title']! as String,
-        body: json['body']! as String,
-        scheduledAt: at,
-        destination: destination,
-        actions: _defaultActions(type),
-        reference: json['reference'] as String?,
-      );
-    } on Object {
-      return null;
-    }
-  }
-
-  static List<CurreNotificationAction> _defaultActions(
-    CurreNotificationType type,
-  ) => switch (type) {
-    CurreNotificationType.checkIn ||
-    CurreNotificationType.planEnding => const <CurreNotificationAction>[
-      CurreNotificationAction.startCheckIn,
-      CurreNotificationAction.snooze,
-    ],
-    CurreNotificationType.unlockTimeUp => const <CurreNotificationAction>[
-      CurreNotificationAction.bringIntoSight,
-    ],
-    CurreNotificationType.proof => const <CurreNotificationAction>[
-      CurreNotificationAction.addProof,
-      CurreNotificationAction.snooze,
-    ],
-  };
 
   static NotificationDetails _details({
     required CurreNotificationType type,

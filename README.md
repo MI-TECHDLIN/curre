@@ -2,7 +2,13 @@
 
 **Curre opens the task, not the app.**
 
-Curre is an Android launcher. You tell it what you're about to do — "learn
+Curre is an Android launcher for a focused stretch of your life: exams, a
+deadline, or a bad habit you want to break. It isn't meant to be your home
+screen forever. You pick what the focus is for and when it ends; when that
+day comes, Curre shows you how it went and hands your phone back to your old
+home screen.
+
+While the focus runs, you tell Curre what you're about to do — "learn
 the G chord on YouTube and find a music shop on Maps until 7" — and it
 builds you a small Home made only of the apps that task needs, each one
 landing on an allowlisted search or a conversation shortcut the phone
@@ -23,6 +29,38 @@ all. Curre's bet is that the phone already has what it needs to open the
 *task* inside an app, not just the app: published shortcuts, conversation
 shortcuts, and a handful of query links, chosen by what you said you meant
 to do.
+
+## A focus period, not forever
+
+A launcher that asks "why now?" every time is a good friend for ten exam
+days and an exhausting one for months. So Curre is built around a time-bound
+**focus period** (`lib/core/focus.dart`):
+
+- **Start: a goal and an end date.** During setup (the "About you" step) or
+  later from Home or Curre settings, pick what it's for — *Exams*, *A
+  deadline*, *Breaking a habit* or *Something else* — add a few words of
+  your own ("Pass my maths finals"), and choose when it ends: 1 week, 2
+  weeks, 3 weeks, 30 days, or any date on the calendar. A habit starts at
+  21 days. People who set Curre up before focus periods existed see a gentle
+  "Set a focus?" card on Home that they can put away.
+- **During: calm and countable.** Home shows the goal and "N days left".
+  Curre settings can move the end date (to extend) or end it now, after one
+  confirm.
+- **A rest day.** Once a week you can "Take today off": until the next
+  morning, hidden apps open without asking why, their notifications come
+  through, and Curre sends no reminders. A rest day never breaks your
+  Prooflight run — it's skipped, not counted as empty.
+- **End: a summary and the way back.** On the end date Curre sends one
+  notification, and Home shows how it went: days of focus, days with proof,
+  tasks proved, and how often a hidden app asked "Why now?" and stayed
+  closed (from the last 30 days of History). Then two choices: **Start
+  another focus period**, or **Go back to my old home screen**, which turns
+  off "Why now?", the quieting of hidden apps and the "Plan your day"
+  reminders, then opens Android's home screen choice. History and proof
+  days stay on the phone.
+- **Leaving early really leaves.** If you switch to another home screen at
+  any time, Curre pauses "Why now?" and notification quieting until it is
+  your home screen again. Your settings stay as you left them.
 
 ## What Curre is
 
@@ -63,6 +101,32 @@ to do.
   app comes to the front — from the recent-apps list, a link, or a
   notification tap — and brings up Curre's "Why now?" gate instead of
   letting it open silently.
+
+## Notifications
+
+Every Curre notification is silent (no sound, no vibration), avoids quiet
+hours (22:00–07:00; reminders move to 07:00) and skips your rest day. Each
+kind has its own switch under **Curre settings → Quiet nudges**, plus "Turn
+all quiet nudges off"; Android's own notification settings for Curre work
+too. On Android 13 and later Curre asks for permission once, in context,
+the first time a nudge would help.
+
+| Notification | When it comes | How to turn it off |
+| --- | --- | --- |
+| **Plan your day** | When your morning begins (new setups get one a day; the afternoon and evening ones are a separate switch) | Quiet nudges → *Plan your day* / *Afternoon and evening too* |
+| **Plan ending** | Ten minutes before a plan ends | Quiet nudges → *Plan ending* |
+| **Add your proof** | Five minutes after a plan ends (off by default for new setups) | Quiet nudges → *Add proof* |
+| **App time up** | While a hidden app you brought back is open, a countdown; then "hidden again" when the time is up | Quiet nudges → *App time up* |
+| **Your focus is done** | The morning your focus period ends | Quiet nudges → *Focus ends* |
+| **Hidden app check is on** | Always shown while "Why now?" is watching for hidden apps (Android requires it for the small background helper) | Curre settings → Hidden apps → *Ask "Why now?"* off |
+
+"Plan your day", "Plan ending" and "Add your proof" offer **Snooze 10 min**.
+Reminders are set a few days ahead and set again each new day, and Android
+puts them back after a restart. Separately, **Keep hidden apps quiet** (with
+notification access) removes notifications from hidden apps and lists them
+under *Missed notifications* in Hidden apps; calls, alarms, system and
+full-screen notifications are never touched. Turn it off under Curre
+settings → Hidden apps.
 
 ## Screenshots
 

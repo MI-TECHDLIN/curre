@@ -35,6 +35,7 @@ class FakeDoorPlatform implements DoorPlatform {
   /// Kept in step with a home role request, when given.
   FakeHomePlatform? home;
   var launches = 0;
+  final launched = <String>[];
   var homeRequests = 0;
 
   @override
@@ -59,6 +60,7 @@ class FakeDoorPlatform implements DoorPlatform {
   @override
   Future<bool> launch(String packageName) async {
     launches++;
+    launched.add(packageName);
     return launchWorks;
   }
 
@@ -128,6 +130,20 @@ class FakeGentleIntercept extends DisabledGentleInterceptGateway {
   var usageRequests = 0;
   var notificationRequests = 0;
   var appInfoOpens = 0;
+
+  /// What Curre last told Android's hidden-app check and quieting.
+  GentleInterceptConfiguration? intercept;
+  QuietNotificationConfiguration? quieting;
+
+  @override
+  Future<void> configureGentleIntercept(
+    GentleInterceptConfiguration configuration,
+  ) async => intercept = configuration;
+
+  @override
+  Future<void> configureQuietNotifications(
+    QuietNotificationConfiguration configuration,
+  ) async => quieting = configuration;
 
   @override
   Future<bool> openAppInfo() async {
@@ -205,6 +221,35 @@ class FakeNotificationGateway implements GrantNotificationGateway {
   Future<void> showOngoing(GrantNotificationNotice notice) async {}
 }
 
+/// Android's scheduled notifications, kept as plain values.
+class FakeReminderGateway implements ReminderNotificationGateway {
+  var initializeCalls = 0;
+  final cancelled = <int>[];
+  final scheduled = <CurreReminder>[];
+
+  /// What would be waiting now: scheduled and not cancelled since.
+  final pending = <int, CurreReminder>{};
+
+  @override
+  Future<void> initialize() async => initializeCalls += 1;
+
+  @override
+  Future<void> cancelReminder(int id) async {
+    cancelled.add(id);
+    pending.remove(id);
+  }
+
+  @override
+  Future<void> scheduleReminder(CurreReminder reminder) async {
+    scheduled.add(reminder);
+    pending[reminder.id] = reminder;
+  }
+
+  List<CurreReminder> pendingOf(CurreNotificationType type) =>
+      pending.values.where((reminder) => reminder.type == type).toList()
+        ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+}
+
 /// A controller over the fakes, at a fixed morning moment.
 CurreController fakeController({
   bool onboardingComplete = true,
@@ -221,7 +266,11 @@ CurreController fakeController({
   DateTime? now,
   AppInventoryState appInventoryState = AppInventoryState.ready,
   List<LaterItem> laterItems = const <LaterItem>[],
+  List<LocalDate> restDays = const <LocalDate>[],
+  List<Attempt> historyAttempts = const <Attempt>[],
+  List<ProofRecord> proofRecords = const <ProofRecord>[],
   Set<ContextPrompt> pendingPrompts = const <ContextPrompt>{},
+  DateTime Function()? clock,
 }) {
   final homePlatform = home ?? FakeHomePlatform();
   final launcher = platform ?? FakeDoorPlatform();
@@ -242,6 +291,8 @@ CurreController fakeController({
         settings ??
         Settings(
           displayName: 'Chidi',
+          // Someone who set up before the gentler default kept it on.
+          proofNudges: true,
           essentials: const {
             'com.google.android.dialer',
             'com.google.android.apps.messaging',
@@ -258,8 +309,11 @@ CurreController fakeController({
     apps: launcher.apps,
     appInventoryState: appInventoryState,
     laterItems: laterItems,
+    restDays: restDays,
+    historyAttempts: historyAttempts,
+    proofRecords: proofRecords,
     onboardingComplete: onboardingComplete,
     pendingPrompts: pendingPrompts,
-    now: () => now ?? DateTime(2026, 10, 26, 6, 40),
+    now: clock ?? () => now ?? DateTime(2026, 10, 26, 6, 40),
   );
 }

@@ -51,10 +51,11 @@
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
-        <!-- Delivers inexact grant-expiry nudges. They are rebuilt from stored
-             grants when Curre next runs, so no notification boot receiver is
-             needed. Android retains the default HOME choice across reboot and
-             starts the activity through the HOME filter above. -->
+        <!-- Delivers Curre's scheduled reminders (plan your day, plan ending,
+             proof, app time up, focus end). The boot receiver below puts them
+             back after a restart or an app update; Curre also sets them again
+             whenever Home starts. Android keeps the HOME choice across reboot
+             and starts the activity through the HOME filter above. -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false"/>
