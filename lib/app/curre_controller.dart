@@ -437,8 +437,12 @@ class CurreController extends ChangeNotifier {
     final window = currentSession;
     final matching = plans.where(
       (plan) =>
-          plan.session == window.session &&
           plan.date == window.localStartDate &&
+          (plan.startsAt != null || plan.session == window.session) &&
+          !instant.isBefore(
+            plan.startsAt ??
+                DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+          ) &&
           instant.isBefore(plan.endsAt),
     );
     // Plans are appended when they are created. The last active plan is the
@@ -462,7 +466,10 @@ class CurreController extends ChangeNotifier {
       hiddenPackages: chosenHiddenPackages,
       planPackages: plan == null
           ? const <String>{}
-          : plan.apps.map((app) => app.packageName).toSet(),
+          : plan.apps
+                .where((app) => app.isAvailableAt(now, plan))
+                .map((app) => app.packageName)
+                .toSet(),
       grantPackages: activeGrants.map((grant) => grant.packageName).toSet(),
     );
   }
@@ -480,7 +487,10 @@ class CurreController extends ChangeNotifier {
       hiddenPackages: chosenHiddenPackages,
       planPackages: plan == null
           ? const <String>{}
-          : plan.apps.map((app) => app.packageName).toSet(),
+          : plan.apps
+                .where((app) => app.isAvailableAt(now, plan))
+                .map((app) => app.packageName)
+                .toSet(),
       grantPackages: activeGrants.map((grant) => grant.packageName).toSet(),
     );
   }
@@ -862,7 +872,7 @@ class CurreController extends ChangeNotifier {
     final plan = activePlan;
     if (plan != null) {
       for (final app in plan.apps) {
-        extend(app.packageName, plan.endsAt);
+        extend(app.packageName, app.availableUntil(plan));
       }
     }
     for (final grant in activeGrants) {
@@ -1292,10 +1302,12 @@ class CurreController extends ChangeNotifier {
               packageName: selection.id,
               door: selection.door,
               query: selection.query,
+              timing: selection.timing,
             ),
           )
           .toList(growable: false),
       endPhrase: response.endPhrase,
+      timing: response.timing,
       source: PlanSource.clocked,
     );
     if (plan.apps.isEmpty) {
@@ -1326,22 +1338,95 @@ class CurreController extends ChangeNotifier {
     required List<PlannedApp> apps,
     required PlanSource source,
     SourceSpan? endPhrase,
+    PlanTimeExpression? timing,
   }) {
     final window = currentSession;
     final instant = now;
+    final labels = <String, String>{
+      for (final app in apps)
+        if (appFor(app.packageName) case final installed?)
+          app.packageName: installed.label,
+    };
+    final fallbackPerApp = parseEnglishPerAppTimes(intention, labels);
+    final appTimes = <String, PlanTimeExpression>{};
+    for (final app in apps) {
+      final merged = mergePlanTimeExpressions(
+        app.timing,
+        fallbackPerApp[app.packageName] ?? const PlanTimeExpression(),
+      );
+      if (!merged.isEmpty) appTimes[app.packageName] = merged;
+    }
+    final perAppSpans = <SourceSpan>[
+      for (final value in appTimes.values) ...<SourceSpan>[
+        ?value.durationPhrase,
+        ?value.startPhrase,
+        ?value.endPhrase,
+      ],
+    ];
+    var serverTime = timing;
+    if (serverTime == null && endPhrase != null) {
+      serverTime = PlanTimeExpression(
+        endPhrase: endPhrase,
+        endClock: normalizeEnglishClock(endPhrase.text),
+      );
+    }
+    if (serverTime != null) {
+      serverTime = timeExpressionWithoutSpans(serverTime, perAppSpans);
+    }
+    final fallbackTime = parseEnglishTimeExpression(
+      intention,
+      excluded: perAppSpans,
+    );
+    final planTime = mergePlanTimeExpressions(serverTime, fallbackTime);
+    final resolved = resolvePlanTime(
+      expression: planTime,
+      now: instant,
+      session: window,
+    );
+
+    var planEnd = resolved.endsAt;
+    var wasCapped = resolved.wasCapped;
+    final appEnds = <String, DateTime>{};
+    for (final entry in appTimes.entries) {
+      final own = resolvePlanTime(
+        expression: entry.value,
+        now: resolved.startsAt,
+        session: window,
+        fallbackEnd: planEnd,
+      );
+      appEnds[entry.key] = own.endsAt;
+      wasCapped = wasCapped || own.wasCapped;
+    }
+    if (planTime.isEmpty && appEnds.isNotEmpty) {
+      planEnd = appEnds.values.reduce(
+        (left, right) => left.isAfter(right) ? left : right,
+      );
+    }
+    final resolvedApps = apps
+        .map((app) {
+          final ownEnd = appEnds[app.packageName];
+          return PlannedApp(
+            packageName: app.packageName,
+            door: app.door,
+            query: app.query,
+            timing: appTimes[app.packageName],
+            endsAt: ownEnd == null
+                ? null
+                : (ownEnd.isAfter(planEnd) ? planEnd : ownEnd),
+          );
+        })
+        .toList(growable: false);
     return Plan(
       id: 'plan-${instant.toUtc().microsecondsSinceEpoch}',
       session: window.session,
       date: window.localStartDate,
       intention: intention,
-      apps: apps,
-      endsAt: resolvePlanEnd(
-        endPhrase: endPhrase,
-        now: instant,
-        session: window,
-        languageCode: languageCode,
-      ),
-      endPhrase: endPhrase,
+      apps: resolvedApps,
+      startsAt: resolved.startsAt,
+      endsAt: planEnd,
+      endPhrase: planTime.endPhrase,
+      timing: planTime,
+      timeWasCapped: wasCapped,
       source: source,
     );
   }
@@ -1364,7 +1449,38 @@ class CurreController extends ChangeNotifier {
     } on Object {
       // The plan is authoritative; reminder delivery is best effort.
     }
+    await _schedulePlanAppNotifications(plan);
     notifyListeners();
+  }
+
+  Future<void> _schedulePlanAppNotifications(Plan plan) async {
+    if (!settings.unlockTimeUpNudges) return;
+    final grantedAt = plan.startsAt ?? now.toUtc();
+    for (final app in plan.apps) {
+      final ownEnd = app.endsAt;
+      if (ownEnd == null ||
+          !ownEnd.isBefore(plan.endsAt) ||
+          !ownEnd.isAfter(now.toUtc()) ||
+          !chosenHiddenPackages.contains(app.packageName)) {
+        continue;
+      }
+      try {
+        await notifications?.startGrant(
+          grant: Grant(
+            packageName: app.packageName,
+            reason: plan.intention,
+            task: app.query?.text,
+            grantedAt: grantedAt,
+            expiresAt: ownEnd,
+            source: GrantSource.clocked,
+          ),
+          appLabel: appFor(app.packageName)?.label ?? app.packageName,
+          settings: settings,
+        );
+      } on Object {
+        // The allowance remains exact even if its nudge cannot be scheduled.
+      }
+    }
   }
 
   Future<void> _prepareReminders() async {
@@ -1401,6 +1517,8 @@ class CurreController extends ChangeNotifier {
       _remindersSetFor = today;
     }
     if (!syncGrantNotifications) return;
+    final plan = activePlan;
+    if (plan != null) await _schedulePlanAppNotifications(plan);
     for (final grant in activeGrants) {
       if (!settings.unlockTimeUpNudges) {
         await notifications?.endGrant(grant.packageName);
@@ -1474,6 +1592,9 @@ class CurreController extends ChangeNotifier {
   }
 
   Future<DoorLaunchResult> openPlanDoor(Plan plan, PlannedApp app) async {
+    if (!app.isAvailableAt(now, plan)) {
+      return const DoorLaunchResult(DoorLaunchKind.failed, detail: 'time_up');
+    }
     final staticShortcuts = await staticShortcutsFor(app.packageName);
     final target = app.query?.text;
     final queryDoor = QueryDoorAllowlist.forPackage(app.packageName);
@@ -1604,6 +1725,93 @@ class CurreController extends ChangeNotifier {
     await store?.appendPlanHistory(plan, now: now);
     await _syncGentleInterceptPolicy();
     notifyListeners();
+  }
+
+  /// Applies a time phrase from confirmation. The same parser handles the
+  /// original sentence and this small correction, so adjusting never opens a
+  /// second interpretation path.
+  Future<Plan?> adjustPlanTime(
+    Plan plan,
+    String phrase, {
+    String? packageName,
+  }) async {
+    final expression = parseEnglishTimeExpression(phrase.trim());
+    if (expression.isEmpty) return null;
+    final window = SessionSchedule.fromSettings(settings)
+        .current(plan.startsAt ?? now);
+
+    Plan updated;
+    if (packageName == null) {
+      final resolved = resolvePlanTime(
+        expression: expression,
+        now: now,
+        session: window,
+      );
+      final apps = <PlannedApp>[];
+      for (final app in plan.apps) {
+        final ownTiming = app.timing;
+        DateTime? ownEnd;
+        if (ownTiming != null && !ownTiming.isEmpty) {
+          ownEnd = resolvePlanTime(
+            expression: ownTiming,
+            now: resolved.startsAt,
+            session: window,
+            fallbackEnd: resolved.endsAt,
+            maximumEnd: resolved.endsAt,
+          ).endsAt;
+        }
+        apps.add(
+          PlannedApp(
+            packageName: app.packageName,
+            door: app.door,
+            query: app.query,
+            timing: ownTiming,
+            endsAt: ownEnd,
+          ),
+        );
+      }
+      updated = plan.withTiming(
+        startsAt: resolved.startsAt,
+        endsAt: resolved.endsAt,
+        timing: expression,
+        timeWasCapped: resolved.wasCapped,
+        apps: apps,
+      );
+    } else {
+      final app = plan.apps
+          .where((item) => item.packageName == packageName)
+          .firstOrNull;
+      if (app == null) return null;
+      final resolved = resolvePlanTime(
+        expression: expression,
+        now: plan.startsAt ?? now,
+        session: window,
+        fallbackEnd: plan.endsAt,
+        maximumEnd: plan.endsAt,
+      );
+      final apps = <PlannedApp>[
+        for (final item in plan.apps)
+          item.packageName == packageName
+              ? PlannedApp(
+                  packageName: item.packageName,
+                  door: item.door,
+                  query: item.query,
+                  timing: expression,
+                  endsAt: resolved.endsAt,
+                )
+              : item,
+      ];
+      updated = plan.withTiming(
+        startsAt: plan.startsAt ?? now,
+        endsAt: plan.endsAt,
+        timing: plan.timing ?? const PlanTimeExpression(),
+        timeWasCapped: plan.timeWasCapped,
+        apps: apps,
+      );
+    }
+    await _replacePlan(updated);
+    await _schedulePlanAppNotifications(updated);
+    return updated;
   }
 
   /// The tasks done away from the phone that Home offers: the active plan's

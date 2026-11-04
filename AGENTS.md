@@ -104,6 +104,12 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   (`lib/core/plan_completion.dart`); "End plan now" is
   `Plan.endedEarlyAt` (keeps `plannedEndsAt`, so undo and History work)
   and must cancel, never reschedule, that plan's reminders.
+- Plan-wide and per-app English time phrases, their six-hour/local-midnight
+  cap and offline normalization live in `lib/core/plan_time_parser.dart`;
+  `server/app/time_phrases.py` normalizes the verbatim Clocked spans. Keep the
+  two form lists and limits in step. A timed app expires independently through
+  `PlannedApp.endsAt`; an explicit plan may remain active across a session
+  boundary.
 - Curre is positioned as a focus-period launcher (exams, a deadline, a habit),
   not a forever home screen. `FocusPeriod`, rest days (`RestDayRules`, one a
   week, kept for good under their own store key because

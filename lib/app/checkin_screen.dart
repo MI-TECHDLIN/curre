@@ -351,19 +351,44 @@ class _CheckinScreenState extends State<CheckinScreen> {
           ),
         );
       }
+      for (final span in <SourceSpan?>[
+        app.timing?.durationPhrase,
+        app.timing?.startPhrase,
+        app.timing?.endPhrase,
+      ]) {
+        if (span != null && _spanBelongsTo(plan.intention, span)) {
+          highlights.add(
+            SpanHighlight(
+              span.start,
+              span.end,
+              style: type.youLarge.copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: colors.ember,
+                decorationThickness: 2.5,
+              ),
+            ),
+          );
+        }
+      }
     }
-    if (plan.endPhrase case final span?) {
-      highlights.add(
-        SpanHighlight(
-          span.start,
-          span.end,
-          style: type.youLarge.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: colors.ember,
-            decorationThickness: 2.5,
+    for (final span in <SourceSpan?>[
+      plan.timing?.durationPhrase,
+      plan.timing?.startPhrase,
+      plan.timing?.endPhrase ?? plan.endPhrase,
+    ]) {
+      if (span != null && _spanBelongsTo(plan.intention, span)) {
+        highlights.add(
+          SpanHighlight(
+            span.start,
+            span.end,
+            style: type.youLarge.copyWith(
+              decoration: TextDecoration.underline,
+              decorationColor: colors.ember,
+              decorationThickness: 2.5,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
     return Column(
       key: const ValueKey('confirmation'),
@@ -398,11 +423,41 @@ class _CheckinScreenState extends State<CheckinScreen> {
                 ),
               ),
               const SizedBox(height: CurreSpace.s3),
-              Text(
-                l10n.onHomeUntil(
-                  formatClock(plan.endsAt, locale: l10n.localeName),
+              Semantics(
+                button: true,
+                label: 'Plan time, ${_planTimeSummary(plan)}. Tap to adjust.',
+                child: InkWell(
+                  key: const Key('adjust-plan-time'),
+                  onTap: () => _adjustTime(plan),
+                  borderRadius: CurreShape.md,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CurreSpace.s2,
+                    ),
+                    child: Row(
+                      children: [
+                        const CurreGlyph(CurreGlyphKind.editSpecify, size: 18),
+                        const SizedBox(width: CurreSpace.s2),
+                        Expanded(
+                          child: Text(
+                            _planTimeSummary(plan),
+                            style: type.meta.copyWith(color: colors.emberText),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                style: type.meta,
+              ),
+              if (plan.timeWasCapped)
+                Text(
+                  'Kept to six hours or midnight, whichever comes first.',
+                  style: type.caption.copyWith(color: colors.ink3),
+                ),
+              const SizedBox(height: CurreSpace.s1),
+              Text(
+                'Tap a time to adjust it before starting.',
+                style: type.caption,
               ),
               const SizedBox(height: CurreSpace.s5),
               for (final (index, app) in plan.apps.indexed) ...[
@@ -412,12 +467,16 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       controller.appFor(app.packageName)?.label ??
                       app.packageName,
                   destination:
-                      '→ ${controller.destinationFor(app, plan, l10n)}',
+                      '→ ${controller.destinationFor(app, plan, l10n)} · ${_appTimeSummary(app, plan)}',
                   appIcon: InstalledAppIcon(
                     controller: controller,
                     packageName: app.packageName,
                   ),
                   link: index + 1,
+                  onTap: () => _adjustTime(plan, app: app),
+                  semanticLabel:
+                      '${controller.appFor(app.packageName)?.label ?? app.packageName}, '
+                      '${_appTimeSummary(app, plan)}, tap to adjust',
                 ),
               ],
               if (_shelf case final shelf? when !shelf.isEmpty) ...[
@@ -452,6 +511,56 @@ class _CheckinScreenState extends State<CheckinScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _adjustTime(Plan plan, {PlannedApp? app}) async {
+    final label = app == null
+        ? 'this plan'
+        : controller.appFor(app.packageName)?.label ?? app.packageName;
+    final input = TextEditingController(
+      text: _timePhrase(app?.timing ?? plan.timing),
+    );
+    final phrase = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Time for $label'),
+        content: TextField(
+          key: const Key('time-adjustment-field'),
+          controller: input,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: '2 hours, until 7, or from 4 to 6',
+          ),
+          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Keep it'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(input.text.trim()),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    input.dispose();
+    if (phrase == null || phrase.isEmpty || !mounted) return;
+    final updated = await controller.adjustPlanTime(
+      plan,
+      phrase,
+      packageName: app?.packageName,
+    );
+    if (!mounted) return;
+    if (updated == null) {
+      showCurreSnack(
+        context,
+        'Try a duration like “90 min” or a clock time like “until 7”.',
+      );
+      return;
+    }
+    setState(() => _plan = updated);
   }
 
   Future<void> _listen() async {
@@ -571,4 +680,66 @@ class _CheckinScreenState extends State<CheckinScreen> {
     PlanFallbackReason.network => l10n.fallbackNetworkBody,
     _ => l10n.fallbackBody,
   };
+}
+
+bool _spanBelongsTo(String source, SourceSpan span) {
+  try {
+    return sliceExtractSpan(source, span) == span.text;
+  } on Object {
+    return false;
+  }
+}
+
+String _planTimeSummary(Plan plan) {
+  final timing = plan.timing;
+  if (timing == null || timing.isEmpty) {
+    return 'Until ${formatClock(plan.endsAt)} · session end';
+  }
+  final parts = <String>[];
+  if (plan.startsAt case final start? when timing.startPhrase != null) {
+    parts.add('from ${formatClock(start)}');
+  }
+  final start =
+      plan.startsAt ?? plan.endsAt.subtract(const Duration(minutes: 1));
+  parts.add(_shortDuration(plan.endsAt.difference(start).inMinutes));
+  parts.add('until ${formatClock(plan.endsAt)}');
+  return parts.join(' · ');
+}
+
+String _appTimeSummary(PlannedApp app, Plan plan) {
+  final end = app.availableUntil(plan);
+  final timing = app.timing;
+  if (timing == null || timing.isEmpty) return 'until ${formatClock(end)}';
+  final start = plan.startsAt;
+  final parts = <String>[];
+  if (timing.durationMinutes != null) {
+    final actual = start == null
+        ? timing.durationMinutes!
+        : end.difference(start).inMinutes;
+    parts.add(_shortDuration(actual.clamp(1, maximumPlanDuration.inMinutes)));
+  }
+  parts.add('until ${formatClock(end)}');
+  return parts.join(' · ');
+}
+
+String _shortDuration(int minutes) {
+  if (minutes < 60) return '$minutes min';
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  return rest == 0 ? '$hours h' : '$hours h $rest min';
+}
+
+String _timePhrase(PlanTimeExpression? timing) {
+  if (timing == null) return '';
+  if (timing.startPhrase != null && timing.endPhrase != null) {
+    return 'from ${timing.startPhrase!.text} to ${timing.endPhrase!.text}';
+  }
+  if (timing.startPhrase != null && timing.durationPhrase != null) {
+    return 'at ${timing.startPhrase!.text} for ${timing.durationPhrase!.text}';
+  }
+  if (timing.durationPhrase case final duration?) return duration.text;
+  if (timing.endPhrase case final end?) return 'until ${end.text}';
+  return timing.durationMinutes == null
+      ? ''
+      : _shortDuration(timing.durationMinutes!);
 }

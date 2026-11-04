@@ -35,10 +35,24 @@ void main() {
         date: const LocalDate(2026, 10, 24),
         intention: '看教程 till 8',
         apps: <PlannedApp>[
-          PlannedApp(packageName: 'com.youtube', door: 'Search', query: span),
+          PlannedApp(
+            packageName: 'com.youtube',
+            door: 'Search',
+            query: span,
+            timing: const PlanTimeExpression(
+              durationPhrase: SourceSpan(text: '45 min', start: 12, end: 18),
+              durationMinutes: 45,
+            ),
+            endsAt: DateTime.utc(2026, 10, 24, 7, 45),
+          ),
         ],
+        startsAt: DateTime.utc(2026, 10, 24, 7),
         endsAt: DateTime.parse('2026-10-24T10:00:00+02:00'),
         endPhrase: const SourceSpan(text: 'till 8', start: 5, end: 11),
+        timing: const PlanTimeExpression(
+          endPhrase: SourceSpan(text: 'till 8', start: 5, end: 11),
+          endClock: '08:00',
+        ),
         source: PlanSource.clocked,
       );
       final grant = Grant(

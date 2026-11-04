@@ -366,7 +366,17 @@ void main() {
 
       expect(find.text('Here’s your plan'), findsOneWidget);
       expect(find.text('YouTube'), findsOneWidget);
-      expect(find.text('→ Search “G chord”'), findsOneWidget);
+      expect(find.textContaining('→ Search “G chord”'), findsOneWidget);
+      expect(find.byKey(const Key('adjust-plan-time')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('adjust-plan-time')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('time-adjustment-field')),
+        '2 hours',
+      );
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2 h · until'), findsWidgets);
       await tester.tap(find.text('Back to Home'));
       await tester.pumpAndSettle();
       expect(find.text('Your morning'), findsOneWidget);

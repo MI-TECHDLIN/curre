@@ -701,6 +701,8 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
 
 (int, int)? _durationSpan(String reason, int? minutes) {
   if (minutes == null) return null;
+  final english = parseEnglishTimeExpression(reason).durationPhrase;
+  if (english != null) return (english.start, english.end);
   final match = RegExp(
     r'\b\d{1,2}\s*(?:minutes?|mins?|min|hours?|hrs?|hr|h|minutos?|horas?|heures?|minuten?|stunden?)\b',
     caseSensitive: false,

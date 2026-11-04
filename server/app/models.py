@@ -99,6 +99,22 @@ class Span(BaseModel):
     end: int
 
 
+class PlanTimeExpression(BaseModel):
+    """A verbatim time expression plus the safe value the phone can use.
+
+    Every field is optional so old clients and partial Extract answers remain
+    valid. Durations are clamped before this model is built.
+    """
+
+    duration_phrase: Span | None = None
+    duration_minutes: int | None = Field(default=None, ge=1, le=360)
+    start_phrase: Span | None = None
+    start_clock: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    end_phrase: Span | None = None
+    end_clock: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    was_clamped: bool = False
+
+
 class Redaction(BaseModel):
     """A personal detail Protect found in the reason or note the phone sent,
     as code-point offsets into that text. It carries no copy of the words."""
@@ -156,11 +172,13 @@ class PlanApp(BaseModel):
     id: str
     door: str | None = None
     query: Span | None = None
+    timing: PlanTimeExpression | None = None
 
 
 class PlanResponse(BaseModel):
     apps: list[PlanApp]
     end_phrase: Span | None = None
+    timing: PlanTimeExpression | None = None
     usage: Usage
 
 

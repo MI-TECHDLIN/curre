@@ -29,16 +29,23 @@ bool isVisible(
 
   final instant = now.toUtc();
   final plan = state.plan;
-  if (plan != null &&
-      instant.isBefore(plan.endsAt) &&
-      plan.packages.contains(packageName)) {
-    final session = SessionSchedule.fromSettings(
-      state.settings,
-      timeZone: timeZone,
-    ).current(instant);
-    if (session.session == plan.session &&
-        session.localStartDate == plan.date) {
-      return true;
+  if (plan != null && instant.isBefore(plan.endsAt)) {
+    if (plan.startsAt == null) {
+      final session = SessionSchedule.fromSettings(
+        state.settings,
+        timeZone: timeZone,
+      ).current(instant);
+      if (session.session != plan.session || session.localStartDate != plan.date) {
+        return state.grants.any(
+          (grant) =>
+              grant.packageName == packageName && grant.isActiveAt(instant),
+        );
+      }
+    }
+    for (final app in plan.apps) {
+      if (app.packageName == packageName && app.isAvailableAt(instant, plan)) {
+        return true;
+      }
     }
   }
 
