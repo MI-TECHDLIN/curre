@@ -135,6 +135,7 @@ class FlutterGrantNotificationGateway
   FlutterGrantNotificationGateway({
     FlutterLocalNotificationsPlugin? plugin,
     void Function(CurreNotificationIntent intent)? onResponse,
+    this.languageCode = 'en',
   }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin(),
        _onResponse = onResponse ?? CurreNotificationInbox.instance.add;
 
@@ -188,6 +189,7 @@ class FlutterGrantNotificationGateway
 
   final FlutterLocalNotificationsPlugin _plugin;
   final void Function(CurreNotificationIntent intent) _onResponse;
+  final String languageCode;
   bool _initialized = false;
 
   @override
@@ -202,7 +204,8 @@ class FlutterGrantNotificationGateway
         unawaited(_handleResponse(response));
       },
     );
-    for (final channel in _channels.values) {
+    final channels = _localizedChannels(curreLocalizationsFor(languageCode));
+    for (final channel in channels.values) {
       await _androidPlugin?.createNotificationChannel(
         AndroidNotificationChannel(
           channel.id,
@@ -351,8 +354,8 @@ class FlutterGrantNotificationGateway
     int? timeoutAfter,
     String languageCode = 'en',
   }) {
-    final channel = _channels[type]!;
     final l10n = curreLocalizationsFor(languageCode);
+    final channel = _localizedChannels(l10n)[type]!;
     return NotificationDetails(
       android: AndroidNotificationDetails(
         channel.id,
@@ -408,6 +411,46 @@ class FlutterGrantNotificationGateway
           ]
         : const <AndroidNotificationActionInput>[],
   );
+
+  static Map<CurreNotificationType, _ChannelSpec> _localizedChannels(
+    AppLocalizations l10n,
+  ) => <CurreNotificationType, _ChannelSpec>{
+    CurreNotificationType.checkIn: _ChannelSpec(
+      id: 'curre_checkins',
+      name: l10n.channelCheckins,
+      description: l10n.channelCheckinsBody,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    ),
+    CurreNotificationType.planEnding: _ChannelSpec(
+      id: 'curre_plans',
+      name: l10n.channelPlans,
+      description: l10n.channelPlansBody,
+      importance: Importance.low,
+      priority: Priority.low,
+    ),
+    CurreNotificationType.unlockTimeUp: _ChannelSpec(
+      id: channelId,
+      name: l10n.channelAppTime,
+      description: l10n.channelAppTimeBody,
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    CurreNotificationType.proof: _ChannelSpec(
+      id: 'curre_proof',
+      name: l10n.channelProof,
+      description: l10n.channelProofBody,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    ),
+    CurreNotificationType.focus: _ChannelSpec(
+      id: 'curre_focus',
+      name: l10n.channelFocus,
+      description: l10n.channelFocusBody,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    ),
+  };
 
   static String _payload({
     required CurreNotificationType type,

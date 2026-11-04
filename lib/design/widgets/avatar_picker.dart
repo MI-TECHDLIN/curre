@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
 import 'avatar.dart';
@@ -40,7 +41,7 @@ class AvatarPicker extends StatelessWidget {
         final columns = crossAxisCount ?? inferredColumns;
         return Semantics(
           container: true,
-          label: 'Choose a profile avatar',
+          label: context.l10n.chooseProfileAvatar,
           explicitChildNodes: true,
           child: GridView.builder(
             shrinkWrap: true,
@@ -87,11 +88,14 @@ class _AvatarChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
+    final number = avatarNumber(option.id);
     return Semantics(
       container: true,
       button: true,
       selected: selected,
-      label: '${option.semanticLabel}${selected ? ', selected' : ''}',
+      label: selected
+          ? context.l10n.profileAvatarSelected(number)
+          : context.l10n.profileAvatarNumber(number),
       onTap: onTap,
       child: ExcludeSemantics(
         child: Material(

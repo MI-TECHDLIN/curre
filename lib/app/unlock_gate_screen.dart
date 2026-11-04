@@ -679,7 +679,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     if (!result.succeeded) {
       showCurreSnack(
         context,
-        '${widget.app.label} didn’t open there. Your time is still running, so try it from Home.',
+        context.l10n.appDidNotOpenThere(widget.app.label),
       );
       return;
     }

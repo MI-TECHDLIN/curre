@@ -240,7 +240,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
                     subtitle: !_planApps && _fixed.contains(app.packageName)
                         ? context.l10n.alwaysOnHome
                         : _planApps
-                        ? appTaskExamples[app.packageName]
+                        ? localizedAppTaskExample(app.packageName, context.l10n)
                         : null,
                     selected: chosen.contains(app.packageName),
                     onTap: () => _toggle(app),

@@ -340,8 +340,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String chatWith(String person) {
-    return 'Chat with $person';
+  String chatWith(String target) {
+    return 'Chat with $target';
   }
 
   @override
@@ -2375,4 +2375,242 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeVoiceFiles => 'Remove voice files';
+
+  @override
+  String get sceneStory =>
+      'Late at night, a phone full of posts pulls a note that says “just check the bus time” into a tangle of yarn, while the sun is still asleep.';
+
+  @override
+  String get sceneBusTime => 'Just check the bus time';
+
+  @override
+  String get sceneMagnetEmpty =>
+      'A magnet waits for the apps that pull you in.';
+
+  @override
+  String sceneMagnetApps(String apps) {
+    return 'A magnet pulls $apps.';
+  }
+
+  @override
+  String get sceneInitial => 'Your initial, waving hello.';
+
+  @override
+  String get sceneFace => 'The face you picked, waving hello.';
+
+  @override
+  String get sceneHome =>
+      'A phone showing Curre’s calm home screen: a greeting, one plan and two apps that open right at the task.';
+
+  @override
+  String get goodMorning => 'Good morning';
+
+  @override
+  String goodMorningName(String name) {
+    return 'Good morning, $name';
+  }
+
+  @override
+  String sceneSearch(String query) {
+    return '→ Search “$query”';
+  }
+
+  @override
+  String miniAllApps(String count) {
+    return 'All apps · $count';
+  }
+
+  @override
+  String get scenePlan => 'The sun is up, and you wave good morning to Peek.';
+
+  @override
+  String onboardingStep(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get nothingHiddenYet =>
+      'Nothing hidden yet. Every app opens as usual.';
+
+  @override
+  String hiddenSummaryOne(String name) {
+    return 'Hidden: $name. Every other app opens as usual.';
+  }
+
+  @override
+  String hiddenSummaryMany(String names) {
+    return 'Hidden: $names. Every other app opens as usual.';
+  }
+
+  @override
+  String hiddenSummaryMore(String names, int count) {
+    return '$names and $count more';
+  }
+
+  @override
+  String get taskExampleLearn => 'Learn something, like a guitar chord';
+
+  @override
+  String get taskExampleFindWay => 'Find the way somewhere';
+
+  @override
+  String get taskExampleReply => 'Reply to someone';
+
+  @override
+  String get taskExampleTextBack => 'Text someone back';
+
+  @override
+  String get taskExamplePlaylist => 'Play one playlist';
+
+  @override
+  String get taskExampleLookUp => 'Look one thing up';
+
+  @override
+  String get taskExampleEmail => 'Answer an email';
+
+  @override
+  String get taskExampleToday => 'Check what’s on today';
+
+  @override
+  String get taskExampleWrite => 'Write something down';
+
+  @override
+  String get taskExamplePhoto => 'Find a photo';
+
+  @override
+  String get taskExampleFile => 'Open a file';
+
+  @override
+  String get taskExampleMessage => 'Reply to a message';
+
+  @override
+  String get taskExampleEpisode => 'Watch one episode';
+
+  @override
+  String get taskExampleGroup => 'Check one group';
+
+  @override
+  String get taskExampleVideo => 'Post one video';
+
+  @override
+  String get taskExamplePost => 'Post one thing';
+
+  @override
+  String get taskExampleThread => 'Read one thread';
+
+  @override
+  String get taskExampleIdea => 'Find one idea';
+
+  @override
+  String get taskExampleFriend => 'Reply to a friend';
+
+  @override
+  String get doorActionSearch => 'Search';
+
+  @override
+  String get doorActionDraft => 'Draft';
+
+  @override
+  String get doorActionNewEvent => 'New event';
+
+  @override
+  String get openAppGeneric => 'Open app';
+
+  @override
+  String get openAppWith => 'Open app with';
+
+  @override
+  String laterSavedSemantics(String app, String reason, String destination) {
+    return '$app, saved for later: $reason. Opens $destination';
+  }
+
+  @override
+  String get chooseProfileAvatar => 'Choose a profile avatar';
+
+  @override
+  String profileAvatarNumber(int number) {
+    return 'Profile avatar $number';
+  }
+
+  @override
+  String profileAvatarSelected(int number) {
+    return 'Profile avatar $number, selected';
+  }
+
+  @override
+  String get customProfileAvatar => 'Custom profile avatar';
+
+  @override
+  String avatarProofToday(String label) {
+    return '$label, proof today';
+  }
+
+  @override
+  String avatarSleepy(String label) {
+    return '$label, sleepy';
+  }
+
+  @override
+  String profileInitial(String letter) {
+    return '$letter initial';
+  }
+
+  @override
+  String profileInitialProof(String letter) {
+    return '$letter initial, proof today';
+  }
+
+  @override
+  String get profileDefaultInitial => 'Profile initial';
+
+  @override
+  String get profileDefaultInitialProof => 'Profile initial, proof today';
+
+  @override
+  String get channelAppTime => 'App time';
+
+  @override
+  String get channelAppTimeBody =>
+      'Shows time left for an app and when it is hidden again.';
+
+  @override
+  String get channelCheckins => 'Plan your day';
+
+  @override
+  String get channelCheckinsBody =>
+      'A gentle reminder to plan your morning, afternoon and evening.';
+
+  @override
+  String get channelPlans => 'Plan reminders';
+
+  @override
+  String get channelPlansBody => 'A quiet heads-up before your plan ends.';
+
+  @override
+  String get channelProof => 'Proof reminders';
+
+  @override
+  String get channelProofBody =>
+      'After a plan, a reminder to note what you got done.';
+
+  @override
+  String get channelFocus => 'Focus period';
+
+  @override
+  String get channelFocusBody =>
+      'On the day your focus ends, a look at how it went.';
+
+  @override
+  String get nameExample => 'Ada';
+
+  @override
+  String appDidNotOpenThere(String app) {
+    return '$app didn’t open there. Your time is still running, so try it from Home.';
+  }
+
+  @override
+  String get sceneGChord => 'G chord';
+
+  @override
+  String get sceneWorship => 'worship';
 }

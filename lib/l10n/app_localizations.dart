@@ -599,8 +599,8 @@ abstract class AppLocalizations {
   /// No description provided for @chatWith.
   ///
   /// In en, this message translates to:
-  /// **'Chat with {person}'**
-  String chatWith(String person);
+  /// **'Chat with {target}'**
+  String chatWith(String target);
 
   /// No description provided for @openDestination.
   ///
@@ -3853,6 +3853,402 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove voice files'**
   String get removeVoiceFiles;
+
+  /// No description provided for @sceneStory.
+  ///
+  /// In en, this message translates to:
+  /// **'Late at night, a phone full of posts pulls a note that says “just check the bus time” into a tangle of yarn, while the sun is still asleep.'**
+  String get sceneStory;
+
+  /// No description provided for @sceneBusTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Just check the bus time'**
+  String get sceneBusTime;
+
+  /// No description provided for @sceneMagnetEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'A magnet waits for the apps that pull you in.'**
+  String get sceneMagnetEmpty;
+
+  /// No description provided for @sceneMagnetApps.
+  ///
+  /// In en, this message translates to:
+  /// **'A magnet pulls {apps}.'**
+  String sceneMagnetApps(String apps);
+
+  /// No description provided for @sceneInitial.
+  ///
+  /// In en, this message translates to:
+  /// **'Your initial, waving hello.'**
+  String get sceneInitial;
+
+  /// No description provided for @sceneFace.
+  ///
+  /// In en, this message translates to:
+  /// **'The face you picked, waving hello.'**
+  String get sceneFace;
+
+  /// No description provided for @sceneHome.
+  ///
+  /// In en, this message translates to:
+  /// **'A phone showing Curre’s calm home screen: a greeting, one plan and two apps that open right at the task.'**
+  String get sceneHome;
+
+  /// No description provided for @goodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get goodMorning;
+
+  /// No description provided for @goodMorningName.
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning, {name}'**
+  String goodMorningName(String name);
+
+  /// No description provided for @sceneSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'→ Search “{query}”'**
+  String sceneSearch(String query);
+
+  /// No description provided for @miniAllApps.
+  ///
+  /// In en, this message translates to:
+  /// **'All apps · {count}'**
+  String miniAllApps(String count);
+
+  /// No description provided for @scenePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'The sun is up, and you wave good morning to Peek.'**
+  String get scenePlan;
+
+  /// No description provided for @onboardingStep.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String onboardingStep(int step, int total);
+
+  /// No description provided for @nothingHiddenYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing hidden yet. Every app opens as usual.'**
+  String get nothingHiddenYet;
+
+  /// No description provided for @hiddenSummaryOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: {name}. Every other app opens as usual.'**
+  String hiddenSummaryOne(String name);
+
+  /// No description provided for @hiddenSummaryMany.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: {names}. Every other app opens as usual.'**
+  String hiddenSummaryMany(String names);
+
+  /// No description provided for @hiddenSummaryMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{names} and {count} more'**
+  String hiddenSummaryMore(String names, int count);
+
+  /// No description provided for @taskExampleLearn.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn something, like a guitar chord'**
+  String get taskExampleLearn;
+
+  /// No description provided for @taskExampleFindWay.
+  ///
+  /// In en, this message translates to:
+  /// **'Find the way somewhere'**
+  String get taskExampleFindWay;
+
+  /// No description provided for @taskExampleReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to someone'**
+  String get taskExampleReply;
+
+  /// No description provided for @taskExampleTextBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Text someone back'**
+  String get taskExampleTextBack;
+
+  /// No description provided for @taskExamplePlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Play one playlist'**
+  String get taskExamplePlaylist;
+
+  /// No description provided for @taskExampleLookUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Look one thing up'**
+  String get taskExampleLookUp;
+
+  /// No description provided for @taskExampleEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer an email'**
+  String get taskExampleEmail;
+
+  /// No description provided for @taskExampleToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Check what’s on today'**
+  String get taskExampleToday;
+
+  /// No description provided for @taskExampleWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Write something down'**
+  String get taskExampleWrite;
+
+  /// No description provided for @taskExamplePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a photo'**
+  String get taskExamplePhoto;
+
+  /// No description provided for @taskExampleFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a file'**
+  String get taskExampleFile;
+
+  /// No description provided for @taskExampleMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to a message'**
+  String get taskExampleMessage;
+
+  /// No description provided for @taskExampleEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch one episode'**
+  String get taskExampleEpisode;
+
+  /// No description provided for @taskExampleGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Check one group'**
+  String get taskExampleGroup;
+
+  /// No description provided for @taskExampleVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Post one video'**
+  String get taskExampleVideo;
+
+  /// No description provided for @taskExamplePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Post one thing'**
+  String get taskExamplePost;
+
+  /// No description provided for @taskExampleThread.
+  ///
+  /// In en, this message translates to:
+  /// **'Read one thread'**
+  String get taskExampleThread;
+
+  /// No description provided for @taskExampleIdea.
+  ///
+  /// In en, this message translates to:
+  /// **'Find one idea'**
+  String get taskExampleIdea;
+
+  /// No description provided for @taskExampleFriend.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to a friend'**
+  String get taskExampleFriend;
+
+  /// No description provided for @doorActionSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get doorActionSearch;
+
+  /// No description provided for @doorActionDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get doorActionDraft;
+
+  /// No description provided for @doorActionNewEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'New event'**
+  String get doorActionNewEvent;
+
+  /// No description provided for @openAppGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app'**
+  String get openAppGeneric;
+
+  /// No description provided for @openAppWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Open app with'**
+  String get openAppWith;
+
+  /// No description provided for @laterSavedSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{app}, saved for later: {reason}. Opens {destination}'**
+  String laterSavedSemantics(String app, String reason, String destination);
+
+  /// No description provided for @chooseProfileAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a profile avatar'**
+  String get chooseProfileAvatar;
+
+  /// No description provided for @profileAvatarNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile avatar {number}'**
+  String profileAvatarNumber(int number);
+
+  /// No description provided for @profileAvatarSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile avatar {number}, selected'**
+  String profileAvatarSelected(int number);
+
+  /// No description provided for @customProfileAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom profile avatar'**
+  String get customProfileAvatar;
+
+  /// No description provided for @avatarProofToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, proof today'**
+  String avatarProofToday(String label);
+
+  /// No description provided for @avatarSleepy.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, sleepy'**
+  String avatarSleepy(String label);
+
+  /// No description provided for @profileInitial.
+  ///
+  /// In en, this message translates to:
+  /// **'{letter} initial'**
+  String profileInitial(String letter);
+
+  /// No description provided for @profileInitialProof.
+  ///
+  /// In en, this message translates to:
+  /// **'{letter} initial, proof today'**
+  String profileInitialProof(String letter);
+
+  /// No description provided for @profileDefaultInitial.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile initial'**
+  String get profileDefaultInitial;
+
+  /// No description provided for @profileDefaultInitialProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile initial, proof today'**
+  String get profileDefaultInitialProof;
+
+  /// No description provided for @channelAppTime.
+  ///
+  /// In en, this message translates to:
+  /// **'App time'**
+  String get channelAppTime;
+
+  /// No description provided for @channelAppTimeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows time left for an app and when it is hidden again.'**
+  String get channelAppTimeBody;
+
+  /// No description provided for @channelCheckins.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan your day'**
+  String get channelCheckins;
+
+  /// No description provided for @channelCheckinsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A gentle reminder to plan your morning, afternoon and evening.'**
+  String get channelCheckinsBody;
+
+  /// No description provided for @channelPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan reminders'**
+  String get channelPlans;
+
+  /// No description provided for @channelPlansBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A quiet heads-up before your plan ends.'**
+  String get channelPlansBody;
+
+  /// No description provided for @channelProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof reminders'**
+  String get channelProof;
+
+  /// No description provided for @channelProofBody.
+  ///
+  /// In en, this message translates to:
+  /// **'After a plan, a reminder to note what you got done.'**
+  String get channelProofBody;
+
+  /// No description provided for @channelFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus period'**
+  String get channelFocus;
+
+  /// No description provided for @channelFocusBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On the day your focus ends, a look at how it went.'**
+  String get channelFocusBody;
+
+  /// No description provided for @nameExample.
+  ///
+  /// In en, this message translates to:
+  /// **'Ada'**
+  String get nameExample;
+
+  /// No description provided for @appDidNotOpenThere.
+  ///
+  /// In en, this message translates to:
+  /// **'{app} didn’t open there. Your time is still running, so try it from Home.'**
+  String appDidNotOpenThere(String app);
+
+  /// No description provided for @sceneGChord.
+  ///
+  /// In en, this message translates to:
+  /// **'G chord'**
+  String get sceneGChord;
+
+  /// No description provided for @sceneWorship.
+  ///
+  /// In en, this message translates to:
+  /// **'worship'**
+  String get sceneWorship;
 }
 
 class _AppLocalizationsDelegate

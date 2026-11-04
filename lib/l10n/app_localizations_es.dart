@@ -341,8 +341,8 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String chatWith(String person) {
-    return 'Chat con $person';
+  String chatWith(String target) {
+    return 'Hablar con $target';
   }
 
   @override
@@ -655,7 +655,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get awayFromPhone => 'Fuera del teléfono';
+  String get awayFromPhone => 'Lejos del teléfono';
 
   @override
   String get you => 'Tú';
@@ -2401,4 +2401,242 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get removeVoiceFiles => 'Eliminar archivos de voz';
+
+  @override
+  String get sceneStory =>
+      'De noche, un teléfono lleno de publicaciones arrastra una nota que dice «solo mirar la hora del bus» a una maraña de lana, mientras el sol aún duerme.';
+
+  @override
+  String get sceneBusTime => 'Solo mirar la hora del bus';
+
+  @override
+  String get sceneMagnetEmpty => 'Un imán espera a las apps que te atrapan.';
+
+  @override
+  String sceneMagnetApps(String apps) {
+    return 'Un imán atrae a $apps.';
+  }
+
+  @override
+  String get sceneInitial => 'Tu inicial te saluda.';
+
+  @override
+  String get sceneFace => 'La cara que elegiste te saluda.';
+
+  @override
+  String get sceneHome =>
+      'Un teléfono muestra la tranquila pantalla de inicio de Curre: un saludo, un plan y dos apps que se abren justo en la tarea.';
+
+  @override
+  String get goodMorning => 'Buenos días';
+
+  @override
+  String goodMorningName(String name) {
+    return 'Buenos días, $name';
+  }
+
+  @override
+  String sceneSearch(String query) {
+    return '→ Buscar «$query»';
+  }
+
+  @override
+  String miniAllApps(String count) {
+    return 'Todas las apps · $count';
+  }
+
+  @override
+  String get scenePlan => 'Ha salido el sol y saludas a Peek.';
+
+  @override
+  String onboardingStep(int step, int total) {
+    return 'Paso $step de $total';
+  }
+
+  @override
+  String get nothingHiddenYet =>
+      'Aún no hay nada oculto. Todas las apps se abren como siempre.';
+
+  @override
+  String hiddenSummaryOne(String name) {
+    return 'Oculta: $name. Las demás apps se abren como siempre.';
+  }
+
+  @override
+  String hiddenSummaryMany(String names) {
+    return 'Ocultas: $names. Las demás apps se abren como siempre.';
+  }
+
+  @override
+  String hiddenSummaryMore(String names, int count) {
+    return '$names y $count más';
+  }
+
+  @override
+  String get taskExampleLearn => 'Aprender algo, como un acorde de guitarra';
+
+  @override
+  String get taskExampleFindWay => 'Buscar cómo llegar a un sitio';
+
+  @override
+  String get taskExampleReply => 'Responder a alguien';
+
+  @override
+  String get taskExampleTextBack => 'Contestar un mensaje';
+
+  @override
+  String get taskExamplePlaylist => 'Reproducir una lista';
+
+  @override
+  String get taskExampleLookUp => 'Buscar una cosa';
+
+  @override
+  String get taskExampleEmail => 'Responder un correo';
+
+  @override
+  String get taskExampleToday => 'Mirar lo que hay hoy';
+
+  @override
+  String get taskExampleWrite => 'Anotar algo';
+
+  @override
+  String get taskExamplePhoto => 'Buscar una foto';
+
+  @override
+  String get taskExampleFile => 'Abrir un archivo';
+
+  @override
+  String get taskExampleMessage => 'Responder a un mensaje';
+
+  @override
+  String get taskExampleEpisode => 'Ver un episodio';
+
+  @override
+  String get taskExampleGroup => 'Mirar un grupo';
+
+  @override
+  String get taskExampleVideo => 'Publicar un vídeo';
+
+  @override
+  String get taskExamplePost => 'Publicar algo';
+
+  @override
+  String get taskExampleThread => 'Leer un hilo';
+
+  @override
+  String get taskExampleIdea => 'Buscar una idea';
+
+  @override
+  String get taskExampleFriend => 'Responder a un amigo';
+
+  @override
+  String get doorActionSearch => 'Buscar';
+
+  @override
+  String get doorActionDraft => 'Borrador';
+
+  @override
+  String get doorActionNewEvent => 'Nuevo evento';
+
+  @override
+  String get openAppGeneric => 'Abrir app';
+
+  @override
+  String get openAppWith => 'Abrir app con';
+
+  @override
+  String laterSavedSemantics(String app, String reason, String destination) {
+    return '$app, guardada para después: $reason. Abre $destination';
+  }
+
+  @override
+  String get chooseProfileAvatar => 'Elige un avatar de perfil';
+
+  @override
+  String profileAvatarNumber(int number) {
+    return 'Avatar de perfil $number';
+  }
+
+  @override
+  String profileAvatarSelected(int number) {
+    return 'Avatar de perfil $number, seleccionado';
+  }
+
+  @override
+  String get customProfileAvatar => 'Avatar de perfil personalizado';
+
+  @override
+  String avatarProofToday(String label) {
+    return '$label, con prueba hoy';
+  }
+
+  @override
+  String avatarSleepy(String label) {
+    return '$label, con sueño';
+  }
+
+  @override
+  String profileInitial(String letter) {
+    return 'Inicial $letter';
+  }
+
+  @override
+  String profileInitialProof(String letter) {
+    return 'Inicial $letter, con prueba hoy';
+  }
+
+  @override
+  String get profileDefaultInitial => 'Inicial del perfil';
+
+  @override
+  String get profileDefaultInitialProof => 'Inicial del perfil, con prueba hoy';
+
+  @override
+  String get channelAppTime => 'Tiempo de la app';
+
+  @override
+  String get channelAppTimeBody =>
+      'Muestra cuánto tiempo queda para una app y cuándo vuelve a ocultarse.';
+
+  @override
+  String get channelCheckins => 'Planifica tu día';
+
+  @override
+  String get channelCheckinsBody =>
+      'Un recordatorio suave para planificar la mañana, la tarde y la noche.';
+
+  @override
+  String get channelPlans => 'Recordatorios de planes';
+
+  @override
+  String get channelPlansBody =>
+      'Un aviso discreto antes de que termine tu plan.';
+
+  @override
+  String get channelProof => 'Recordatorios de prueba';
+
+  @override
+  String get channelProofBody =>
+      'Después de un plan, recuerda anotar lo que hiciste.';
+
+  @override
+  String get channelFocus => 'Periodo de enfoque';
+
+  @override
+  String get channelFocusBody =>
+      'El día que termina tu enfoque, mira cómo te fue.';
+
+  @override
+  String get nameExample => 'Ada';
+
+  @override
+  String appDidNotOpenThere(String app) {
+    return '$app no se abrió ahí. El tiempo sigue corriendo; inténtalo desde Inicio.';
+  }
+
+  @override
+  String get sceneGChord => 'acorde de sol';
+
+  @override
+  String get sceneWorship => 'música de alabanza';
 }

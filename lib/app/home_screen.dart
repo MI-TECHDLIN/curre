@@ -985,7 +985,7 @@ class _PlanDoor extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final entry = controller.appFor(app.packageName);
     final appName = entry?.label ?? app.packageName;
-    final destination = controller.destinationFor(app, plan);
+    final destination = controller.destinationFor(app, plan, context.l10n);
     final done = _localizedDoneTaskCopy(state, context.l10n);
     return DoorRow(
       appName: appName,
@@ -1363,7 +1363,7 @@ class _GrantDoor extends StatelessWidget {
     final tint = colors.outcome(Outcome.open, laterTarget: Session.evening);
     return DoorRow(
       appName: entry?.label ?? grant.packageName,
-      destination: '→ ${controller.grantDestinationFor(grant)}',
+      destination: '→ ${controller.grantDestinationFor(grant, context.l10n)}',
       appIcon: InstalledAppIcon(
         controller: controller,
         packageName: grant.packageName,

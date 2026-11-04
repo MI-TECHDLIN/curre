@@ -610,6 +610,7 @@ class _ProofHistoryCard extends StatelessWidget {
               controller.titleFor(
                 planId: record.planId,
                 packageName: record.packageName,
+                l10n: l10n,
               ),
               style: type.label,
             ),

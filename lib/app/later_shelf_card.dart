@@ -74,13 +74,17 @@ class LaterShelfCard extends StatelessWidget {
                 key: ValueKey('later-${item.id}'),
                 appName:
                     controller.appFor(item.packageName)?.label ?? item.appLabel,
-                destination: '→ ${controller.laterDestination(item)}',
+                destination:
+                    '→ ${controller.laterDestination(item, context.l10n)}',
                 appIcon: InstalledAppIcon(
                   controller: controller,
                   packageName: item.packageName,
                 ),
-                semanticLabel:
-                    '${item.appLabel}, saved for later: ${item.reason}. Opens ${controller.laterDestination(item)}',
+                semanticLabel: context.l10n.laterSavedSemantics(
+                  item.appLabel,
+                  item.reason,
+                  controller.laterDestination(item, context.l10n),
+                ),
                 onTap: () => onOpen(item),
               ),
             ],

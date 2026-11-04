@@ -156,7 +156,12 @@ class CurreController extends ChangeNotifier {
         !kIsWeb && defaultTargetPlatform == TargetPlatform.android
         ? AndroidGentleInterceptGateway()
         : const DisabledGentleInterceptGateway();
-    final notificationGateway = FlutterGrantNotificationGateway();
+    final notificationGateway = FlutterGrantNotificationGateway(
+      languageCode: effectiveLanguageCode(
+        preference: settings.languageCode,
+        phoneLocale: PlatformDispatcher.instance.locale,
+      ),
+    );
     final controller = CurreController(
       launcher: launcher,
       store: store,
@@ -1409,15 +1414,16 @@ class CurreController extends ChangeNotifier {
     }
   }
 
-  String destinationFor(PlannedApp app, Plan plan) {
+  String destinationFor(PlannedApp app, Plan plan, [AppLocalizations? l10n]) {
     if (app.query case final query?) {
-      final action =
-          QueryDoorAllowlist.forPackage(app.packageName)?.actionLabel ??
-          'Open app with';
+      final template = QueryDoorAllowlist.forPackage(app.packageName);
+      final action = template == null
+          ? l10n?.openAppWith ?? 'Open app with'
+          : _queryAction(template, l10n);
       return '$action “${query.text}”';
     }
     if (app.door case final door?) return door;
-    return 'Open app';
+    return l10n?.openAppGeneric ?? 'Open app';
   }
 
   Future<DoorResolution> unlockDestinationFor(
@@ -1446,23 +1452,25 @@ class CurreController extends ChangeNotifier {
     return const DoorResolution.plain();
   }
 
-  String grantDestinationFor(Grant grant) {
+  String grantDestinationFor(Grant grant, [AppLocalizations? l10n]) {
     final target = grant.task?.trim();
-    if (target == null || target.isEmpty) return 'Open app';
+    if (target == null || target.isEmpty) {
+      return l10n?.openAppGeneric ?? 'Open app';
+    }
     if (grant.kind == ReasonKind.person) {
       final conversations =
           _conversationShortcuts[grant.packageName] ?? const <AppShortcut>[];
       return matchConversationShortcut(target, conversations) == null
-          ? 'Open app'
-          : 'Chat with $target';
+          ? l10n?.openAppGeneric ?? 'Open app'
+          : l10n?.chatWith(target) ?? 'Chat with $target';
     }
     final queryDoor = QueryDoorAllowlist.forPackage(grant.packageName);
     if ((grant.kind == ReasonKind.task ||
             grant.kind == ReasonKind.timeSensitive) &&
         queryDoor != null) {
-      return '${queryDoor.actionLabel} “$target”';
+      return '${_queryAction(queryDoor, l10n)} “$target”';
     }
-    return 'Open app';
+    return l10n?.openAppGeneric ?? 'Open app';
   }
 
   Future<DoorLaunchResult> openPlanDoor(Plan plan, PlannedApp app) async {
@@ -1618,14 +1626,18 @@ class CurreController extends ChangeNotifier {
 
   /// How the completion sheet names a task: the door it went through
   /// ("YouTube → Search “G chord”"), or the time away from the phone.
-  String taskTitle(PlannedTask task) =>
-      titleFor(planId: task.planId, packageName: task.packageName);
+  String taskTitle(PlannedTask task, [AppLocalizations? l10n]) =>
+      titleFor(planId: task.planId, packageName: task.packageName, l10n: l10n);
 
   /// [taskTitle] for a task known only by its plan and door, as a proof
   /// record keeps it.
-  String titleFor({required String planId, String? packageName}) {
+  String titleFor({
+    required String planId,
+    String? packageName,
+    AppLocalizations? l10n,
+  }) {
     final package = packageName;
-    if (package == null) return 'Away from your phone';
+    if (package == null) return l10n?.awayFromPhone ?? 'Away from your phone';
     final plan = <Plan>[
       ...plans,
       ...historyPlans,
@@ -1635,7 +1647,7 @@ class CurreController extends ChangeNotifier {
         .firstOrNull;
     final label = appFor(package)?.label ?? package;
     if (plan == null || app == null) return label;
-    return '$label → ${destinationFor(app, plan)}';
+    return '$label → ${destinationFor(app, plan, l10n)}';
   }
 
   Future<TaskTrace> startOfflineTask(PlannedTask task) async {
@@ -1917,14 +1929,21 @@ class CurreController extends ChangeNotifier {
   }
 
   /// Where a saved item's door lands, in the words the user wrote.
-  String laterDestination(LaterItem item) {
+  String laterDestination(LaterItem item, [AppLocalizations? l10n]) {
     final target = item.target?.text;
     if (target == null || target.trim().isEmpty) return item.reason;
     if (QueryDoorAllowlist.forPackage(item.packageName) != null) {
-      return 'Search “$target”';
+      return '${l10n?.doorActionSearch ?? 'Search'} “$target”';
     }
     return target;
   }
+
+  String _queryAction(QueryDoorTemplate template, AppLocalizations? l10n) =>
+      switch (template.id) {
+        'gmail_compose' => l10n?.doorActionDraft ?? template.actionLabel,
+        'calendar_event' => l10n?.doorActionNewEvent ?? template.actionLabel,
+        _ => l10n?.doorActionSearch ?? template.actionLabel,
+      };
 
   Future<bool> plainLaunch(String packageName) async {
     try {

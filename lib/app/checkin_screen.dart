@@ -411,7 +411,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
                   appName:
                       controller.appFor(app.packageName)?.label ??
                       app.packageName,
-                  destination: '→ ${controller.destinationFor(app, plan)}',
+                  destination:
+                      '→ ${controller.destinationFor(app, plan, l10n)}',
                   appIcon: InstalledAppIcon(
                     controller: controller,
                     packageName: app.packageName,

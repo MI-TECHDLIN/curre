@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../design/design.dart';
+import '../../l10n/l10n.dart';
 import '../curre_controller.dart';
 
 /// The colour blocks onboarding's stages are made of. Each step has its
@@ -135,7 +136,7 @@ class SunriseProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     return Semantics(
-      label: 'Step $step of $total',
+      label: context.l10n.onboardingStep(step, total),
       excludeSemantics: true,
       child: TweenAnimationBuilder<double>(
         tween: Tween(end: step.toDouble()),

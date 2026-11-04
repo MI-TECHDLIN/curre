@@ -32,27 +32,17 @@ void main() {
     );
 
     expect(find.bySemanticsLabel('Choose a profile avatar'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel(
-        RegExp('Avatar 1, light skin, a short fade, and bold brows, selected'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Profile avatar 1, selected'), findsOneWidget);
     expect(find.byType(Avatar), findsNWidgets(12));
     for (var number = 1; number <= 12; number++) {
       expect(find.text('Avatar $number'), findsNothing);
     }
 
-    await tester.tap(
-      find.bySemanticsLabel(RegExp('Avatar 7, rich brown skin')),
-    );
+    await tester.tap(find.bySemanticsLabel('Profile avatar 7'));
     await tester.pump();
 
     expect(selected, 'avatar-07');
-    expect(
-      find.bySemanticsLabel(RegExp('Avatar 7, rich brown skin.*selected')),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Profile avatar 7, selected'), findsOneWidget);
   });
 
   for (final textScale in const [1.0, 2.0]) {

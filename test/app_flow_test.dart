@@ -118,7 +118,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(AvatarPicker), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel(RegExp('Avatar 1, light skin')));
+    await tester.tap(find.bySemanticsLabel('Profile avatar 1'));
     await tester.pump();
     expect(controller.settings.avatarId, 'avatar-01');
     expect(find.text('Proof days'), findsOneWidget);

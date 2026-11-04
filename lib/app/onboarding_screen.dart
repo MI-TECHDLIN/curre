@@ -581,7 +581,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         style: type.youLarge.copyWith(height: 1.15),
         decoration: InputDecoration(
           labelText: context.l10n.yourName,
-          hintText: 'Ada',
+          hintText: context.l10n.nameExample,
           filled: true,
           fillColor: colors.raised,
           counterText: '',
@@ -672,7 +672,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       Semantics(
         liveRegion: true,
         child: Text(
-          hiddenSummary(_pickedLabels),
+          localizedHiddenSummary(_pickedLabels, context.l10n),
           key: const Key('onboarding-hidden-summary'),
           style: type.body.copyWith(color: colors.ink2),
         ),

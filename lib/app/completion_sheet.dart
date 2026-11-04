@@ -113,7 +113,7 @@ class _CompletionSheetState extends State<CompletionSheet> {
                 builder: (context, _) => CompletionSheetView(
                   state: _state,
                   task: task,
-                  title: controller.taskTitle(task),
+                  title: controller.taskTitle(task, context.l10n),
                   link: _link(task),
                   session: controller.currentSession.session.designSession,
                   noteController: _note,
