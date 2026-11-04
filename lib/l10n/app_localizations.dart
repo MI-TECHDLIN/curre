@@ -2971,6 +2971,528 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'End focus'**
   String get endFocus;
+
+  /// No description provided for @historySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The last 30 days · only on this phone'**
+  String get historySubtitle;
+
+  /// No description provided for @whatHappened.
+  ///
+  /// In en, this message translates to:
+  /// **'What happened'**
+  String get whatHappened;
+
+  /// No description provided for @historyEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A quiet start.'**
+  String get historyEmptyTitle;
+
+  /// No description provided for @historyEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your plans, and the apps you bring back, will show up here. It all stays on this phone.'**
+  String get historyEmptyBody;
+
+  /// No description provided for @plannedSessionsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} of 21 planned'**
+  String plannedSessionsCount(int count);
+
+  /// No description provided for @historyOverviewHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Each square is a morning, afternoon or evening in the last 7 days. Filled ones started with a plan.'**
+  String get historyOverviewHelp;
+
+  /// No description provided for @sessionPlanState.
+  ///
+  /// In en, this message translates to:
+  /// **'{session}: {state}'**
+  String sessionPlanState(String session, String state);
+
+  /// No description provided for @planned.
+  ///
+  /// In en, this message translates to:
+  /// **'planned'**
+  String get planned;
+
+  /// No description provided for @noPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'no plan'**
+  String get noPlan;
+
+  /// No description provided for @proofCloudInHand.
+  ///
+  /// In en, this message translates to:
+  /// **'You have a cloud day. {detail}'**
+  String proofCloudInHand(String detail);
+
+  /// No description provided for @oneMoreProofToCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'1 more proof day to your next cloud day.'**
+  String get oneMoreProofToCloud;
+
+  /// No description provided for @moreProofToCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} more proof days to your next cloud day.'**
+  String moreProofToCloud(int count);
+
+  /// No description provided for @proofDaysInAll.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 proof day in all} other{{count} proof days in all}}'**
+  String proofDaysInAll(int count);
+
+  /// No description provided for @bestRunCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Best run {count}'**
+  String bestRunCount(int count);
+
+  /// No description provided for @cloudDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 cloud day} other{{count} cloud days}}'**
+  String cloudDaysCount(int count);
+
+  /// No description provided for @historyProofHint.
+  ///
+  /// In en, this message translates to:
+  /// **'After a task, say what changed. A specific note adds a proof day.'**
+  String get historyProofHint;
+
+  /// No description provided for @historySessionPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'{session, select, morning{Morning plan} afternoon{Afternoon plan} evening{Evening plan} other{Plan}}'**
+  String historySessionPlan(String session);
+
+  /// No description provided for @endedEarlyAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended early at {ended}, planned until {planned}'**
+  String endedEarlyAt(String ended, String planned);
+
+  /// No description provided for @waitedDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Waited {duration}'**
+  String waitedDuration(String duration);
+
+  /// No description provided for @whyNowApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Why now? · {app}'**
+  String whyNowApp(String app);
+
+  /// No description provided for @olderReasonMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason wasn’t stored in this older entry.'**
+  String get olderReasonMissing;
+
+  /// No description provided for @appCameBack.
+  ///
+  /// In en, this message translates to:
+  /// **'{app} came back'**
+  String appCameBack(String app);
+
+  /// No description provided for @minutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String minutesShort(int count);
+
+  /// No description provided for @openedAfterWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened after waiting {duration}'**
+  String openedAfterWaiting(String duration);
+
+  /// No description provided for @openedFromLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for later, then opened from a plan'**
+  String get openedFromLater;
+
+  /// No description provided for @supportedProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported proof'**
+  String get supportedProof;
+
+  /// No description provided for @waitingToBeChecked.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to be checked'**
+  String get waitingToBeChecked;
+
+  /// No description provided for @markedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked done'**
+  String get markedDone;
+
+  /// No description provided for @noNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No note'**
+  String get noNote;
+
+  /// No description provided for @personalDetailHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal detail hidden'**
+  String get personalDetailHidden;
+
+  /// No description provided for @outcomeOpened.
+  ///
+  /// In en, this message translates to:
+  /// **'Opened'**
+  String get outcomeOpened;
+
+  /// No description provided for @outcomeNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get outcomeNotNow;
+
+  /// No description provided for @outcomeNeededDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed more detail'**
+  String get outcomeNeededDetail;
+
+  /// No description provided for @outcomeNotReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a reason'**
+  String get outcomeNotReason;
+
+  /// No description provided for @outcomeCouldNotCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t check'**
+  String get outcomeCouldNotCheck;
+
+  /// No description provided for @nextSunriseOneProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Next sunrise: one proof away'**
+  String get nextSunriseOneProof;
+
+  /// No description provided for @noProofDaysYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No proof days yet'**
+  String get noProofDaysYet;
+
+  /// No description provided for @proofDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 proof day} other{{count} proof days}}'**
+  String proofDaysCount(int count);
+
+  /// No description provided for @todaysSunIsUp.
+  ///
+  /// In en, this message translates to:
+  /// **'today’s sun is up'**
+  String get todaysSunIsUp;
+
+  /// No description provided for @oneCloudInHand.
+  ///
+  /// In en, this message translates to:
+  /// **'one cloud day in hand'**
+  String get oneCloudInHand;
+
+  /// No description provided for @cloudDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud day'**
+  String get cloudDay;
+
+  /// No description provided for @runEndedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'That run ended at {days}.'**
+  String runEndedAt(String days);
+
+  /// No description provided for @todaysProofStartsNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s proof starts the next sunrise.'**
+  String get todaysProofStartsNext;
+
+  /// No description provided for @theNextSunrise.
+  ///
+  /// In en, this message translates to:
+  /// **'The next sunrise'**
+  String get theNextSunrise;
+
+  /// No description provided for @dayProof.
+  ///
+  /// In en, this message translates to:
+  /// **'proof day'**
+  String get dayProof;
+
+  /// No description provided for @dayPending.
+  ///
+  /// In en, this message translates to:
+  /// **'note waiting to be checked'**
+  String get dayPending;
+
+  /// No description provided for @dayNoProof.
+  ///
+  /// In en, this message translates to:
+  /// **'no proof'**
+  String get dayNoProof;
+
+  /// No description provided for @dayCloud.
+  ///
+  /// In en, this message translates to:
+  /// **'cloud day'**
+  String get dayCloud;
+
+  /// No description provided for @dayToday.
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get dayToday;
+
+  /// No description provided for @dayFuture.
+  ///
+  /// In en, this message translates to:
+  /// **'still to come'**
+  String get dayFuture;
+
+  /// No description provided for @dayStillOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'still open'**
+  String get dayStillOpen;
+
+  /// No description provided for @startingToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting today'**
+  String get startingToday;
+
+  /// No description provided for @proofRunRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{start} to {end}'**
+  String proofRunRange(String start, String end);
+
+  /// No description provided for @sinceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Since {date}'**
+  String sinceDate(String date);
+
+  /// No description provided for @milestoneSeven.
+  ///
+  /// In en, this message translates to:
+  /// **'Seven proof days: your rays now end in sparks.'**
+  String get milestoneSeven;
+
+  /// No description provided for @milestoneTwentyOne.
+  ///
+  /// In en, this message translates to:
+  /// **'21 proof days: a ring of light now stands behind your sun.'**
+  String get milestoneTwentyOne;
+
+  /// No description provided for @milestoneFifty.
+  ///
+  /// In en, this message translates to:
+  /// **'50 proof days: your sun wears a second ring.'**
+  String get milestoneFifty;
+
+  /// No description provided for @cloudDayKeepsRun.
+  ///
+  /// In en, this message translates to:
+  /// **'If a day passes without proof, it keeps your run going.'**
+  String get cloudDayKeepsRun;
+
+  /// No description provided for @weekdaySunUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday}’s sun is up'**
+  String weekdaySunUp(String weekday);
+
+  /// No description provided for @earnedCloudDay.
+  ///
+  /// In en, this message translates to:
+  /// **'You earned a cloud day. {detail}'**
+  String earnedCloudDay(String detail);
+
+  /// No description provided for @completionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'What changed, finished, or became clear?'**
+  String get completionQuestion;
+
+  /// No description provided for @oneSentenceEnough.
+  ///
+  /// In en, this message translates to:
+  /// **'One sentence is enough'**
+  String get oneSentenceEnough;
+
+  /// No description provided for @addOneDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Add one detail'**
+  String get addOneDetail;
+
+  /// No description provided for @addWhatChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Add what changed'**
+  String get addWhatChanged;
+
+  /// No description provided for @proofMismatchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'“{detail}” doesn’t match the task you planned. What changed, finished, or became clear?'**
+  String proofMismatchPrompt(String detail);
+
+  /// No description provided for @proofFuturePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'That sounds like what comes next. What changed, finished, or became clear?'**
+  String get proofFuturePrompt;
+
+  /// No description provided for @proofUnrelatedPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Say how it connects to your plan. What changed, finished, or became clear?'**
+  String get proofUnrelatedPrompt;
+
+  /// No description provided for @proofDetailPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'A name, a number or a step is enough. What changed, finished, or became clear?'**
+  String get proofDetailPrompt;
+
+  /// No description provided for @justMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Just mark it done'**
+  String get justMarkDone;
+
+  /// No description provided for @readingYourNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your note'**
+  String get readingYourNote;
+
+  /// No description provided for @readingYourNoteProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading your note…'**
+  String get readingYourNoteProgress;
+
+  /// No description provided for @noteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Your note is saved'**
+  String get noteSaved;
+
+  /// No description provided for @noteSavedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn’t check it right now. It will be checked once you’re back online.'**
+  String get noteSavedBody;
+
+  /// No description provided for @runSafeWhileWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Your run stays safe while it waits.'**
+  String get runSafeWhileWaiting;
+
+  /// No description provided for @markedAsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as done'**
+  String get markedAsDone;
+
+  /// No description provided for @markedDoneBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It’s in your history. Proof days come from a note about what changed.'**
+  String get markedDoneBody;
+
+  /// No description provided for @noteCountsAsProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Your note counts as proof.'**
+  String get noteCountsAsProof;
+
+  /// No description provided for @oneMoreRay.
+  ///
+  /// In en, this message translates to:
+  /// **'One more ray'**
+  String get oneMoreRay;
+
+  /// No description provided for @proofAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof added'**
+  String get proofAdded;
+
+  /// No description provided for @profileSmiling.
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile, smiling'**
+  String get profileSmiling;
+
+  /// No description provided for @sunOneRay.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s sun, one ray: one task with proof'**
+  String get sunOneRay;
+
+  /// No description provided for @sunManyRays.
+  ///
+  /// In en, this message translates to:
+  /// **'Today’s sun, {count} rays: {count} tasks with proof'**
+  String sunManyRays(int count);
+
+  /// No description provided for @proofDayUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{proof day} other{proof days}}'**
+  String proofDayUnit(int count);
+
+  /// No description provided for @newRunStarts.
+  ///
+  /// In en, this message translates to:
+  /// **'A new run starts here.'**
+  String get newRunStarts;
+
+  /// No description provided for @supported.
+  ///
+  /// In en, this message translates to:
+  /// **'Supported'**
+  String get supported;
+
+  /// No description provided for @backedByStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed by starting the task and your note'**
+  String get backedByStart;
+
+  /// No description provided for @backedByApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed by the app you opened and your note'**
+  String get backedByApp;
 }
 
 class _AppLocalizationsDelegate

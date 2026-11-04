@@ -1818,4 +1818,357 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get endFocus => 'Terminar enfoque';
+
+  @override
+  String get historySubtitle => 'Los últimos 30 días · solo en este teléfono';
+
+  @override
+  String get whatHappened => 'Qué pasó';
+
+  @override
+  String get historyEmptyTitle => 'Un comienzo tranquilo.';
+
+  @override
+  String get historyEmptyBody =>
+      'Aquí aparecerán tus planes y las apps que recuperes. Todo se queda en este teléfono.';
+
+  @override
+  String plannedSessionsCount(int count) {
+    return '$count de 21 con plan';
+  }
+
+  @override
+  String get historyOverviewHelp =>
+      'Cada cuadro es una mañana, una tarde o una noche de los últimos 7 días. Los rellenos empezaron con un plan.';
+
+  @override
+  String sessionPlanState(String session, String state) {
+    return '$session: $state';
+  }
+
+  @override
+  String get planned => 'con plan';
+
+  @override
+  String get noPlan => 'sin plan';
+
+  @override
+  String proofCloudInHand(String detail) {
+    return 'Tienes un día nube. $detail';
+  }
+
+  @override
+  String get oneMoreProofToCloud =>
+      'Falta 1 día con prueba para tu próximo día nube.';
+
+  @override
+  String moreProofToCloud(int count) {
+    return 'Faltan $count días con prueba para tu próximo día nube.';
+  }
+
+  @override
+  String proofDaysInAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días con prueba en total',
+      one: '1 día con prueba en total',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bestRunCount(int count) {
+    return 'Mejor racha $count';
+  }
+
+  @override
+  String cloudDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días nube',
+      one: '1 día nube',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get historyProofHint =>
+      'Después de una tarea, cuenta qué cambió. Una nota concreta añade un día con prueba.';
+
+  @override
+  String historySessionPlan(String session) {
+    String _temp0 = intl.Intl.selectLogic(session, {
+      'morning': 'Plan de la mañana',
+      'afternoon': 'Plan de la tarde',
+      'evening': 'Plan de la noche',
+      'other': 'Plan',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String endedEarlyAt(String ended, String planned) {
+    return 'Terminó antes a las $ended; estaba previsto hasta las $planned';
+  }
+
+  @override
+  String waitedDuration(String duration) {
+    return 'Esperó $duration';
+  }
+
+  @override
+  String whyNowApp(String app) {
+    return '¿Por qué ahora? · $app';
+  }
+
+  @override
+  String get olderReasonMissing =>
+      'El motivo no se guardó en esta entrada antigua.';
+
+  @override
+  String appCameBack(String app) {
+    return '$app volvió';
+  }
+
+  @override
+  String minutesShort(int count) {
+    return '$count min';
+  }
+
+  @override
+  String openedAfterWaiting(String duration) {
+    return 'Se abrió tras esperar $duration';
+  }
+
+  @override
+  String get openedFromLater =>
+      'Se guardó para después y se abrió desde un plan';
+
+  @override
+  String get supportedProof => 'Prueba respaldada';
+
+  @override
+  String get waitingToBeChecked => 'Pendiente de revisar';
+
+  @override
+  String get markedDone => 'Marcada como hecha';
+
+  @override
+  String get noNote => 'Sin nota';
+
+  @override
+  String get personalDetailHidden => 'Dato personal oculto';
+
+  @override
+  String get outcomeOpened => 'Se abrió';
+
+  @override
+  String get outcomeNotNow => 'Ahora no';
+
+  @override
+  String get outcomeNeededDetail => 'Faltaban detalles';
+
+  @override
+  String get outcomeNotReason => 'No era un motivo';
+
+  @override
+  String get outcomeCouldNotCheck => 'No se pudo revisar';
+
+  @override
+  String get nextSunriseOneProof => 'Próximo amanecer: falta una prueba';
+
+  @override
+  String get noProofDaysYet => 'Aún no hay días con prueba';
+
+  @override
+  String proofDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días con prueba',
+      one: '1 día con prueba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get todaysSunIsUp => 'el sol de hoy ya salió';
+
+  @override
+  String get oneCloudInHand => 'un día nube disponible';
+
+  @override
+  String get cloudDay => 'Día nube';
+
+  @override
+  String runEndedAt(String days) {
+    return 'Esa racha terminó con $days.';
+  }
+
+  @override
+  String get todaysProofStartsNext =>
+      'La prueba de hoy inicia el próximo amanecer.';
+
+  @override
+  String get theNextSunrise => 'El próximo amanecer';
+
+  @override
+  String get dayProof => 'día con prueba';
+
+  @override
+  String get dayPending => 'nota pendiente de revisar';
+
+  @override
+  String get dayNoProof => 'sin prueba';
+
+  @override
+  String get dayCloud => 'día nube';
+
+  @override
+  String get dayToday => 'hoy';
+
+  @override
+  String get dayFuture => 'aún por llegar';
+
+  @override
+  String get dayStillOpen => 'aún abierto';
+
+  @override
+  String get startingToday => 'Empieza hoy';
+
+  @override
+  String proofRunRange(String start, String end) {
+    return 'De $start a $end';
+  }
+
+  @override
+  String sinceDate(String date) {
+    return 'Desde el $date';
+  }
+
+  @override
+  String get milestoneSeven =>
+      'Siete días con prueba: tus rayos terminan ahora en chispas.';
+
+  @override
+  String get milestoneTwentyOne =>
+      '21 días con prueba: un aro de luz aparece detrás de tu sol.';
+
+  @override
+  String get milestoneFifty =>
+      '50 días con prueba: tu sol lleva un segundo aro.';
+
+  @override
+  String get cloudDayKeepsRun =>
+      'Si pasa un día sin prueba, mantiene tu racha.';
+
+  @override
+  String weekdaySunUp(String weekday) {
+    return 'El sol del $weekday ya salió';
+  }
+
+  @override
+  String earnedCloudDay(String detail) {
+    return 'Has ganado un día nube. $detail';
+  }
+
+  @override
+  String get completionQuestion => '¿Qué cambió, terminaste o entendiste?';
+
+  @override
+  String get oneSentenceEnough => 'Con una frase basta';
+
+  @override
+  String get addOneDetail => 'Añade un detalle';
+
+  @override
+  String get addWhatChanged => 'Añade qué cambió';
+
+  @override
+  String proofMismatchPrompt(String detail) {
+    return '“$detail” no coincide con la tarea que planeaste. ¿Qué cambió, terminaste o entendiste?';
+  }
+
+  @override
+  String get proofFuturePrompt =>
+      'Eso suena a lo que viene después. ¿Qué cambió, terminaste o entendiste?';
+
+  @override
+  String get proofUnrelatedPrompt =>
+      'Cuenta cómo se relaciona con tu plan. ¿Qué cambió, terminaste o entendiste?';
+
+  @override
+  String get proofDetailPrompt =>
+      'Basta un nombre, un número o un paso. ¿Qué cambió, terminaste o entendiste?';
+
+  @override
+  String get justMarkDone => 'Solo marcar como hecha';
+
+  @override
+  String get readingYourNote => 'Leyendo tu nota';
+
+  @override
+  String get readingYourNoteProgress => 'Leyendo tu nota…';
+
+  @override
+  String get noteSaved => 'Tu nota está guardada';
+
+  @override
+  String get noteSavedBody =>
+      'No se pudo revisar ahora. Se revisará cuando vuelvas a tener conexión.';
+
+  @override
+  String get runSafeWhileWaiting => 'Tu racha se mantiene mientras espera.';
+
+  @override
+  String get markedAsDone => 'Marcada como hecha';
+
+  @override
+  String get markedDoneBody =>
+      'Está en tu historial. Los días con prueba nacen de una nota sobre lo que cambió.';
+
+  @override
+  String get noteCountsAsProof => 'Tu nota cuenta como prueba.';
+
+  @override
+  String get oneMoreRay => 'Un rayo más';
+
+  @override
+  String get proofAdded => 'Prueba añadida';
+
+  @override
+  String get profileSmiling => 'Tu perfil, sonriendo';
+
+  @override
+  String get sunOneRay => 'El sol de hoy, un rayo: una tarea con prueba';
+
+  @override
+  String sunManyRays(int count) {
+    return 'El sol de hoy, $count rayos: $count tareas con prueba';
+  }
+
+  @override
+  String proofDayUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'días con prueba',
+      one: 'día con prueba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newRunStarts => 'Aquí empieza una nueva racha.';
+
+  @override
+  String get supported => 'Respaldada';
+
+  @override
+  String get backedByStart => 'Respaldada por el inicio de la tarea y tu nota';
+
+  @override
+  String get backedByApp => 'Respaldada por la app que abriste y tu nota';
 }

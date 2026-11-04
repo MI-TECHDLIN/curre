@@ -1828,4 +1828,361 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get endFocus => 'Fokus beenden';
+
+  @override
+  String get historySubtitle => 'Die letzten 30 Tage · nur auf diesem Handy';
+
+  @override
+  String get whatHappened => 'Was passiert ist';
+
+  @override
+  String get historyEmptyTitle => 'Ein ruhiger Anfang.';
+
+  @override
+  String get historyEmptyBody =>
+      'Deine Pläne und zurückgeholten Apps erscheinen hier. Alles bleibt auf diesem Handy.';
+
+  @override
+  String plannedSessionsCount(int count) {
+    return '$count von 21 geplant';
+  }
+
+  @override
+  String get historyOverviewHelp =>
+      'Jedes Feld steht für einen Morgen, Nachmittag oder Abend der letzten 7 Tage. Ausgefüllte Felder begannen mit einem Plan.';
+
+  @override
+  String sessionPlanState(String session, String state) {
+    return '$session: $state';
+  }
+
+  @override
+  String get planned => 'geplant';
+
+  @override
+  String get noPlan => 'ohne Plan';
+
+  @override
+  String proofCloudInHand(String detail) {
+    return 'Du hast einen Wolkentag. $detail';
+  }
+
+  @override
+  String get oneMoreProofToCloud =>
+      'Noch 1 Nachweistag bis zu deinem nächsten Wolkentag.';
+
+  @override
+  String moreProofToCloud(int count) {
+    return 'Noch $count Nachweistage bis zu deinem nächsten Wolkentag.';
+  }
+
+  @override
+  String proofDaysInAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'insgesamt $count Nachweistage',
+      one: 'insgesamt 1 Nachweistag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bestRunCount(int count) {
+    return 'Beste Folge $count';
+  }
+
+  @override
+  String cloudDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Wolkentage',
+      one: '1 Wolkentag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get historyProofHint =>
+      'Sag nach einer Aufgabe, was sich geändert hat. Eine konkrete Notiz fügt einen Nachweistag hinzu.';
+
+  @override
+  String historySessionPlan(String session) {
+    String _temp0 = intl.Intl.selectLogic(session, {
+      'morning': 'Morgenplan',
+      'afternoon': 'Nachmittagsplan',
+      'evening': 'Abendplan',
+      'other': 'Plan',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String endedEarlyAt(String ended, String planned) {
+    return 'Um $ended vorzeitig beendet, geplant bis $planned';
+  }
+
+  @override
+  String waitedDuration(String duration) {
+    return '$duration gewartet';
+  }
+
+  @override
+  String whyNowApp(String app) {
+    return 'Warum jetzt? · $app';
+  }
+
+  @override
+  String get olderReasonMissing =>
+      'Der Grund wurde in diesem älteren Eintrag nicht gespeichert.';
+
+  @override
+  String appCameBack(String app) {
+    return '$app kam zurück';
+  }
+
+  @override
+  String minutesShort(int count) {
+    return '$count Min.';
+  }
+
+  @override
+  String openedAfterWaiting(String duration) {
+    return 'Nach $duration Wartezeit geöffnet';
+  }
+
+  @override
+  String get openedFromLater =>
+      'Für später aufgehoben und aus einem Plan geöffnet';
+
+  @override
+  String get supportedProof => 'Gestützter Nachweis';
+
+  @override
+  String get waitingToBeChecked => 'Wird noch geprüft';
+
+  @override
+  String get markedDone => 'Als erledigt markiert';
+
+  @override
+  String get noNote => 'Keine Notiz';
+
+  @override
+  String get personalDetailHidden => 'Persönliche Angabe ausgeblendet';
+
+  @override
+  String get outcomeOpened => 'Geöffnet';
+
+  @override
+  String get outcomeNotNow => 'Nicht jetzt';
+
+  @override
+  String get outcomeNeededDetail => 'Mehr Details nötig';
+
+  @override
+  String get outcomeNotReason => 'Kein Grund';
+
+  @override
+  String get outcomeCouldNotCheck => 'Prüfung nicht möglich';
+
+  @override
+  String get nextSunriseOneProof => 'Nächster Sonnenaufgang: noch ein Nachweis';
+
+  @override
+  String get noProofDaysYet => 'Noch keine Nachweistage';
+
+  @override
+  String proofDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Nachweistage',
+      one: '1 Nachweistag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get todaysSunIsUp => 'die heutige Sonne ist aufgegangen';
+
+  @override
+  String get oneCloudInHand => 'ein Wolkentag verfügbar';
+
+  @override
+  String get cloudDay => 'Wolkentag';
+
+  @override
+  String runEndedAt(String days) {
+    return 'Diese Folge endete bei $days.';
+  }
+
+  @override
+  String get todaysProofStartsNext =>
+      'Der heutige Nachweis beginnt den nächsten Sonnenaufgang.';
+
+  @override
+  String get theNextSunrise => 'Der nächste Sonnenaufgang';
+
+  @override
+  String get dayProof => 'Nachweistag';
+
+  @override
+  String get dayPending => 'Notiz wird noch geprüft';
+
+  @override
+  String get dayNoProof => 'kein Nachweis';
+
+  @override
+  String get dayCloud => 'Wolkentag';
+
+  @override
+  String get dayToday => 'heute';
+
+  @override
+  String get dayFuture => 'kommt noch';
+
+  @override
+  String get dayStillOpen => 'noch offen';
+
+  @override
+  String get startingToday => 'Beginnt heute';
+
+  @override
+  String proofRunRange(String start, String end) {
+    return '$start bis $end';
+  }
+
+  @override
+  String sinceDate(String date) {
+    return 'Seit $date';
+  }
+
+  @override
+  String get milestoneSeven =>
+      'Sieben Nachweistage: Deine Strahlen enden jetzt in Funken.';
+
+  @override
+  String get milestoneTwentyOne =>
+      '21 Nachweistage: Ein Lichtring steht nun hinter deiner Sonne.';
+
+  @override
+  String get milestoneFifty =>
+      '50 Nachweistage: Deine Sonne trägt einen zweiten Ring.';
+
+  @override
+  String get cloudDayKeepsRun =>
+      'Wenn ein Tag ohne Nachweis vergeht, hält er deine Folge am Laufen.';
+
+  @override
+  String weekdaySunUp(String weekday) {
+    return 'Die Sonne am $weekday ist aufgegangen';
+  }
+
+  @override
+  String earnedCloudDay(String detail) {
+    return 'Du hast einen Wolkentag verdient. $detail';
+  }
+
+  @override
+  String get completionQuestion =>
+      'Was hat sich verändert, was wurde fertig oder klar?';
+
+  @override
+  String get oneSentenceEnough => 'Ein Satz genügt';
+
+  @override
+  String get addOneDetail => 'Füge ein Detail hinzu';
+
+  @override
+  String get addWhatChanged => 'Ergänze, was sich geändert hat';
+
+  @override
+  String proofMismatchPrompt(String detail) {
+    return '„$detail“ passt nicht zu deiner geplanten Aufgabe. Was hat sich verändert, was wurde fertig oder klar?';
+  }
+
+  @override
+  String get proofFuturePrompt =>
+      'Das klingt nach dem nächsten Schritt. Was hat sich verändert, was wurde fertig oder klar?';
+
+  @override
+  String get proofUnrelatedPrompt =>
+      'Sag, wie es mit deinem Plan zusammenhängt. Was hat sich verändert, was wurde fertig oder klar?';
+
+  @override
+  String get proofDetailPrompt =>
+      'Ein Name, eine Zahl oder ein Schritt genügt. Was hat sich verändert, was wurde fertig oder klar?';
+
+  @override
+  String get justMarkDone => 'Nur als erledigt markieren';
+
+  @override
+  String get readingYourNote => 'Deine Notiz wird gelesen';
+
+  @override
+  String get readingYourNoteProgress => 'Deine Notiz wird gelesen…';
+
+  @override
+  String get noteSaved => 'Deine Notiz ist gespeichert';
+
+  @override
+  String get noteSavedBody =>
+      'Sie konnte gerade nicht geprüft werden. Das geschieht, sobald du wieder online bist.';
+
+  @override
+  String get runSafeWhileWaiting =>
+      'Deine Folge bleibt während der Wartezeit sicher.';
+
+  @override
+  String get markedAsDone => 'Als erledigt markiert';
+
+  @override
+  String get markedDoneBody =>
+      'Es steht in deinem Verlauf. Nachweistage entstehen aus einer Notiz darüber, was sich geändert hat.';
+
+  @override
+  String get noteCountsAsProof => 'Deine Notiz zählt als Nachweis.';
+
+  @override
+  String get oneMoreRay => 'Ein Strahl mehr';
+
+  @override
+  String get proofAdded => 'Nachweis hinzugefügt';
+
+  @override
+  String get profileSmiling => 'Dein Profil lächelt';
+
+  @override
+  String get sunOneRay =>
+      'Die heutige Sonne, ein Strahl: eine Aufgabe mit Nachweis';
+
+  @override
+  String sunManyRays(int count) {
+    return 'Die heutige Sonne, $count Strahlen: $count Aufgaben mit Nachweis';
+  }
+
+  @override
+  String proofDayUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nachweistage',
+      one: 'Nachweistag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get newRunStarts => 'Hier beginnt eine neue Folge.';
+
+  @override
+  String get supported => 'Gestützt';
+
+  @override
+  String get backedByStart =>
+      'Gestützt durch den Aufgabenstart und deine Notiz';
+
+  @override
+  String get backedByApp => 'Gestützt durch die geöffnete App und deine Notiz';
 }

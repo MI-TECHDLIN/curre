@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
 import '../curre_type.dart';
@@ -70,7 +71,11 @@ class ProoflightSun extends StatelessWidget {
           rise: (rise ?? (rays > 0 ? 1.0 : 0.0)).clamp(0.0, 1.0),
           grow: grow.clamp(0.0, 1.0),
           ember: c.ember,
-          dormant: Color.lerp(c.outcomes[Outcome.unavailable]!.bg, c.outcomes[Outcome.unavailable]!.fg, .42)!,
+          dormant: Color.lerp(
+            c.outcomes[Outcome.unavailable]!.bg,
+            c.outcomes[Outcome.unavailable]!.fg,
+            .42,
+          )!,
           lineColor: lineColor,
         ),
       ),
@@ -103,7 +108,10 @@ class _ProoflightPainter extends CustomPainter {
   static List<double> slots(int n) {
     final count = math.max(5, n);
     final spread = count == 5 ? 140.0 : 150.0;
-    return [for (var i = 0; i < count; i++) 90 + spread / 2 - spread * i / (count - 1)];
+    return [
+      for (var i = 0; i < count; i++)
+        90 + spread / 2 - spread * i / (count - 1),
+    ];
   }
 
   /// The order proofs take the slots in: the centre first, then left and
@@ -133,14 +141,26 @@ class _ProoflightPainter extends CustomPainter {
 
     final lit = Color.lerp(dormant, ember, Curves.easeIn.transform(rise))!;
     if (proofDays >= 50) {
-      canvas.drawCircle(center, r * 1.98, Paint()..color = ember.withValues(alpha: .14 * rise));
+      canvas.drawCircle(
+        center,
+        r * 1.98,
+        Paint()..color = ember.withValues(alpha: .14 * rise),
+      );
     }
-    if (proofDays >= 21) canvas.drawCircle(center, r * 1.62, Paint()..color = ember.withValues(alpha: .28 * rise));
+    if (proofDays >= 21) {
+      canvas.drawCircle(
+        center,
+        r * 1.62,
+        Paint()..color = ember.withValues(alpha: .28 * rise),
+      );
+    }
 
     // Short rays say the sun is up; each proof grows one of them long. A
     // small sun is a sign only, so its rays stay short.
     final angles = slots(small ? 0 : rays);
-    final longOnes = small ? const <int>{} : order(angles.length).take(rays).toSet();
+    final longOnes = small
+        ? const <int>{}
+        : order(angles.length).take(rays).toSet();
     final newest = small || rays == 0 ? -1 : order(angles.length)[rays - 1];
     final width = r * (small ? .22 : .13);
     final gap = r * (small ? .22 : .14);
@@ -151,7 +171,9 @@ class _ProoflightPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeWidth = width;
     // Rays come out as the sun clears the line.
-    final shown = small ? (rays > 0 ? 1.0 : 0.0) : Curves.easeOut.transform(((rise - .35) / .65).clamp(0.0, 1.0));
+    final shown = small
+        ? (rays > 0 ? 1.0 : 0.0)
+        : Curves.easeOut.transform(((rise - .35) / .65).clamp(0.0, 1.0));
     if (shown > 0) {
       for (var i = 0; i < angles.length; i++) {
         final a = angles[i] * math.pi / 180;
@@ -207,7 +229,14 @@ class _ProoflightPainter extends CustomPainter {
 /// sunrise: one proof away". [cloudDay] adds the soft cloud of a cloud day
 /// in hand.
 class ProofDaysLabel extends StatelessWidget {
-  const ProofDaysLabel({super.key, required this.days, this.raysToday = 0, this.cloudDay = false, this.runEnded = false, this.color});
+  const ProofDaysLabel({
+    super.key,
+    required this.days,
+    this.raysToday = 0,
+    this.cloudDay = false,
+    this.runEnded = false,
+    this.color,
+  });
 
   final int days;
   final int raysToday;
@@ -222,15 +251,26 @@ class ProofDaysLabel extends StatelessWidget {
     _ => '$days proof days',
   };
 
+  static String textFor(
+    AppLocalizations l10n,
+    int days, {
+    bool runEnded = false,
+  }) => switch (days) {
+    0 when runEnded => l10n.nextSunriseOneProof,
+    0 => l10n.noProofDaysYet,
+    _ => l10n.proofDaysCount(days),
+  };
+
   @override
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final ink = color ?? c.ink2;
     final label = [
-      text(days, runEnded: runEnded),
-      if (raysToday > 0) 'today’s sun is up',
-      if (cloudDay) 'one cloud day in hand',
+      textFor(l10n, days, runEnded: runEnded),
+      if (raysToday > 0) l10n.todaysSunIsUp,
+      if (cloudDay) l10n.oneCloudInHand,
     ].join(', ');
     return Semantics(
       label: label,
@@ -239,17 +279,25 @@ class ProofDaysLabel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          ProoflightSun(rays: raysToday, proofDays: days, size: 34, lineColor: ink.withValues(alpha: .7)),
+          ProoflightSun(
+            rays: raysToday,
+            proofDays: days,
+            size: 34,
+            lineColor: ink.withValues(alpha: .7),
+          ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              text(days, runEnded: runEnded),
+              textFor(l10n, days, runEnded: runEnded),
               style: t.label.copyWith(fontSize: 14, color: ink),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (cloudDay) ...[const SizedBox(width: 6), const CloudDayMark(size: 24, semanticLabel: null)],
+          if (cloudDay) ...[
+            const SizedBox(width: 6),
+            const CloudDayMark(size: 24, semanticLabel: null),
+          ],
         ],
       ),
     );
@@ -261,7 +309,12 @@ class ProofDaysLabel extends StatelessWidget {
 /// earned, free and visible as weather, never sold as a repair. [label] is
 /// the day it covers (a date in the week strip).
 class CloudDayMark extends StatelessWidget {
-  const CloudDayMark({super.key, this.size = 44, this.label, this.semanticLabel = 'Cloud day'});
+  const CloudDayMark({
+    super.key,
+    this.size = 44,
+    this.label,
+    this.semanticLabel = '',
+  });
 
   final double size;
   final String? label;
@@ -274,8 +327,15 @@ class CloudDayMark extends StatelessWidget {
     final light = Theme.of(context).brightness == Brightness.light;
     final fill = light ? const Color(0xFFE6EEF6) : const Color(0xFF2C3446);
     final edge = light ? const Color(0xFFC9D6E3) : const Color(0xFF3F4A60);
+    final accessibleLabel = semanticLabel == null
+        ? null
+        : semanticLabel!.isEmpty
+        ? context.l10n.cloudDay
+        : semanticLabel;
     return Semantics(
-      label: semanticLabel == null ? null : [semanticLabel!, ?label].join(', '),
+      label: accessibleLabel == null
+          ? null
+          : [accessibleLabel, ?label].join(', '),
       excludeSemantics: true,
       child: SizedBox(
         width: size,
@@ -287,7 +347,10 @@ class CloudDayMark extends StatelessWidget {
               : Padding(
                   padding: EdgeInsets.only(top: size * .16),
                   child: Center(
-                    child: Text(label!, style: t.label.weight(600).copyWith(color: c.ink2)),
+                    child: Text(
+                      label!,
+                      style: t.label.weight(600).copyWith(color: c.ink2),
+                    ),
                   ),
                 ),
         ),
@@ -307,10 +370,26 @@ class _CloudPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final path = Path()
-      ..addRRect(RRect.fromLTRBR(w * .02, h * .42, w * .98, h * .9, Radius.circular(h * .24)))
-      ..addOval(Rect.fromCircle(center: Offset(w * .34, h * .46), radius: h * .22))
-      ..addOval(Rect.fromCircle(center: Offset(w * .6, h * .38), radius: h * .28));
-    final outline = Path.combine(PathOperation.union, Path()..addPath(path, Offset.zero), Path());
+      ..addRRect(
+        RRect.fromLTRBR(
+          w * .02,
+          h * .42,
+          w * .98,
+          h * .9,
+          Radius.circular(h * .24),
+        ),
+      )
+      ..addOval(
+        Rect.fromCircle(center: Offset(w * .34, h * .46), radius: h * .22),
+      )
+      ..addOval(
+        Rect.fromCircle(center: Offset(w * .6, h * .38), radius: h * .28),
+      );
+    final outline = Path.combine(
+      PathOperation.union,
+      Path()..addPath(path, Offset.zero),
+      Path(),
+    );
     canvas.drawPath(outline, Paint()..color = fill);
     canvas.drawPath(
       outline,
@@ -322,7 +401,8 @@ class _CloudPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CloudPainter old) => old.fill != fill || old.edge != edge;
+  bool shouldRepaint(covariant _CloudPainter old) =>
+      old.fill != fill || old.edge != edge;
 }
 
 /// What Curre says when a run ends (audit §3, rule 8). Nothing is erased:
@@ -336,7 +416,8 @@ class RunEndedNote extends StatelessWidget {
   final int? best;
   final int? total;
 
-  static String headline(int days) => 'That run ended at ${days == 1 ? '1 proof day' : '$days proof days'}.';
+  static String headline(int days) =>
+      'That run ended at ${days == 1 ? '1 proof day' : '$days proof days'}.';
 
   static const next = 'Today’s proof starts the next sunrise.';
 
@@ -345,7 +426,8 @@ class RunEndedNote extends StatelessWidget {
   static String? record({int? best, int? total}) {
     final parts = [
       if (best != null) 'Best run $best',
-      if (total != null) total == 1 ? '1 proof day in all' : '$total proof days in all',
+      if (total != null)
+        total == 1 ? '1 proof day in all' : '$total proof days in all',
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
@@ -354,10 +436,20 @@ class RunEndedNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
-    final meta = record(best: best, total: total);
+    final l10n = context.l10n;
+    final metaParts = <String>[
+      if (best != null) l10n.bestRunCount(best!),
+      if (total != null) l10n.proofDaysInAll(total!),
+    ];
+    final meta = metaParts.isEmpty ? null : metaParts.join(' · ');
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(CurreSpace.s5, CurreSpace.s4, CurreSpace.s5, CurreSpace.s5),
+      padding: const EdgeInsets.fromLTRB(
+        CurreSpace.s5,
+        CurreSpace.s4,
+        CurreSpace.s5,
+        CurreSpace.s5,
+      ),
       decoration: BoxDecoration(
         color: c.raised,
         borderRadius: CurreShape.md,
@@ -372,14 +464,29 @@ class RunEndedNote extends StatelessWidget {
             child: Align(
               alignment: Alignment.bottomLeft,
               heightFactor: .5,
-              child: ProoflightSun(rays: 0, size: 72, rise: .3, lineColor: c.ink, semanticLabel: 'The next sunrise'),
+              child: ProoflightSun(
+                rays: 0,
+                size: 72,
+                rise: .3,
+                lineColor: c.ink,
+                semanticLabel: l10n.theNextSunrise,
+              ),
             ),
           ),
           const SizedBox(height: CurreSpace.s3),
-          Text(headline(endedAt), style: t.title.copyWith(fontSize: 18, height: 24 / 18)),
+          Text(
+            l10n.runEndedAt(l10n.proofDaysCount(endedAt)),
+            style: t.title.copyWith(fontSize: 18, height: 24 / 18),
+          ),
           const SizedBox(height: CurreSpace.s1),
-          Text(next, style: t.body.copyWith(color: c.ink2)),
-          if (meta != null) ...[const SizedBox(height: CurreSpace.s3), Text(meta, style: t.meta)],
+          Text(
+            l10n.todaysProofStartsNext,
+            style: t.body.copyWith(color: c.ink2),
+          ),
+          if (meta != null) ...[
+            const SizedBox(height: CurreSpace.s3),
+            Text(meta, style: t.meta),
+          ],
         ],
       ),
     );
@@ -440,7 +547,12 @@ class WeekDay {
 /// open to a proof day, for the moment today's sun rises. Display only in
 /// core: the days are not buttons.
 class WeekStrip extends StatelessWidget {
-  const WeekStrip({super.key, required this.days, this.session = Session.morning, this.todayLit = 0});
+  const WeekStrip({
+    super.key,
+    required this.days,
+    this.session = Session.morning,
+    this.todayLit = 0,
+  });
 
   final List<WeekDay> days;
   final Session session;
@@ -450,10 +562,13 @@ class WeekStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final sky = c.sky(session);
     // One line of caption at the reader's text size: every label sits in
     // the same height, so the day marks below stay in one row.
-    final labelHeight = MediaQuery.textScalerOf(context).scale(t.caption.fontSize ?? 13) * (t.caption.height ?? 1.4);
+    final labelHeight =
+        MediaQuery.textScalerOf(context).scale(t.caption.fontSize ?? 13) *
+        (t.caption.height ?? 1.4);
     return LayoutBuilder(
       builder: (context, box) {
         final col = box.maxWidth / days.length;
@@ -465,8 +580,18 @@ class WeekStrip extends StatelessWidget {
                 child: Semantics(
                   label: [
                     '${day.label} ${day.date}',
-                    if (day._today) 'today',
-                    if (day.state == DayState.today) todayLit >= 1 ? 'proof day' : 'still open' else day.description,
+                    if (day._today) l10n.dayToday,
+                    if (day.state == DayState.today)
+                      todayLit >= 1 ? l10n.dayProof : l10n.dayStillOpen
+                    else
+                      switch (day.state) {
+                        DayState.proof => l10n.dayProof,
+                        DayState.pending => l10n.dayPending,
+                        DayState.quiet => l10n.dayNoProof,
+                        DayState.cloud => l10n.dayCloud,
+                        DayState.today => l10n.dayToday,
+                        DayState.future => l10n.dayFuture,
+                      },
                   ].join(', '),
                   excludeSemantics: true,
                   child: Column(
@@ -482,7 +607,9 @@ class WeekStrip extends StatelessWidget {
                             child: Text(
                               day.label,
                               maxLines: 1,
-                              style: t.caption.copyWith(color: day._today ? c.ink : c.ink3).weight(day._today ? 700 : 520),
+                              style: t.caption
+                                  .copyWith(color: day._today ? c.ink : c.ink3)
+                                  .weight(day._today ? 700 : 520),
                             ),
                           ),
                         ),
@@ -528,24 +655,42 @@ class _DayDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = colors;
     if (day.state == DayState.cloud) {
-      return CloudDayMark(size: diameter, label: '${day.date}', semanticLabel: null);
+      return CloudDayMark(
+        size: diameter,
+        label: '${day.date}',
+        semanticLabel: null,
+      );
     }
     // A proof day wears an ember ring (a sun that rose), quiet enough that
     // the check-in card below stays the loudest thing on the screen.
     final proof = BorderSide(color: c.ember, width: 2.5);
     final (Color fill, Color fg, BorderSide side) = switch (day.state) {
       DayState.proof => (c.raised, c.ink, proof),
-      DayState.pending => (c.raised, c.ink2, BorderSide(color: c.ember.withValues(alpha: .38), width: 2.5)),
-      DayState.cloud || DayState.quiet => (c.raised, c.ink2, BorderSide(color: c.hairline)),
-      DayState.future => (Colors.transparent, c.ink3, BorderSide(color: c.hairline)),
+      DayState.pending => (
+        c.raised,
+        c.ink2,
+        BorderSide(color: c.ember.withValues(alpha: .38), width: 2.5),
+      ),
+      DayState.cloud ||
+      DayState.quiet => (c.raised, c.ink2, BorderSide(color: c.hairline)),
+      DayState.future => (
+        Colors.transparent,
+        c.ink3,
+        BorderSide(color: c.hairline),
+      ),
       DayState.today => (
         Color.lerp(sky.bg, c.raised, lit)!,
         Color.lerp(sky.fg, c.ink, lit)!,
-        BorderSide(color: Color.lerp(sky.fg, c.ember, lit)!, width: lit > 0 ? 2.5 : 2),
+        BorderSide(
+          color: Color.lerp(sky.fg, c.ember, lit)!,
+          width: lit > 0 ? 2.5 : 2,
+        ),
       ),
     };
     // A short pop as today lights up, then it settles.
-    final pop = lit <= 0 || lit >= 1 ? 1.0 : 1 + .14 * (lit < .5 ? lit * 2 : (1 - lit) * 2);
+    final pop = lit <= 0 || lit >= 1
+        ? 1.0
+        : 1 + .14 * (lit < .5 ? lit * 2 : (1 - lit) * 2);
     return Transform.scale(
       scale: pop,
       child: Container(
@@ -563,7 +708,9 @@ class _DayDot extends StatelessWidget {
             child: Text(
               '${day.date}',
               maxLines: 1,
-              style: type.label.weight(day.state == DayState.today ? 720 : 600).copyWith(color: fg),
+              style: type.label
+                  .weight(day.state == DayState.today ? 720 : 600)
+                  .copyWith(color: fg),
             ),
           ),
         ),
@@ -575,7 +722,13 @@ class _DayDot extends StatelessWidget {
 /// A count that rolls from [from] to [to] as [t] goes 0–1 (the `tick`
 /// token: a short decelerating roll).
 class RollingCount extends StatelessWidget {
-  const RollingCount({super.key, required this.from, required this.to, required this.t, required this.style});
+  const RollingCount({
+    super.key,
+    required this.from,
+    required this.to,
+    required this.t,
+    required this.style,
+  });
 
   final int from;
   final int to;
@@ -586,11 +739,12 @@ class RollingCount extends StatelessWidget {
   Widget build(BuildContext context) {
     // The window is one line of the number as it is drawn, large text
     // included, so the roll never clips the digits.
-    final h = MediaQuery.textScalerOf(context).scale(style.fontSize ?? 60) * 1.1;
+    final h =
+        MediaQuery.textScalerOf(context).scale(style.fontSize ?? 60) * 1.1;
     final shown = t >= .5 ? to : from;
     final width = '${math.max(from, to)}'.length;
     return Semantics(
-      label: ProofDaysLabel.text(shown),
+      label: ProofDaysLabel.textFor(context.l10n, shown),
       excludeSemantics: true,
       child: ClipRect(
         child: SizedBox(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'prooflight_view.dart';
@@ -27,20 +29,21 @@ class _HistoryBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final entries = _entries(controller);
     return CurrePage(
       child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               CurreSpace.gutter,
               CurreSpace.s3,
               CurreSpace.gutter,
               0,
             ),
             child: CurreTopBar(
-              title: 'History',
-              subtitle: 'The last 30 days · only on this phone',
+              title: l10n.history,
+              subtitle: l10n.historySubtitle,
             ),
           ),
           Expanded(
@@ -51,7 +54,7 @@ class _HistoryBody extends StatelessWidget {
                 const SizedBox(height: CurreSpace.s3),
                 _ProofSlot(controller: controller),
                 const SizedBox(height: CurreSpace.s6),
-                Text('What happened', style: type.title),
+                Text(l10n.whatHappened, style: type.title),
                 const SizedBox(height: CurreSpace.s3),
                 if (entries.isEmpty)
                   DecoratedBox(
@@ -70,10 +73,10 @@ class _HistoryBody extends StatelessWidget {
                             color: colors.emberText,
                           ),
                           const SizedBox(height: CurreSpace.s3),
-                          Text('A quiet start.', style: type.title),
+                          Text(l10n.historyEmptyTitle, style: type.title),
                           const SizedBox(height: CurreSpace.s2),
                           Text(
-                            'Your plans, and the apps you bring back, will show up here. It all stays on this phone.',
+                            l10n.historyEmptyBody,
                             style: type.body.copyWith(color: colors.ink2),
                             textAlign: TextAlign.center,
                           ),
@@ -101,6 +104,8 @@ class _DawnOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final today = controller.currentSession.localStartDate;
     final days = <LocalDate>[
       for (var offset = 6; offset >= 0; offset--) _addDays(today, -offset),
@@ -128,10 +133,10 @@ class _DawnOverview extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$count of 21 planned', style: type.title),
+            Text(l10n.plannedSessionsCount(count), style: type.title),
             const SizedBox(height: CurreSpace.s1),
             Text(
-              'Each square is a morning, afternoon or evening in the last 7 days. Filled ones started with a plan.',
+              l10n.historyOverviewHelp,
               style: type.caption.copyWith(color: colors.ink3),
             ),
             const SizedBox(height: CurreSpace.s4),
@@ -142,7 +147,7 @@ class _DawnOverview extends StatelessWidget {
                   children: [
                     SizedBox(
                       width: 42,
-                      child: Text(_shortDay(day), style: type.meta),
+                      child: Text(_shortDay(day, locale), style: type.meta),
                     ),
                     for (final session in SessionName.values) ...[
                       Expanded(
@@ -176,8 +181,12 @@ class _SessionMark extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final sky = colors.sky(session.designSession);
+    final l10n = context.l10n;
     return Semantics(
-      label: '${session.label}: ${planned ? 'planned' : 'no plan'}',
+      label: l10n.sessionPlanState(
+        session.localizedLabel(l10n),
+        planned ? l10n.planned : l10n.noPlan,
+      ),
       child: Container(
         height: 16,
         decoration: BoxDecoration(
@@ -205,14 +214,16 @@ class _ProofSlot extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final summary = controller.proofSummary;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final started = summary.totalProofDays > 0 || summary.cloudDays > 0;
     final toCloud = ProoflightRules.provedDaysPerCloud - summary.towardCloud;
     final cloudLine = summary.cloudInHand
-        ? 'You have a cloud day. $cloudDayLine'
+        ? l10n.proofCloudInHand(cloudDayLineFor(l10n))
         : summary.currentRun > 0
         ? toCloud == 1
-              ? '1 more proof day to your next cloud day.'
-              : '$toCloud more proof days to your next cloud day.'
+              ? l10n.oneMoreProofToCloud
+              : l10n.moreProofToCloud(toCloud)
         : null;
     return DecoratedBox(
       key: const Key('history-prooflight'),
@@ -238,25 +249,23 @@ class _ProofSlot extends StatelessWidget {
               // between figures.
               Text(
                 [
-                  '${proofDaysText(summary.totalProofDays)} in all',
-                  'Best run ${summary.bestRun}',
-                  summary.cloudDays == 1
-                      ? '1 cloud day'
-                      : '${summary.cloudDays} cloud days',
+                  l10n.proofDaysInAll(summary.totalProofDays),
+                  l10n.bestRunCount(summary.bestRun),
+                  l10n.cloudDaysCount(summary.cloudDays),
                 ].map((part) => part.replaceAll(' ', '\u00A0')).join(' · '),
                 style: type.meta,
               ),
             ],
             const SizedBox(height: CurreSpace.s4),
             WeekStrip(
-              days: proofWeek(summary),
+              days: proofWeek(summary, locale),
               session: controller.currentSession.session.designSession,
               todayLit: summary.raysToday > 0 ? 1 : 0,
             ),
             if (!started && summary.pendingDates.isEmpty) ...[
               const SizedBox(height: CurreSpace.s3),
               Text(
-                'After a task, say what changed. A specific note adds a proof day.',
+                l10n.historyProofHint,
                 style: type.caption.copyWith(color: colors.ink2),
               ),
             ],
@@ -285,12 +294,13 @@ List<Widget> _groupedEntries(
   List<_HistoryEntry> entries,
 ) {
   final type = Theme.of(context).extension<CurreType>()!;
+  final locale = Localizations.localeOf(context).toLanguageTag();
   final result = <Widget>[];
   LocalDate? previous;
   for (final entry in entries) {
     if (entry.date != previous) {
       if (result.isNotEmpty) result.add(const SizedBox(height: CurreSpace.s4));
-      result.add(Text(_longDate(entry.date), style: type.meta));
+      result.add(Text(_longDate(entry.date, locale), style: type.meta));
       result.add(const SizedBox(height: CurreSpace.s2));
       previous = entry.date;
     } else {
@@ -329,6 +339,7 @@ class _PlanHistoryCard extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final sky = colors.sky(plan.session.designSession);
+    final l10n = context.l10n;
     final highlights = <SpanHighlight>[
       for (final (index, app) in plan.apps.indexed)
         if (app.query case final span?)
@@ -354,12 +365,12 @@ class _PlanHistoryCard extends StatelessWidget {
                 const SizedBox(width: CurreSpace.s2),
                 Expanded(
                   child: Text(
-                    '${_capitalise(plan.session.label)} plan',
+                    l10n.historySessionPlan(plan.session.wireValue),
                     style: type.label.copyWith(color: sky.fg),
                   ),
                 ),
                 Text(
-                  '${plan.apps.length} ${plan.apps.length == 1 ? 'app' : 'apps'}',
+                  l10n.appsCount(plan.apps.length),
                   style: type.meta.copyWith(color: sky.fg),
                 ),
               ],
@@ -373,8 +384,10 @@ class _PlanHistoryCard extends StatelessWidget {
             if (plan.plannedEndsAt case final planned?) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
-                'Ended early at ${formatClock(plan.endsAt)}, '
-                'planned until ${formatClock(planned)}',
+                l10n.endedEarlyAt(
+                  formatClock(plan.endsAt),
+                  formatClock(planned),
+                ),
                 key: const Key('history-plan-ended-early'),
                 style: type.meta.copyWith(color: sky.fg),
               ),
@@ -411,6 +424,7 @@ class _AttemptHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final reason = attempt.reason;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -432,7 +446,7 @@ class _AttemptHistoryCard extends StatelessWidget {
                 if (attempt.kind != null) KindChip(kind: attempt.kind!),
                 if (attempt.overridden)
                   _PlainPill(
-                    label: 'Waited $overrideWaitWords',
+                    label: l10n.waitedDuration(overrideWaitWordsFor(l10n)),
                     foreground: colors.emberText,
                     background: colors.marker,
                   ),
@@ -440,13 +454,16 @@ class _AttemptHistoryCard extends StatelessWidget {
             ),
             const SizedBox(height: CurreSpace.s3),
             Text(
-              'Why now? · ${controller.appFor(attempt.packageName)?.label ?? attempt.packageName}',
+              l10n.whyNowApp(
+                controller.appFor(attempt.packageName)?.label ??
+                    attempt.packageName,
+              ),
               style: type.label,
             ),
             const SizedBox(height: CurreSpace.s1),
             if (reason == null)
               Text(
-                'Reason wasn’t stored in this older entry.',
+                l10n.olderReasonMissing,
                 style: type.caption.copyWith(color: colors.ink3),
               )
             else
@@ -480,6 +497,7 @@ class _GrantHistoryCard extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final open = colors.outcome(Outcome.open, laterTarget: Session.evening);
+    final l10n = context.l10n;
     final minutes = grant.expiresAt.difference(grant.grantedAt).inMinutes;
     return DecoratedBox(
       decoration: BoxDecoration(color: open.bg, borderRadius: CurreShape.md),
@@ -494,11 +512,17 @@ class _GrantHistoryCard extends StatelessWidget {
                 const SizedBox(width: CurreSpace.s2),
                 Expanded(
                   child: Text(
-                    '${controller.appFor(grant.packageName)?.label ?? grant.packageName} came back',
+                    l10n.appCameBack(
+                      controller.appFor(grant.packageName)?.label ??
+                          grant.packageName,
+                    ),
                     style: type.label.copyWith(color: open.fg),
                   ),
                 ),
-                Text('$minutes min', style: type.meta.copyWith(color: open.fg)),
+                Text(
+                  l10n.minutesShort(minutes),
+                  style: type.meta.copyWith(color: open.fg),
+                ),
               ],
             ),
             const SizedBox(height: CurreSpace.s2),
@@ -514,14 +538,14 @@ class _GrantHistoryCard extends StatelessWidget {
             if (grant.source == GrantSource.override) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
-                'Opened after waiting $overrideWaitWords',
+                l10n.openedAfterWaiting(overrideWaitWordsFor(l10n)),
                 style: type.caption.copyWith(color: open.fg),
               ),
             ],
             if (grant.source == GrantSource.later) ...[
               const SizedBox(height: CurreSpace.s2),
               Text(
-                'Saved for later, then opened from a plan',
+                l10n.openedFromLater,
                 style: type.caption.copyWith(color: open.fg),
               ),
             ],
@@ -545,11 +569,12 @@ class _ProofHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final (label, glyph) = record.countsForProoflight
-        ? ('Supported proof', CurreGlyphKind.check)
+        ? (l10n.supportedProof, CurreGlyphKind.check)
         : record.isPending
-        ? ('Waiting to be checked', CurreGlyphKind.later)
-        : ('Marked done', CurreGlyphKind.kindTask);
+        ? (l10n.waitingToBeChecked, CurreGlyphKind.later)
+        : (l10n.markedDone, CurreGlyphKind.kindTask);
     final supported = record.countsForProoflight;
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -590,7 +615,10 @@ class _ProofHistoryCard extends StatelessWidget {
             ),
             const SizedBox(height: CurreSpace.s1),
             if (record.note.isEmpty)
-              Text('No note', style: type.caption.copyWith(color: colors.ink3))
+              Text(
+                l10n.noNote,
+                style: type.caption.copyWith(color: colors.ink3),
+              )
             else
               SpanText(
                 record.note,
@@ -634,7 +662,7 @@ List<SpanHighlight> _historyHighlights(
       SpanHighlight(
         span.start,
         span.end,
-        semanticsLabel: 'Personal detail hidden',
+        semanticsLabel: context.l10n.personalDetailHidden,
         style: type.youSmall.copyWith(
           backgroundColor: colors.guardMark,
           color: colors.markInk,
@@ -657,11 +685,11 @@ class _OutcomePill extends StatelessWidget {
     );
     return _PlainPill(
       label: switch (outcome) {
-        UnlockOutcome.open => 'Opened',
-        UnlockOutcome.later => 'Not now',
-        UnlockOutcome.specify => 'Needed more detail',
-        UnlockOutcome.flagged => 'Not a reason',
-        UnlockOutcome.unavailable => 'Couldn’t check',
+        UnlockOutcome.open => context.l10n.outcomeOpened,
+        UnlockOutcome.later => context.l10n.outcomeNotNow,
+        UnlockOutcome.specify => context.l10n.outcomeNeededDetail,
+        UnlockOutcome.flagged => context.l10n.outcomeNotReason,
+        UnlockOutcome.unavailable => context.l10n.outcomeCouldNotCheck,
       },
       foreground: pair.fg,
       background: pair.bg,
@@ -764,32 +792,15 @@ LocalDate _addDays(LocalDate value, int days) {
   return LocalDate(shifted.year, shifted.month, shifted.day);
 }
 
-String _shortDay(LocalDate value) {
-  const names = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  final weekday = DateTime.utc(value.year, value.month, value.day).weekday;
-  return names[weekday - 1];
-}
+String _shortDay(LocalDate value, String locale) => DateFormat(
+  'EEE',
+  locale,
+).format(DateTime(value.year, value.month, value.day));
 
-String _longDate(LocalDate value) {
-  const months = <String>[
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  return '${_shortDay(value)}, ${value.day} ${months[value.month - 1]}';
-}
-
-String _capitalise(String value) =>
-    '${value[0].toUpperCase()}${value.substring(1)}';
+String _longDate(LocalDate value, String locale) => DateFormat(
+  'EEE, d MMMM',
+  locale,
+).format(DateTime(value.year, value.month, value.day));
 
 extension on UnlockOutcome {
   Outcome get designOutcome => switch (this) {
