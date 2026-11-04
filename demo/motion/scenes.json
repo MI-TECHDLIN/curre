@@ -1,0 +1,17 @@
+{
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "scenes": [
+    {"id": "hook", "duration": 12},
+    {"id": "setup", "duration": 23.5, "clip": "setup", "from": 0},
+    {"id": "oneline", "duration": 24, "clip": "setup", "from": 23.5},
+    {"id": "whynow", "duration": 32, "clip": "whynow", "from": 0},
+    {"id": "held", "duration": 20.5, "clip": "held", "from": 0, "then": {"clip": "rest", "at": 10}},
+    {"id": "proof", "duration": 22, "clip": "proof", "from": 0},
+    {"id": "later", "duration": 11, "clip": "later", "from": 0},
+    {"id": "focusend", "duration": 12, "clip": "focusend", "from": 0},
+    {"id": "arch", "duration": 16},
+    {"id": "end", "duration": 6}
+  ]
+}

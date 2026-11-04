@@ -8,3 +8,5 @@ motion/node_modules/
 motion/public/clips/
 motion/public/audio/
 motion/out/
+motion/.hyperframes/
+motion/assets/

@@ -100,7 +100,7 @@ Settings filmSettings({FocusPeriod? focus, String? avatarId}) => Settings(
 /// the demo server.
 class FilmWorld {
   FilmWorld({
-    required DateTime start,
+    required this.start,
     bool onboarded = true,
     Settings? settings,
     List<LaterItem> laterItems = const <LaterItem>[],
@@ -147,6 +147,8 @@ class FilmWorld {
     );
   }
 
+  /// Where the take's clock starts; [now] moves on with the film.
+  final DateTime start;
   DateTime now;
   final server = DemoServer();
   final homeSettings = FakeHomeSettings();

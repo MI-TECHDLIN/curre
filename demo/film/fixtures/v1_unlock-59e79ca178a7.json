@@ -1,0 +1,43 @@
+{
+  "route": "/v1/unlock",
+  "captured_at": "2026-11-04T11:32:22Z",
+  "source": "https://curre-zdfr.onrender.com",
+  "round_trip_ms": 561.0,
+  "request": {
+    "app_label": "Instagram",
+    "plan_intention": "Revise chapter 4 in Keep Notes and watch the G chord lesson on YouTube until 7",
+    "reason": "Reply to Ada about tomorrow’s study group",
+    "shortcut_labels": [],
+    "threshold": 0.7
+  },
+  "status": 200,
+  "response": {
+    "outcome": "open",
+    "kind": "person",
+    "confidence": 0.975,
+    "door": null,
+    "target": {
+      "text": "Reply to Ada about tomorrow’s study group",
+      "start": 0,
+      "end": 41
+    },
+    "person": {
+      "text": "Ada",
+      "start": 9,
+      "end": 12
+    },
+    "minutes": 5,
+    "guard": null,
+    "redactions": [
+      {
+        "kind": "person",
+        "start": 9,
+        "end": 12
+      }
+    ],
+    "usage": {
+      "credits": 9,
+      "model_ms": 203.526302
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "route": "/v1/later",
+  "captured_at": "2026-11-04T11:32:21Z",
+  "source": "https://curre-zdfr.onrender.com",
+  "round_trip_ms": 605.1,
+  "request": {
+    "plan": "Learn the Essence chords on YouTube and revise chapter 5 in Keep Notes until 9",
+    "items": [
+      {
+        "id": "later-4",
+        "app_label": "TikTok",
+        "text": "Just checking something quickly"
+      },
+      {
+        "id": "later-3",
+        "app_label": "Instagram",
+        "text": "The class page posted the chapter 5 summary notes"
+      },
+      {
+        "id": "later-2",
+        "app_label": "TikTok",
+        "text": "See the new dance trend everyone is doing"
+      },
+      {
+        "id": "later-1",
+        "app_label": "Instagram",
+        "text": "Tolu posted a tutorial on the Essence chord changes"
+      }
+    ]
+  },
+  "status": 200,
+  "response": {
+    "items": [
+      {
+        "id": "later-1",
+        "score": 0.9456,
+        "fits": true
+      },
+      {
+        "id": "later-3",
+        "score": 0.6046,
+        "fits": true
+      },
+      {
+        "id": "later-2",
+        "score": 0.001,
+        "fits": false
+      },
+      {
+        "id": "later-4",
+        "score": 0.0009,
+        "fits": false
+      }
+    ],
+    "usage": {
+      "credits": 1,
+      "model_ms": 21.217152
+    }
+  }
+}

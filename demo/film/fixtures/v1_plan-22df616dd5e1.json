@@ -1,0 +1,104 @@
+{
+  "route": "/v1/plan",
+  "captured_at": "2026-11-04T11:32:21Z",
+  "source": "https://curre-zdfr.onrender.com",
+  "round_trip_ms": 461.6,
+  "request": {
+    "session": "evening",
+    "intention": "Learn the Essence chords on YouTube and revise chapter 5 in Keep Notes until 9",
+    "candidates": [
+      {
+        "id": "com.google.android.calendar",
+        "label": "Calendar",
+        "shortcut_labels": [],
+        "query_door": true
+      },
+      {
+        "id": "com.google.android.deskclock",
+        "label": "Clock",
+        "shortcut_labels": [],
+        "query_door": false
+      },
+      {
+        "id": "com.google.android.apps.docs",
+        "label": "Drive",
+        "shortcut_labels": [],
+        "query_door": false
+      },
+      {
+        "id": "com.google.android.gm",
+        "label": "Gmail",
+        "shortcut_labels": [],
+        "query_door": true
+      },
+      {
+        "id": "com.google.android.keep",
+        "label": "Keep Notes",
+        "shortcut_labels": [
+          "New list",
+          "New note",
+          "Search"
+        ],
+        "query_door": false
+      },
+      {
+        "id": "com.google.android.apps.maps",
+        "label": "Maps",
+        "shortcut_labels": [],
+        "query_door": true
+      },
+      {
+        "id": "com.netflix.mediaclient",
+        "label": "Netflix",
+        "shortcut_labels": [],
+        "query_door": false
+      },
+      {
+        "id": "com.spotify.music",
+        "label": "Spotify",
+        "shortcut_labels": [],
+        "query_door": true
+      },
+      {
+        "id": "com.whatsapp",
+        "label": "WhatsApp",
+        "shortcut_labels": [],
+        "query_door": false
+      },
+      {
+        "id": "com.google.android.youtube",
+        "label": "YouTube",
+        "shortcut_labels": [],
+        "query_door": true
+      }
+    ]
+  },
+  "status": 200,
+  "response": {
+    "apps": [
+      {
+        "id": "com.google.android.keep",
+        "door": null,
+        "query": null
+      },
+      {
+        "id": "com.google.android.youtube",
+        "door": null,
+        "query": {
+          "text": "Learn the Essence chords",
+          "start": 0,
+          "end": 24
+        }
+      }
+    ],
+    "end_phrase": {
+      "text": "9",
+      "start": 77,
+      "end": 78
+    },
+    "usage": {
+      "credits": 5,
+      "model_ms": 115.008322
+    }
+  }
+}
