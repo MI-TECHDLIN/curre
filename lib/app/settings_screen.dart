@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'access_help.dart';
 import 'app_choice_screen.dart';
@@ -109,6 +110,13 @@ class _SettingsScreenState extends State<SettingsScreen>
                   animation: controller,
                   builder: (context, _) =>
                       FocusSettingsCard(controller: controller),
+                ),
+                const SizedBox(height: CurreSpace.s6),
+                _SettingsTile(
+                  glyph: CurreGlyphKind.curreSettings,
+                  title: context.l10n.language,
+                  subtitle: _languageName(context.l10n, settings.languageCode),
+                  onTap: _pickLanguage,
                 ),
                 const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Your day'),
@@ -231,9 +239,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   settings: settings,
                   onCheckInChanged: (value) =>
                       _saveNudges(settings.copyWith(checkInNudges: value)),
-                  onEverySessionChanged: (value) => _saveNudges(
-                    settings.copyWith(everySessionNudges: value),
-                  ),
+                  onEverySessionChanged: (value) =>
+                      _saveNudges(settings.copyWith(everySessionNudges: value)),
                   onFocusChanged: (value) =>
                       _saveNudges(settings.copyWith(focusNudges: value)),
                   onPlanEndingChanged: (value) =>
@@ -370,6 +377,54 @@ class _SettingsScreenState extends State<SettingsScreen>
       saved: 'Your ${session.label} now starts at ${starts[session]}.',
     );
   }
+
+  Future<void> _pickLanguage() async {
+    const system = 'system';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final l10n = context.l10n;
+        final current = controller.settings.languageCode ?? system;
+        return SimpleDialog(
+          title: Text(l10n.language),
+          children: [
+            for (final code in const [system, 'en', 'es', 'fr', 'pt', 'de'])
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(code),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _languageName(l10n, code == system ? null : code),
+                      ),
+                    ),
+                    if (current == code)
+                      const CurreGlyph(CurreGlyphKind.check, size: 20),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    await _save(
+      selected == system
+          ? controller.settings.copyWith(clearLanguageCode: true)
+          : controller.settings.copyWith(languageCode: selected),
+    );
+  }
+
+  static String _languageName(AppLocalizations l10n, String? code) =>
+      switch (code) {
+        null => l10n.systemLanguage,
+        'en' => l10n.languageEnglish,
+        'es' => l10n.languageSpanish,
+        'fr' => l10n.languageFrench,
+        'pt' => l10n.languagePortuguese,
+        'de' => l10n.languageGerman,
+        _ => code,
+      };
 
   Future<void> _saveThreshold(double value) => _save(
     controller.settings.copyWith(threshold: value),

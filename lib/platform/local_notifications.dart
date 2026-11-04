@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import '../core/models.dart';
+import '../l10n/l10n.dart';
 
 /// The notification families exposed to Android as separate channels.
 ///
@@ -21,6 +23,14 @@ extension CurreNotificationActionWire on CurreNotificationAction {
     CurreNotificationAction.snooze => 'snooze_10',
   };
 
+  String labelFor(AppLocalizations l10n) => switch (this) {
+    CurreNotificationAction.startCheckIn => l10n.planNow,
+    CurreNotificationAction.bringIntoSight => l10n.bringItBack,
+    CurreNotificationAction.addProof => l10n.addProof,
+    CurreNotificationAction.snooze => l10n.snoozeTenMinutes,
+  };
+
+  /// Kept for callers that build a notification without a locale.
   String get label => switch (this) {
     CurreNotificationAction.startCheckIn => 'Plan now',
     CurreNotificationAction.bringIntoSight => 'Bring back',
@@ -102,6 +112,7 @@ class CurreReminder {
     required this.destination,
     required this.actions,
     this.reference,
+    this.languageCode = 'en',
   });
 
   final int id;
@@ -112,6 +123,7 @@ class CurreReminder {
   final CurreNotificationDestination destination;
   final List<CurreNotificationAction> actions;
   final String? reference;
+  final String languageCode;
 
   String get payload => jsonEncode(<String, Object?>{
     'version': 1,
@@ -120,6 +132,7 @@ class CurreReminder {
     'title': title,
     'body': body,
     'reference': ?reference,
+    'language': languageCode,
   });
 }
 
@@ -204,6 +217,7 @@ CurreReminder? snoozedReminder(String? payload, DateTime now) {
       destination: destination,
       actions: defaultActionsFor(type),
       reference: json['reference'] as String?,
+      languageCode: json['language'] as String? ?? 'en',
     );
   } on Object {
     return null;
@@ -289,6 +303,7 @@ class LocalReminderService {
     await _gateway.initialize();
     final now = _now();
     final activePolicy = _policyFor(settings);
+    final l10n = _localizationsFor(settings);
     final resting = restDays.toSet();
     for (final session in SessionName.values) {
       final start = settings.sessionStarts[session]!;
@@ -332,13 +347,13 @@ class LocalReminderService {
           CurreReminder(
             id: id,
             type: CurreNotificationType.checkIn,
-            title: 'Plan your ${session.name}',
-            body:
-                'One sentence, and Curre puts just the apps you need on Home.',
+            title: l10n.planYourSession(session.localizedLabel(l10n)),
+            body: l10n.oneSentenceHome,
             scheduledAt: activePolicy.nextAllowed(occurrence),
             destination: CurreNotificationDestination.checkIn,
             actions: defaultActionsFor(CurreNotificationType.checkIn),
             reference: session.name,
+            languageCode: l10n.localeName,
           ),
         );
       }
@@ -367,19 +382,27 @@ class LocalReminderService {
     }
     final morning = settings.sessionStarts[SessionName.morning]!;
     final end = focus.endsOn;
-    final at = DateTime(end.year, end.month, end.day, morning.hour, morning.minute);
+    final at = DateTime(
+      end.year,
+      end.month,
+      end.day,
+      morning.hour,
+      morning.minute,
+    );
     if (!at.isAfter(_now())) return;
     final days = focus.lengthInDays;
+    final l10n = _localizationsFor(settings);
     await _gateway.scheduleReminder(
       CurreReminder(
         id: focusEndId,
         type: CurreNotificationType.focus,
-        title: 'Your focus is done',
-        body: 'See how your $days days went, and choose what comes next.',
+        title: l10n.focusDone,
+        body: l10n.focusDoneNotification(l10n.daysCount(days)),
         scheduledAt: activePolicy.nextAllowed(at),
         destination: CurreNotificationDestination.home,
         actions: defaultActionsFor(CurreNotificationType.focus),
         reference: end.toJson(),
+        languageCode: l10n.localeName,
       ),
     );
   }
@@ -416,6 +439,9 @@ class LocalReminderService {
 
     final now = _now();
     final localEnd = plan.endsAt.toLocal();
+    final l10n = settings == null
+        ? curreLocalizationsFor(PlatformDispatcher.instance.locale.languageCode)
+        : _localizationsFor(settings);
     if (activePolicy.allows(CurreNotificationType.planEnding)) {
       final proposed = localEnd.subtract(planHeadsUp);
       if (proposed.isAfter(now)) {
@@ -423,8 +449,8 @@ class LocalReminderService {
           CurreReminder(
             id: headsUpId,
             type: CurreNotificationType.planEnding,
-            title: 'Your ${plan.session.name} is almost done',
-            body: 'Your plan ends in 10 minutes. Choose what comes next.',
+            title: l10n.sessionAlmostDone(plan.session.localizedLabel(l10n)),
+            body: l10n.planEndsTenMinutes,
             scheduledAt: activePolicy.nextAllowed(proposed),
             destination: CurreNotificationDestination.checkIn,
             actions: const <CurreNotificationAction>[
@@ -432,6 +458,7 @@ class LocalReminderService {
               CurreNotificationAction.snooze,
             ],
             reference: plan.id,
+            languageCode: l10n.localeName,
           ),
         );
       }
@@ -444,8 +471,8 @@ class LocalReminderService {
           CurreReminder(
             id: proofId,
             type: CurreNotificationType.proof,
-            title: 'Add your proof',
-            body: 'A short note about what you got done counts as proof.',
+            title: l10n.addYourProof,
+            body: l10n.proofNotificationBody,
             scheduledAt: activePolicy.nextAllowed(proposed),
             destination: CurreNotificationDestination.proof,
             actions: const <CurreNotificationAction>[
@@ -453,6 +480,7 @@ class LocalReminderService {
               CurreNotificationAction.snooze,
             ],
             reference: plan.id,
+            languageCode: l10n.localeName,
           ),
         );
       }
@@ -462,6 +490,13 @@ class LocalReminderService {
   static int _sessionId(SessionName session, int day) =>
       _firstSessionId + day * SessionName.values.length + session.index;
 }
+
+AppLocalizations _localizationsFor(Settings settings) => curreLocalizationsFor(
+  effectiveLanguageCode(
+    preference: settings.languageCode,
+    phoneLocale: PlatformDispatcher.instance.locale,
+  ),
+);
 
 int _stableId(String value) {
   var hash = 0x811c9dc5;

@@ -5,14 +5,19 @@ void main() {
   const utc = FixedOffsetTimeZone(Duration.zero);
   final schedule = SessionSchedule.fromSettings(Settings(), timeZone: utc);
 
-  DateTime parse(String? text, DateTime now, {SessionWindow? window}) =>
-      resolvePlanEnd(
-        endPhrase: text == null
-            ? null
-            : SourceSpan(text: text, start: 0, end: text.runes.length),
-        now: now,
-        session: window ?? schedule.current(now),
-      );
+  DateTime parse(
+    String? text,
+    DateTime now, {
+    SessionWindow? window,
+    String language = 'en',
+  }) => resolvePlanEnd(
+    endPhrase: text == null
+        ? null
+        : SourceSpan(text: text, start: 0, end: text.runes.length),
+    now: now,
+    session: window ?? schedule.current(now),
+    languageCode: language,
+  );
 
   test('accepts every specified form', () {
     final morning = DateTime.utc(2026, 10, 24, 5);
@@ -32,6 +37,27 @@ void main() {
 
     final evening = DateTime.utc(2026, 10, 24, 18);
     expect(parse('1', evening), DateTime.utc(2026, 10, 25, 1));
+  });
+
+  test('accepts the five app languages and their usual time forms', () {
+    final morning = DateTime.utc(2026, 10, 24, 5);
+    expect(parse('until 7', morning), DateTime.utc(2026, 10, 24, 7));
+    expect(
+      parse('hasta las 7', morning, language: 'es'),
+      DateTime.utc(2026, 10, 24, 7),
+    );
+    expect(
+      parse('jusqu’à 7 h 30', morning, language: 'fr'),
+      DateTime.utc(2026, 10, 24, 7, 30),
+    );
+    expect(
+      parse('até às 7', morning, language: 'pt'),
+      DateTime.utc(2026, 10, 24, 7),
+    );
+    expect(
+      parse('bis 7 Uhr', morning, language: 'de'),
+      DateTime.utc(2026, 10, 24, 7),
+    );
   });
 
   test('junk, elapsed times, and times outside the session use its end', () {

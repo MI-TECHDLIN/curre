@@ -7,6 +7,7 @@ import 'package:timezone/data/latest.dart' as time_zone_data;
 import 'package:timezone/timezone.dart' as time_zone;
 
 import '../core/models.dart';
+import '../l10n/l10n.dart';
 import 'local_notifications.dart';
 
 class GrantNotificationNotice {
@@ -19,6 +20,7 @@ class GrantNotificationNotice {
     required this.expiresAt,
     required this.remaining,
     required this.packageName,
+    this.languageCode = 'en',
   });
 
   final int id;
@@ -29,6 +31,7 @@ class GrantNotificationNotice {
   final DateTime expiresAt;
   final Duration remaining;
   final String packageName;
+  final String languageCode;
 }
 
 abstract interface class GrantNotificationGateway {
@@ -87,16 +90,21 @@ class GrantNotificationService {
     }
 
     final minutes = grant.expiresAt.difference(grant.grantedAt).inMinutes;
+    final languageCode = effectiveLanguageCode(
+      preference: settings?.languageCode,
+      phoneLocale: PlatformDispatcher.instance.locale,
+    );
+    final l10n = curreLocalizationsFor(languageCode);
     final notice = GrantNotificationNotice(
       id: id,
-      ongoingTitle: '$appLabel is back for now',
-      ongoingBody:
-          '${_targetWords(grant)} · It hides again when the time is up.',
-      expiryTitle: '$appLabel is hidden again',
-      expiryBody: 'Your $minutes min for ${grant.reason.trim()} are up.',
+      ongoingTitle: l10n.appBackForNow(appLabel),
+      ongoingBody: l10n.grantOngoingBody(_targetWords(grant)),
+      expiryTitle: l10n.appHiddenAgain(appLabel),
+      expiryBody: l10n.grantExpiredBody(minutes, grant.reason.trim()),
       expiresAt: grant.expiresAt,
       remaining: grant.expiresAt.difference(now),
       packageName: grant.packageName,
+      languageCode: languageCode,
     );
     await _gateway.showOngoing(notice);
     await _gateway.scheduleExpiry(notice);
@@ -176,8 +184,7 @@ class FlutterGrantNotificationGateway
       };
 
   /// The Android channel each kind of notification posts to.
-  static String channelIdFor(CurreNotificationType type) =>
-      _channels[type]!.id;
+  static String channelIdFor(CurreNotificationType type) => _channels[type]!.id;
 
   final FlutterLocalNotificationsPlugin _plugin;
   final void Function(CurreNotificationIntent intent) _onResponse;
@@ -243,6 +250,7 @@ class FlutterGrantNotificationGateway
       usesChronometer: true,
       chronometerCountDown: true,
       timeoutAfter: notice.remaining.inMilliseconds,
+      languageCode: notice.languageCode,
     ),
     payload: _payload(
       type: CurreNotificationType.unlockTimeUp,
@@ -270,6 +278,7 @@ class FlutterGrantNotificationGateway
           actions: const <CurreNotificationAction>[
             CurreNotificationAction.bringIntoSight,
           ],
+          languageCode: notice.languageCode,
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: _payload(
@@ -296,6 +305,7 @@ class FlutterGrantNotificationGateway
           title: reminder.title,
           body: reminder.body,
           actions: reminder.actions,
+          languageCode: reminder.languageCode,
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: reminder.payload,
@@ -339,8 +349,10 @@ class FlutterGrantNotificationGateway
     bool usesChronometer = false,
     bool chronometerCountDown = false,
     int? timeoutAfter,
+    String languageCode = 'en',
   }) {
     final channel = _channels[type]!;
+    final l10n = curreLocalizationsFor(languageCode);
     return NotificationDetails(
       android: AndroidNotificationDetails(
         channel.id,
@@ -371,16 +383,19 @@ class FlutterGrantNotificationGateway
           hideExpandedLargeIcon: true,
           showBigPictureWhenCollapsed: true,
         ),
-        actions: actions.map(_androidAction).toList(growable: false),
+        actions: actions
+            .map((action) => _androidAction(action, l10n))
+            .toList(growable: false),
       ),
     );
   }
 
   static AndroidNotificationAction _androidAction(
     CurreNotificationAction action,
+    AppLocalizations l10n,
   ) => AndroidNotificationAction(
     action.wireValue,
-    action.label,
+    action.labelFor(l10n),
     showsUserInterface: true,
     contextual: action == CurreNotificationAction.bringIntoSight,
     allowGeneratedReplies: action == CurreNotificationAction.addProof,
@@ -388,8 +403,8 @@ class FlutterGrantNotificationGateway
         ? SemanticAction.reply
         : SemanticAction.none,
     inputs: action == CurreNotificationAction.addProof
-        ? const <AndroidNotificationActionInput>[
-            AndroidNotificationActionInput(label: 'What did you get done?'),
+        ? <AndroidNotificationActionInput>[
+            AndroidNotificationActionInput(label: l10n.whatDidYouGetDone),
           ]
         : const <AndroidNotificationActionInput>[],
   );

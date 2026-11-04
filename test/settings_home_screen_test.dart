@@ -47,6 +47,28 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   }
 
+  testWidgets('language follows the phone by default and can be chosen', (
+    tester,
+  ) async {
+    final controller = fakeController();
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: SettingsScreen(controller: controller),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Phone language'), findsOneWidget);
+    await tapText(tester, 'Language');
+    await tapText(tester, 'Español');
+
+    expect(controller.settings.languageCode, 'es');
+  });
+
   group('Hidden apps in settings', () {
     Future<void> showAccess(WidgetTester tester, String title) async {
       await tester.scrollUntilVisible(

@@ -189,9 +189,11 @@ class Settings {
     this.proofNudges = false,
     this.focusNudges = true,
     this.focus,
+    String? languageCode,
     String? displayName,
     String? avatarId,
-  }) : displayName = normalizeDisplayName(displayName),
+  }) : languageCode = _normalizeLanguageCode(languageCode),
+       displayName = normalizeDisplayName(displayName),
        avatarId = _normalizeOptionalText(avatarId),
        sessionStarts = Map.unmodifiable(
          sessionStarts ??
@@ -270,6 +272,9 @@ class Settings {
       // Absent for people who set up before focus periods existed; Home
       // offers them one gently. An unreadable focus is dropped, not fatal.
       focus: _focus(json['focus']),
+      // Null means follow the phone. Unknown future codes remain harmless:
+      // the app falls back to the phone until that language is available.
+      languageCode: _nullableString(json['languageCode'], 'languageCode'),
       // Absent in settings saved before names existed, which still load.
       displayName: _nullableString(json['displayName'], 'displayName'),
       // Absent in settings saved before avatars existed, which still load.
@@ -309,6 +314,9 @@ class Settings {
   /// is set.
   final FocusPeriod? focus;
 
+  /// A two-letter language override, or null to follow the phone.
+  final String? languageCode;
+
   bool get hasAnyNudges =>
       checkInNudges ||
       planEndingNudges ||
@@ -342,6 +350,8 @@ class Settings {
     bool? focusNudges,
     FocusPeriod? focus,
     bool clearFocus = false,
+    String? languageCode,
+    bool clearLanguageCode = false,
     String? displayName,
     bool clearDisplayName = false,
     String? avatarId,
@@ -364,6 +374,7 @@ class Settings {
     proofNudges: proofNudges ?? this.proofNudges,
     focusNudges: focusNudges ?? this.focusNudges,
     focus: clearFocus ? null : focus ?? this.focus,
+    languageCode: clearLanguageCode ? null : languageCode ?? this.languageCode,
     displayName: clearDisplayName ? null : displayName ?? this.displayName,
     avatarId: clearAvatarId ? null : avatarId ?? this.avatarId,
   );
@@ -379,6 +390,11 @@ class Settings {
   static String? _normalizeOptionalText(String? value) {
     final tidy = value?.trim();
     return tidy == null || tidy.isEmpty ? null : tidy;
+  }
+
+  static String? _normalizeLanguageCode(String? value) {
+    final code = value?.trim().toLowerCase().split(RegExp('[-_]')).first;
+    return code == null || !RegExp(r'^[a-z]{2}$').hasMatch(code) ? null : code;
   }
 
   void _validate() {
@@ -424,6 +440,7 @@ class Settings {
     'unlockTimeUpNudges': unlockTimeUpNudges,
     'proofNudges': proofNudges,
     'focusNudges': focusNudges,
+    if (languageCode != null) 'languageCode': languageCode,
     if (focus != null) 'focus': focus!.toJson(),
     if (displayName != null) 'displayName': displayName,
     if (avatarId != null) 'avatarId': avatarId,

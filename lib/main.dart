@@ -16,6 +16,7 @@ import 'app/voice_sheet.dart';
 import 'design/design.dart';
 import 'doors/door_lab_screen.dart';
 import 'gallery/gallery_screen.dart';
+import 'l10n/l10n.dart';
 import 'platform/platform.dart';
 
 void main() {
@@ -64,7 +65,12 @@ class _CurreAppState extends State<CurreApp> {
       unawaited(_rememberBootstrappedController());
     } else {
       _resolvedController = widget.controller;
+      _resolvedController!.addListener(_handleControllerChanged);
     }
+  }
+
+  void _handleControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _rememberBootstrappedController() async {
@@ -72,6 +78,7 @@ class _CurreAppState extends State<CurreApp> {
       final controller = await _bootstrap!;
       if (!mounted) return;
       _resolvedController = controller;
+      controller.addListener(_handleControllerChanged);
       final pending = _pendingNotification;
       _pendingNotification = null;
       if (pending != null) _handleNotification(pending);
@@ -83,6 +90,7 @@ class _CurreAppState extends State<CurreApp> {
   @override
   void dispose() {
     _notificationSubscription.cancel();
+    _resolvedController?.removeListener(_handleControllerChanged);
     final future = _bootstrap;
     if (future != null) future.then((controller) => controller.dispose());
     super.dispose();
@@ -92,7 +100,12 @@ class _CurreAppState extends State<CurreApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: _navigatorKey,
-      title: 'Curre',
+      onGenerateTitle: (context) => context.l10n.appName,
+      locale: curreLocaleForPreference(
+        _resolvedController?.settings.languageCode,
+      ),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
       themeMode: widget.themeMode,
       theme: curreTheme(Brightness.light),
@@ -309,19 +322,21 @@ class _AppInventoryRetry extends StatelessWidget {
                   ),
                   const SizedBox(height: CurreSpace.s4),
                   Text(
-                    'Couldn’t read your apps',
+                    context.l10n.couldNotReadApps,
                     style: type.headline,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: CurreSpace.s2),
                   Text(
-                    'Curre couldn’t read the apps installed on this phone. Try again, and your real apps will appear here.',
+                    context.l10n.couldNotReadAppsBody,
                     style: type.body.copyWith(color: colors.ink2),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: CurreSpace.s5),
                   CurrePrimaryButton(
-                    label: loading ? 'Reading apps…' : 'Try again',
+                    label: loading
+                        ? context.l10n.readingApps
+                        : context.l10n.tryAgain,
                     onPressed: loading ? null : controller.retryAppInventory,
                   ),
                 ],

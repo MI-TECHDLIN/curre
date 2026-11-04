@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
 import '../curre_type.dart';
+import '../../l10n/l10n.dart';
 import 'curre_glyph.dart';
 
 /// Word and glyph Curre shows for each [ReasonKind] (design report 3.7 / 4.6).
@@ -29,7 +30,12 @@ const Map<ReasonKind, CurreGlyphKind> kindGlyphs = {
 /// [threshold] plus the mono number, as on the gate's "Ask" and "Thinking"
 /// states.
 class KindChip extends StatelessWidget {
-  const KindChip({super.key, required this.kind, this.confidence, this.threshold = 0.70});
+  const KindChip({
+    super.key,
+    required this.kind,
+    this.confidence,
+    this.threshold = 0.70,
+  });
 
   final ReasonKind kind;
 
@@ -41,10 +47,20 @@ class KindChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = Theme.of(context).extension<CurreColors>()!;
     final t = Theme.of(context).extension<CurreType>()!;
-    final label = kindLabels[kind]!;
+    final l10n = context.l10n;
+    final label = switch (kind) {
+      ReasonKind.task => l10n.kindTask,
+      ReasonKind.person => l10n.kindPerson,
+      ReasonKind.timeSensitive => l10n.kindTimeSensitive,
+      ReasonKind.browse => l10n.kindBrowse,
+      ReasonKind.unclear => l10n.kindUnclear,
+    };
+    final percent = ((confidence ?? 0) * 100).round();
 
     return Semantics(
-      label: confidence == null ? label : '$label, confidence ${(confidence! * 100).round()} percent',
+      label: confidence == null
+          ? label
+          : l10n.confidencePercent(label, percent),
       excludeSemantics: true,
       child: DecoratedBox(
         decoration: ShapeDecoration(
@@ -52,7 +68,12 @@ class KindChip extends StatelessWidget {
           shape: StadiumBorder(side: BorderSide(color: c.hairline)),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(CurreSpace.s3, CurreSpace.s2, CurreSpace.s4, CurreSpace.s2),
+          padding: const EdgeInsets.fromLTRB(
+            CurreSpace.s3,
+            CurreSpace.s2,
+            CurreSpace.s4,
+            CurreSpace.s2,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -61,16 +82,25 @@ class KindChip extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
-                  style: t.label.weight(640).copyWith(color: c.ink, fontSize: 14),
+                  style: t.label
+                      .weight(640)
+                      .copyWith(color: c.ink, fontSize: 14),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (confidence != null) ...[
                 const SizedBox(width: CurreSpace.s3),
-                _ConfidenceMeter(value: confidence!, threshold: threshold, colors: c),
+                _ConfidenceMeter(
+                  value: confidence!,
+                  threshold: threshold,
+                  colors: c,
+                ),
                 const SizedBox(width: CurreSpace.s2),
-                Text('${(confidence! * 100).round()}%', style: t.figure.copyWith(fontSize: 13, color: c.ink2)),
+                Text(
+                  '${(confidence! * 100).round()}%',
+                  style: t.figure.copyWith(fontSize: 13, color: c.ink2),
+                ),
               ],
             ],
           ),
@@ -81,7 +111,11 @@ class KindChip extends StatelessWidget {
 }
 
 class _ConfidenceMeter extends StatelessWidget {
-  const _ConfidenceMeter({required this.value, required this.threshold, required this.colors});
+  const _ConfidenceMeter({
+    required this.value,
+    required this.threshold,
+    required this.colors,
+  });
 
   final double value;
   final double threshold;
@@ -108,7 +142,12 @@ class _ConfidenceMeter extends StatelessWidget {
 }
 
 class _ConfidenceMeterPainter extends CustomPainter {
-  _ConfidenceMeterPainter({required this.value, required this.threshold, required this.track, required this.fill});
+  _ConfidenceMeterPainter({
+    required this.value,
+    required this.threshold,
+    required this.track,
+    required this.fill,
+  });
 
   final double value;
   final double threshold;
@@ -118,7 +157,10 @@ class _ConfidenceMeterPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final radius = size.height / 2;
-    final trackRect = RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, size.width, size.height), Radius.circular(radius));
+    final trackRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    );
     canvas.drawRRect(trackRect, Paint()..color = track);
 
     if (value > 0) {

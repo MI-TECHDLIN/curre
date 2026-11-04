@@ -2,8 +2,8 @@ import 'models.dart';
 import 'sessions.dart';
 import 'span.dart';
 
-final RegExp _clockPattern = RegExp(
-  r'^(?:(?:till|until)\s+)?(noon|(?:0?[1-9]|1[0-2])(?:(?::|\.)[0-5]\d)?\s*(?:am|pm)?)$',
+final RegExp _leadingTimeWords = RegExp(
+  r"^(?:(?:till|until)|(?:hasta(?:\s+las)?)|(?:até(?:\s+às)?)|(?:jusqu['’]?(?:à|a)?)|bis)\s+",
   caseSensitive: false,
 );
 
@@ -14,14 +14,13 @@ DateTime resolvePlanEnd({
   required SourceSpan? endPhrase,
   required DateTime now,
   required SessionWindow session,
+  String languageCode = 'en',
 }) {
   final phrase = endPhrase?.text.trim();
   if (phrase == null || phrase.isEmpty) return session.endsAt.toUtc();
 
-  final match = _clockPattern.firstMatch(phrase);
-  if (match == null) return session.endsAt.toUtc();
-  final token = match.group(1)!.toLowerCase().replaceAll(' ', '');
-  final times = _candidateTimes(token);
+  final token = _normaliseTimePhrase(phrase, languageCode);
+  final times = _candidateTimes(token, languageCode);
   if (times == null) return session.endsAt.toUtc();
 
   final current = now.toUtc();
@@ -61,18 +60,55 @@ DateTime resolvePlanEnd({
   return matches.first;
 }
 
-List<LocalTime>? _candidateTimes(String token) {
-  if (token == 'noon') return const <LocalTime>[LocalTime(12)];
+String _normaliseTimePhrase(String phrase, String languageCode) {
+  var token = phrase.toLowerCase().trim().replaceFirst(_leadingTimeWords, '');
+  token = token
+      .replaceAll(RegExp(r'\bp\s*\.\s*m\s*\.?'), 'pm')
+      .replaceAll(RegExp(r'\ba\s*\.\s*m\s*\.?'), 'am')
+      .replaceAll(RegExp(r'\s+uhr\b'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  // French and Portuguese commonly write 7h30; a trailing h means :00.
+  token = token.replaceFirstMapped(
+    RegExp(r'^(\d{1,2})\s*h\s*(\d{2})$'),
+    (match) => '${match.group(1)}:${match.group(2)}',
+  );
+  token = token.replaceFirstMapped(
+    RegExp(r'^(\d{1,2})\s*h$'),
+    (match) => match.group(1)!,
+  );
+  return token.replaceAll(' ', '');
+}
+
+List<LocalTime>? _candidateTimes(String token, String languageCode) {
+  final language = languageCode.toLowerCase().split(RegExp('[-_]')).first;
+  final noon = switch (language) {
+    'es' => const {'mediodía', 'mediodia'},
+    'fr' => const {'midi'},
+    'pt' => const {'meio-dia', 'meiodia'},
+    'de' => const {'mittag'},
+    _ => const {'noon'},
+  };
+  final midnight = switch (language) {
+    'es' => const {'medianoche'},
+    'fr' => const {'minuit'},
+    'pt' => const {'meia-noite', 'meianoite'},
+    'de' => const {'mitternacht'},
+    _ => const {'midnight'},
+  };
+  if (noon.contains(token)) return const <LocalTime>[LocalTime(12)];
+  if (midnight.contains(token)) return const <LocalTime>[LocalTime(0)];
 
   final match = RegExp(r'^(\d{1,2})(?:(?::|\.)(\d{2}))?(am|pm)?$')
       .firstMatch(token);
   if (match == null) return null;
   final hour = int.parse(match.group(1)!);
   final minute = int.tryParse(match.group(2) ?? '0');
-  if (hour < 1 || hour > 12 || minute == null || minute > 59) return null;
+  if (hour < 0 || hour > 23 || minute == null || minute > 59) return null;
 
   final meridiem = match.group(3);
   if (meridiem != null) {
+    if (hour < 1 || hour > 12) return null;
     final hour24 = switch (meridiem) {
       'am' => hour == 12 ? 0 : hour,
       'pm' => hour == 12 ? 12 : hour + 12,
@@ -80,6 +116,8 @@ List<LocalTime>? _candidateTimes(String token) {
     };
     return <LocalTime>[LocalTime(hour24, minute)];
   }
+
+  if (hour == 0 || hour > 12) return <LocalTime>[LocalTime(hour, minute)];
 
   if (hour == 12) {
     return <LocalTime>[LocalTime(0, minute), LocalTime(12, minute)];

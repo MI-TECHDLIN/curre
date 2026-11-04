@@ -535,6 +535,7 @@ void main() {
     expect(sent.single, <String, Object?>{
       'task': 'Learn the G chord on YouTube',
       'note': 'I switched from G to C without looking',
+      'language': 'en',
     });
     expect(find.byKey(const Key('proof-accepted')), findsOneWidget);
     expect(find.text('Today’s sun is up'), findsOneWidget);

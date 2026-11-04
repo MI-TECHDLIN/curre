@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import '../curre_colors.dart';
 import '../curre_tokens.dart';
 import '../curre_type.dart';
+import '../../l10n/l10n.dart';
 import 'curre_glyph.dart';
 
 /// The glyph each outcome carries. `later` shows the sky of the session
 /// it can wait for (its card borrows that sky too), so the icon and the
 /// colour say the same thing: "this evening".
-CurreGlyphKind outcomeGlyph(Outcome o, {Session laterTarget = Session.evening}) => switch (o) {
+CurreGlyphKind outcomeGlyph(
+  Outcome o, {
+  Session laterTarget = Session.evening,
+}) => switch (o) {
   Outcome.open => CurreGlyphKind.door,
   Outcome.later => switch (laterTarget) {
     Session.morning => CurreGlyphKind.sessionMorning,
@@ -28,6 +32,15 @@ String outcomeGlyphLabel(Outcome o) => switch (o) {
   Outcome.flagged => 'Not a reason',
   Outcome.unavailable => 'Couldn’t check',
 };
+
+String localizedOutcomeGlyphLabel(BuildContext context, Outcome outcome) =>
+    switch (outcome) {
+      Outcome.open => context.l10n.outcomeGlyphOpen,
+      Outcome.later => context.l10n.outcomeGlyphLater,
+      Outcome.specify => context.l10n.outcomeGlyphSpecify,
+      Outcome.flagged => context.l10n.outcomeGlyphFlagged,
+      Outcome.unavailable => context.l10n.outcomeGlyphUnavailable,
+    };
 
 /// The unlock gate's outcome card (design report 4.6): a dome card in the
 /// outcome's tint, carrying its glyph and headline, then an optional body
@@ -61,7 +74,12 @@ class OutcomeCard extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(color: pair.bg, borderRadius: CurreShape.dome),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(CurreSpace.s4, CurreSpace.s4, CurreSpace.s4, CurreSpace.s5),
+        padding: const EdgeInsets.fromLTRB(
+          CurreSpace.s4,
+          CurreSpace.s4,
+          CurreSpace.s4,
+          CurreSpace.s5,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -73,12 +91,15 @@ class OutcomeCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(color: pair.fg.withValues(alpha: .12), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                    color: pair.fg.withValues(alpha: .12),
+                    shape: BoxShape.circle,
+                  ),
                   child: CurreGlyph(
                     outcomeGlyph(outcome, laterTarget: laterTarget),
                     size: 20,
                     color: pair.fg,
-                    semanticLabel: outcomeGlyphLabel(outcome),
+                    semanticLabel: localizedOutcomeGlyphLabel(context, outcome),
                   ),
                 ),
                 const SizedBox(width: CurreSpace.s3),
@@ -87,7 +108,11 @@ class OutcomeCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 5),
                     child: Text(
                       headline,
-                      style: t.title.copyWith(color: pair.fg, fontSize: 20, height: 26 / 20),
+                      style: t.title.copyWith(
+                        color: pair.fg,
+                        fontSize: 20,
+                        height: 26 / 20,
+                      ),
                     ),
                   ),
                 ),
@@ -97,10 +122,16 @@ class OutcomeCard extends StatelessWidget {
               const SizedBox(height: CurreSpace.s2),
               Padding(
                 padding: const EdgeInsets.only(left: 48),
-                child: Text(body!, style: t.body.copyWith(color: pair.fg.withValues(alpha: .86))),
+                child: Text(
+                  body!,
+                  style: t.body.copyWith(color: pair.fg.withValues(alpha: .86)),
+                ),
               ),
             ],
-            if (child != null) ...[const SizedBox(height: CurreSpace.s3), child!],
+            if (child != null) ...[
+              const SizedBox(height: CurreSpace.s3),
+              child!,
+            ],
           ],
         ),
       ),

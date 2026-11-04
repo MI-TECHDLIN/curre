@@ -69,8 +69,19 @@ def test_later_sends_one_rerank_call_with_plan_as_query(make_client):
         {"id": "later-2", "title": "YouTube", "text": "watch the guitar cover Marcus uploaded"},
         {"id": "later-3", "title": "X", "text": "catch up on the football transfer news"},
     ]
-    assert call["instructions"] == clocked_pipeline.LATER_INSTRUCTIONS
+    assert call["instructions"].startswith(clocked_pipeline.LATER_INSTRUCTIONS)
+    assert "language code en" in call["instructions"]
     assert call["max_attempts"] == clocked_pipeline.LATER_MAX_ATTEMPTS
+
+
+def test_later_passes_the_requested_language_to_rerank(make_client):
+    async def rerank(*, query, documents, **kwargs):
+        return make_rerank_result([rerank_entry(0, documents[0]["id"], 0.9)])
+
+    client = make_client(_no_pipeline, rerank=rerank)
+    client.post("/v1/later", json={**_payload(items=ITEMS[:1]), "language": "fr"})
+
+    assert "language code fr" in client.fake.rerank_calls[0]["instructions"]
 
 
 def test_later_order_follows_the_plan(make_client):

@@ -92,7 +92,12 @@ class SpeechInputService {
 
   /// The quiet background download of the voice files.
   final VoicePrefetcher prefetch;
-  final String Function() _language;
+  String Function() _language;
+
+  /// Curre replaces the phone-only default with its saved language choice.
+  /// Keeping this injectable also makes the Whisper hint deterministic in
+  /// tests without changing the recognizer itself.
+  set languageProvider(String Function() value) => _language = value;
 
   SpeechInputPresenter? presenter;
   var _open = false;

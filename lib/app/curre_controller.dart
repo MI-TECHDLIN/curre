@@ -8,6 +8,7 @@ import '../doors/door_models.dart';
 import '../doors/door_router.dart';
 import '../doors/launcher_channel.dart';
 import '../doors/query_door_allowlist.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'onboarding/app_hints.dart';
 
@@ -88,7 +89,12 @@ class CurreController extends ChangeNotifier {
        laterItems = List<LaterItem>.of(laterItems),
        restDays = List<LocalDate>.of(restDays),
        pendingPrompts = Set<ContextPrompt>.of(pendingPrompts),
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now {
+    this.speech.languageProvider = () => effectiveLanguageCode(
+      preference: this.settings.languageCode,
+      phoneLocale: PlatformDispatcher.instance.locale,
+    );
+  }
 
   static Future<CurreController> bootstrap() async {
     const launcher = LauncherChannel();
@@ -256,6 +262,11 @@ class CurreController extends ChangeNotifier {
   final SpeechInputService speech;
   final CurreApiClient? api;
   final DateTime Function() _now;
+
+  String get languageCode => effectiveLanguageCode(
+    preference: settings.languageCode,
+    phoneLocale: PlatformDispatcher.instance.locale,
+  );
 
   Settings settings;
   List<LaunchableApp> apps;
@@ -1252,6 +1263,7 @@ class CurreController extends ChangeNotifier {
         session: currentSession.session,
         intention: intention,
         candidates: requestCandidates,
+        language: languageCode,
       ),
     );
     stopwatch.stop();
@@ -1322,6 +1334,7 @@ class CurreController extends ChangeNotifier {
         endPhrase: endPhrase,
         now: instant,
         session: window,
+        languageCode: languageCode,
       ),
       endPhrase: endPhrase,
       source: source,
@@ -1692,7 +1705,11 @@ class CurreController extends ChangeNotifier {
     if (client == null) return const ProofResponse.pending();
     final stopwatch = Stopwatch()..start();
     final response = await client.proof(
-      ProofRequest(task: _clip(task, 500), note: _clip(note, 300)),
+      ProofRequest(
+        task: _clip(task, 500),
+        note: _clip(note, 300),
+        language: languageCode,
+      ),
     );
     stopwatch.stop();
     lastProofCall = CallReceipt(
@@ -1838,6 +1855,7 @@ class CurreController extends ChangeNotifier {
     final response = await client.later(
       LaterRequest(
         plan: _clip(intention, 500),
+        language: languageCode,
         items: <LaterRequestItem>[
           for (final item in ranked)
             LaterRequestItem(
@@ -1953,6 +1971,7 @@ class CurreController extends ChangeNotifier {
               planIntention: activePlan?.intention,
               reason: reason,
               threshold: settings.threshold,
+              language: languageCode,
               shortcutLabels: cleanShortcutLabels(
                 shortcuts.map((shortcut) => shortcut.shortLabel),
               ),

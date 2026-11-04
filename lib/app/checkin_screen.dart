@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/speech_input.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
@@ -64,6 +65,8 @@ class _CheckinScreenState extends State<CheckinScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
+    final l10n = context.l10n;
+    final session = controller.currentSession.session.localizedLabel(l10n);
     return CurrePage(
       child: Column(
         children: [
@@ -74,9 +77,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               CurreSpace.gutter,
               0,
             ),
-            child: CurreTopBar(
-              title: 'Plan your ${controller.currentSession.session.label}',
-            ),
+            child: CurreTopBar(title: l10n.planYourSession(session)),
           ),
           Expanded(
             child: AnimatedSwitcher(
@@ -98,7 +99,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                 CurreSpace.s4,
               ),
               child: CurrePrimaryButton(
-                label: 'Set my ${controller.currentSession.session.label}',
+                label: l10n.setMySession(session),
                 glyph: CurreGlyphKind.go,
                 onPressed: _intention.text.trim().isEmpty ? null : _submit,
                 background: colors.ember,
@@ -113,6 +114,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   Widget _compose(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final session = controller.currentSession.session;
     final designSession = session.designSession;
     final sky = colors.sky(designSession);
@@ -147,8 +149,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
               live: true,
               water: day.value,
               waterFrom: day.value,
-              waterLabel:
-                  'Today is ${(day.value * 100).round()} percent complete',
+              waterLabel: l10n.todayPercent((day.value * 100).round()),
               child: Align(
                 alignment: Alignment.topLeft,
                 child: ConstrainedBox(
@@ -158,14 +159,14 @@ class _CheckinScreenState extends State<CheckinScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'What’s this ${session.label} for?',
+                        l10n.whatsThisSessionFor(session.localizedLabel(l10n)),
                         style: type.title
                             .weight(720)
                             .copyWith(color: sky.fg, fontSize: 26),
                       ),
                       const SizedBox(height: CurreSpace.s2),
                       Text(
-                        'One sentence. Only what you name shows on Home.',
+                        l10n.oneSentenceHome,
                         style: type.body.copyWith(
                           color: sky.fg.withValues(alpha: .86),
                         ),
@@ -186,12 +187,12 @@ class _CheckinScreenState extends State<CheckinScreen> {
             style: type.you,
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
-              labelText: 'Your plan',
-              hintText: 'Learn the G chord on YouTube till 7',
+              labelText: l10n.yourPlanLabel,
+              hintText: l10n.planHint,
               filled: true,
               fillColor: colors.raised,
               suffixIcon: IconButton(
-                tooltip: 'Say your plan',
+                tooltip: l10n.sayYourPlan,
                 onPressed: _listen,
                 icon: CurreGlyph(CurreGlyphKind.speak, color: colors.emberText),
               ),
@@ -214,6 +215,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   Widget _thinking(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final candidates = controller.candidateApps;
     return SingleChildScrollView(
       key: const ValueKey('thinking'),
@@ -222,16 +224,16 @@ class _CheckinScreenState extends State<CheckinScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: CurreSpace.s8),
-          Text('Getting your apps ready…', style: type.headline),
+          Text(l10n.gettingAppsReady, style: type.headline),
           const SizedBox(height: CurreSpace.s3),
           Text(_intention.text, style: type.youLarge),
           const SizedBox(height: CurreSpace.s6),
-          const HorizonLine(scanning: true, semanticLabel: 'Choosing apps'),
+          HorizonLine(scanning: true, semanticLabel: l10n.choosingApps),
           const SizedBox(height: CurreSpace.s3),
           GettingReadyNote(
             waking: controller.waking,
             child: Text(
-              'Looking through your ${candidates.length} apps',
+              l10n.lookingThroughApps(candidates.length),
               style: type.caption.copyWith(color: colors.ink2),
             ),
           ),
@@ -267,6 +269,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
   Widget _manualChecklist(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final candidates = controller.candidateApps.isEmpty
         ? controller.apps.take(30).toList(growable: false)
         : controller.candidateApps;
@@ -279,14 +282,14 @@ class _CheckinScreenState extends State<CheckinScreen> {
             children: [
               OutcomeCard(
                 outcome: Outcome.unavailable,
-                headline: _fallbackHeadline(_fallback),
-                body: _fallbackBody(_fallback),
+                headline: _fallbackHeadline(l10n, _fallback),
+                body: _fallbackBody(l10n, _fallback),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.only(left: 48),
                     child: CurreSecondaryButton(
-                      label: 'Try again',
+                      label: l10n.tryAgain,
                       glyph: CurreGlyphKind.rise,
                       onPressed: _submit,
                     ),
@@ -294,7 +297,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
                 ),
               ),
               const SizedBox(height: CurreSpace.s5),
-              Text('Choose the apps yourself', style: type.title),
+              Text(l10n.chooseAppsYourself, style: type.title),
               const SizedBox(height: CurreSpace.s2),
               Text(_intention.text, style: type.you),
               const SizedBox(height: CurreSpace.s3),
@@ -320,7 +323,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
         Padding(
           padding: const EdgeInsets.all(CurreSpace.gutter),
           child: CurrePrimaryButton(
-            label: 'Use these apps',
+            label: l10n.useTheseApps,
             glyph: CurreGlyphKind.check,
             onPressed: _manual.isEmpty ? null : _saveManual,
           ),
@@ -333,6 +336,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
     final plan = _plan!;
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final highlights = <SpanHighlight>[];
     for (final (index, app) in plan.apps.indexed) {
       if (app.query case final span?) {
@@ -368,7 +372,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
           child: ListView(
             padding: const EdgeInsets.all(CurreSpace.gutter),
             children: [
-              Text('Here’s your plan', style: type.headline),
+              Text(l10n.heresYourPlan, style: type.headline),
               const SizedBox(height: CurreSpace.s3),
               Hero(
                 tag: 'active-plan-${plan.id}',
@@ -395,7 +399,9 @@ class _CheckinScreenState extends State<CheckinScreen> {
               ),
               const SizedBox(height: CurreSpace.s3),
               Text(
-                'On your Home until ${formatClock(plan.endsAt)}',
+                l10n.onHomeUntil(
+                  formatClock(plan.endsAt, locale: l10n.localeName),
+                ),
                 style: type.meta,
               ),
               const SizedBox(height: CurreSpace.s5),
@@ -430,13 +436,13 @@ class _CheckinScreenState extends State<CheckinScreen> {
           child: Column(
             children: [
               CurrePrimaryButton(
-                label: 'Back to Home',
+                label: l10n.backToHome,
                 glyph: CurreGlyphKind.homeRole,
                 onPressed: () => Navigator.of(context).pop(),
               ),
               const SizedBox(height: CurreSpace.s2),
               CurreSecondaryButton(
-                label: 'Change the plan',
+                label: l10n.changePlan,
                 glyph: CurreGlyphKind.editSpecify,
                 onPressed: () => setState(() => _state = _CheckinState.compose),
               ),
@@ -448,8 +454,11 @@ class _CheckinScreenState extends State<CheckinScreen> {
   }
 
   Future<void> _listen() async {
+    final l10n = context.l10n;
     final result = await controller.speech.listen(
-      prompt: 'What is this ${controller.currentSession.session.label} for?',
+      prompt: l10n.whatsThisSessionFor(
+        controller.currentSession.session.localizedLabel(l10n),
+      ),
     );
     if (!mounted) return;
     switch (result.status) {
@@ -544,17 +553,21 @@ class _CheckinScreenState extends State<CheckinScreen> {
   }
 
   /// What went wrong, in words a person would use, then what to do.
-  static String _fallbackHeadline(PlanFallbackReason? reason) =>
-      switch (reason) {
-        PlanFallbackReason.network => 'Couldn’t connect just now',
-        PlanFallbackReason.timeout => 'That took too long',
-        PlanFallbackReason.invalidResponse => 'Curre couldn’t read that plan',
-        PlanFallbackReason.http || null => 'Curre couldn’t plan that just now',
-      };
+  static String _fallbackHeadline(
+    AppLocalizations l10n,
+    PlanFallbackReason? reason,
+  ) => switch (reason) {
+    PlanFallbackReason.network => l10n.fallbackConnect,
+    PlanFallbackReason.timeout => l10n.fallbackTimeout,
+    PlanFallbackReason.invalidResponse => l10n.fallbackReadPlan,
+    PlanFallbackReason.http || null => l10n.fallbackPlan,
+  };
 
-  static String _fallbackBody(PlanFallbackReason? reason) => switch (reason) {
-    PlanFallbackReason.network =>
-      'Check your internet and try again, or choose the apps yourself below.',
-    _ => 'Try again in a moment, or choose the apps yourself below.',
+  static String _fallbackBody(
+    AppLocalizations l10n,
+    PlanFallbackReason? reason,
+  ) => switch (reason) {
+    PlanFallbackReason.network => l10n.fallbackNetworkBody,
+    _ => l10n.fallbackBody,
   };
 }

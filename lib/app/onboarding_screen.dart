@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../core/core.dart';
 import '../design/design.dart';
 import '../doors/door_models.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
@@ -326,16 +327,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (!mounted) return;
       setState(() {
         _working = false;
-        _error =
-            'Curre couldn’t save your answers on this phone. Please try again.';
+        _error = context.l10n.onboardingSaveFailed;
       });
     }
   }
 
   Future<void> _speakPlan() async {
-    final session = _planSession.label;
+    final session = _planSession.localizedLabel(context.l10n);
     final result = await controller.speech.listen(
-      prompt: 'What’s this $session for?',
+      prompt: context.l10n.whatsThisSessionFor(session),
     );
     if (!mounted) return;
     switch (result.status) {
@@ -446,8 +446,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             palette: palette,
             step: _step.index + 1,
             total: _Step.values.length,
-            eyebrow: _eyebrow,
-            headline: _headline,
+            eyebrow: _eyebrow(context.l10n),
+            headline: _headline(context.l10n),
             onBack: _step == _Step.welcome || _working ? null : _back,
             scene: _scene(palette),
             backdrop: _step == _Step.plan
@@ -478,20 +478,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  String get _eyebrow => switch (_step) {
-    _Step.welcome => 'Welcome to Curre',
-    _Step.you => 'About you',
-    _Step.pull => 'Your apps',
-    _Step.home => 'Your home screen',
-    _Step.plan => 'Your first plan',
+  String _eyebrow(AppLocalizations l10n) => switch (_step) {
+    _Step.welcome => l10n.welcomeCurre,
+    _Step.you => l10n.aboutYou,
+    _Step.pull => l10n.yourApps,
+    _Step.home => l10n.yourHomeScreen,
+    _Step.plan => l10n.yourFirstPlan,
   };
 
-  String get _headline => switch (_step) {
-    _Step.welcome => 'Ever pick up your phone for one thing and lose an hour?',
-    _Step.you => 'What should Curre call you?',
-    _Step.pull => 'What pulls you in?',
-    _Step.home => 'Make Curre your home screen.',
-    _Step.plan => 'What’s this ${_planSession.label} for?',
+  String _headline(AppLocalizations l10n) => switch (_step) {
+    _Step.welcome => l10n.onboardingWelcomeQuestion,
+    _Step.you => l10n.whatShouldCurreCallYou,
+    _Step.pull => l10n.whatPullsYouIn,
+    _Step.home => l10n.makeCurreHomeHeadline,
+    _Step.plan => l10n.whatsThisSessionFor(_planSession.localizedLabel(l10n)),
   };
 
   Widget _scene(StagePalette palette) => switch (_step) {
@@ -533,16 +533,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     return [
-      const _StoryCard(
+      _StoryCard(
         prop: CurreProp.yarn,
-        label: 'Without Curre',
-        body: 'One quick look. The feed pulls you in. An hour is gone.',
+        label: context.l10n.withoutCurre,
+        body: context.l10n.withoutCurreBody,
       ),
       const SizedBox(height: CurreSpace.s3),
-      const _StoryCard(
+      _StoryCard(
         prop: CurreProp.door,
-        label: 'With Curre',
-        body: 'Say what you need. Curre opens the app right where you need it.',
+        label: context.l10n.withCurre,
+        body: context.l10n.withCurreBody,
         highlight: true,
       ),
       const SizedBox(height: CurreSpace.s4),
@@ -552,14 +552,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           const SizedBox(width: CurreSpace.s3),
           Expanded(
             child: Text(
-              'Your history and contacts stay on this phone.',
+              context.l10n.historyContactsStay,
               style: type.body.copyWith(color: colors.ink2),
             ),
           ),
         ],
       ),
       _QuietButton(
-        label: 'How Curre keeps things private',
+        label: context.l10n.howCurrePrivate,
         onPressed: _openPrivacyDetails,
       ),
     ];
@@ -570,7 +570,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final type = Theme.of(context).extension<CurreType>()!;
     final missing = _nameTried && _displayName == null;
     return [
-      const Text('Just for your greeting on Home. It stays on this phone.'),
+      Text(context.l10n.namePrivacyNote),
       const SizedBox(height: CurreSpace.s4),
       TextField(
         controller: _name,
@@ -580,19 +580,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         textInputAction: TextInputAction.done,
         style: type.youLarge.copyWith(height: 1.15),
         decoration: InputDecoration(
-          labelText: 'Your name',
+          labelText: context.l10n.yourName,
           hintText: 'Ada',
           filled: true,
           fillColor: colors.raised,
           counterText: '',
-          errorText: missing ? 'Add a name, even just a nickname.' : null,
+          errorText: missing ? context.l10n.addNameError : null,
         ),
         onChanged: (_) => setState(() {}),
         onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       ),
       const SizedBox(height: CurreSpace.s5),
       Text(
-        'Pick a face, or keep your initial. You can change it any time.',
+        context.l10n.pickFaceOrInitial,
         style: type.body.copyWith(color: colors.ink2),
       ),
       const SizedBox(height: CurreSpace.s3),
@@ -606,18 +606,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (_avatarId != null) ...[
         const SizedBox(height: CurreSpace.s2),
         _QuietButton(
-          label: 'Use my initial instead',
+          label: context.l10n.useInitial,
           onPressed: () => setState(() => _avatarId = null),
         ),
       ],
       const SizedBox(height: CurreSpace.s6),
       Text(
-        'What’s this focus for?',
+        context.l10n.whatsFocusFor,
         style: type.title.copyWith(color: colors.ink),
       ),
       const SizedBox(height: CurreSpace.s1),
       Text(
-        'Curre helps most for a while, with an end date. When it ends, your phone goes back to normal. Skip this if you’re not sure yet.',
+        context.l10n.focusOnboardingBody,
         style: type.body.copyWith(color: colors.ink2),
       ),
       const SizedBox(height: CurreSpace.s3),
@@ -650,9 +650,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final choices = _pullChoices;
     final shown = _showAllPull ? choices : choices.take(_shortList).toList();
     return [
-      const Text(
-        'Pick the ones where a quick look turns into an hour. Curre hides only these: they leave your Home, and opening one asks “Why now?” first. Every other app opens as usual.',
-      ),
+      Text(context.l10n.pickPullAppsBody),
       const SizedBox(height: CurreSpace.s4),
       _AppChips(
         controller: controller,
@@ -666,7 +664,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (!_showAllPull && choices.length > _shortList) ...[
         const SizedBox(height: CurreSpace.s3),
         _QuietButton(
-          label: 'Show all ${choices.length} apps',
+          label: context.l10n.showAllApps(choices.length),
           onPressed: () => setState(() => _showAllPull = true),
         ),
       ],
@@ -683,7 +681,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _AlwaysOnHome(controller: controller, essentials: _essentials),
       const SizedBox(height: CurreSpace.s2),
       Text(
-        'Hide another app or bring one back any time from Hidden apps or Curre settings.',
+        context.l10n.changeHiddenAnyTime,
         style: type.caption.copyWith(color: colors.ink3),
       ),
     ];
@@ -693,22 +691,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     return [
-      const Text(
-        'Android will ask which app to use as your home screen. Choose Curre.',
-      ),
+      Text(context.l10n.androidChooseCurre),
       const SizedBox(height: CurreSpace.s4),
-      const _NumberedPoint(
-        number: 1,
-        text: 'Your Home shows your plan. Every app you didn’t hide is in All apps and opens as usual.',
-      ),
-      const _NumberedPoint(
-        number: 2,
-        text: 'Only the apps you picked are hidden. Opening one asks “Why now?” first.',
-      ),
-      const _NumberedPoint(
-        number: 3,
-        text: 'Tap an app on Home to go straight to your task.',
-      ),
+      _NumberedPoint(number: 1, text: context.l10n.homePointPlan),
+      _NumberedPoint(number: 2, text: context.l10n.homePointHidden),
+      _NumberedPoint(number: 3, text: context.l10n.homePointDoor),
       if (_homeReady != null) ...[
         const SizedBox(height: CurreSpace.s3),
         Semantics(
@@ -717,43 +704,40 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             glyph: _homeReady! ? CurreGlyphKind.check : CurreGlyphKind.homeRole,
             color: _homeReady! ? colors.emberText : colors.ink2,
             text: _homeReady!
-                ? 'Curre is your home screen now.'
-                : _homeHelp(_homeSettings),
+                ? context.l10n.curreIsHomeNow
+                : _homeHelp(context.l10n, _homeSettings),
           ),
         ),
       ],
       if (_homeReady == false) ...[
         const SizedBox(height: CurreSpace.s2),
         Text(
-          'Changed your mind? You can switch home screens any time in Curre settings.',
+          context.l10n.switchHomeAnyTime,
           style: type.caption.copyWith(color: colors.ink3),
         ),
       ],
     ];
   }
 
-  static String _homeHelp(HomeSettingsOpened? opened) => switch (opened) {
-    null => 'Curre isn’t your home screen yet. Try again, or open your phone’s home screen settings and choose Curre.',
-    HomeSettingsOpened.homeApps =>
-      'Choose Curre in the list, then come back here.',
-    HomeSettingsOpened.defaultApps =>
-      'Tap “Home app”, choose Curre, then come back here.',
-    HomeSettingsOpened.settings => 'In Settings, search for “Home app” (or open Apps, then Default apps), choose Curre, then come back here.',
-    HomeSettingsOpened.none => 'Open your phone’s Settings app, search for “Home app”, choose Curre, then come back here.',
-  };
+  static String _homeHelp(AppLocalizations l10n, HomeSettingsOpened? opened) =>
+      switch (opened) {
+        null => l10n.curreNotHomeHelp,
+        HomeSettingsOpened.homeApps => l10n.chooseCurreList,
+        HomeSettingsOpened.defaultApps => l10n.chooseCurreDefaultApps,
+        HomeSettingsOpened.settings => l10n.chooseCurreSettings,
+        HomeSettingsOpened.none => l10n.chooseCurrePhoneSettings,
+      };
 
   List<Widget> _planSheet(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
-    const examples = <String>[
-      'Learn the G chord on YouTube till 7',
-      'Play the Sunday worship playlist on Spotify',
-      'Find the way to the studio on Maps',
+    final examples = <String>[
+      context.l10n.planExampleGuitar,
+      context.l10n.planExamplePlaylist,
+      context.l10n.planExampleMaps,
     ];
     return [
-      const Text(
-        'Say it in one sentence: the app, what you’ll do, and until when. Curre brings only that to your Home.',
-      ),
+      Text(context.l10n.onboardingPlanHelp),
       const SizedBox(height: CurreSpace.s4),
       TextField(
         key: const Key('onboarding-plan'),
@@ -765,12 +749,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         textCapitalization: TextCapitalization.sentences,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-          labelText: 'Your plan',
+          labelText: context.l10n.yourPlanLabel,
           hintText: examples.first,
           filled: true,
           fillColor: colors.raised,
           suffixIcon: IconButton(
-            tooltip: 'Say your plan',
+            tooltip: context.l10n.sayYourPlan,
             onPressed: _speakPlan,
             icon: CurreGlyph(CurreGlyphKind.speak, color: colors.emberText),
           ),
@@ -778,7 +762,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         onChanged: (_) => setState(() {}),
       ),
       const SizedBox(height: CurreSpace.s2),
-      Text('Or start from one of these:', style: type.caption),
+      Text(context.l10n.startFromExample, style: type.caption),
       const SizedBox(height: CurreSpace.s2),
       Wrap(
         spacing: CurreSpace.s2,
@@ -798,7 +782,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       ),
       const SizedBox(height: CurreSpace.s4),
       Text(
-        'Curre asks what your morning is for from $_morning. Change that any time in Curre settings.',
+        context.l10n.morningStartNote('$_morning'),
         style: type.caption.copyWith(color: colors.ink3),
       ),
     ];
@@ -810,7 +794,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _footer(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
-    final (primary, secondary) = _actions();
+    final (primary, secondary) = _actions(context.l10n);
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
     final primaryButton = CurrePrimaryButton(
       label: primary.label,
@@ -883,17 +867,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  (_Action, _Action?) _actions() {
+  (_Action, _Action?) _actions(AppLocalizations l10n) {
     switch (_step) {
       case _Step.welcome:
-        return (_Action('Show me how', _next, CurreGlyphKind.go), null);
+        return (_Action(l10n.showMeHow, _next, CurreGlyphKind.go), null);
       case _Step.you:
         final name = _displayName;
         return (
           _Action(
             name == null || name.runes.length > 16
-                ? 'Continue'
-                : 'Call me $name',
+                ? l10n.continueLabel
+                : l10n.callMe(name),
             _submitYou,
             CurreGlyphKind.go,
           ),
@@ -904,41 +888,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return (
           _Action(
             switch (count) {
-              0 => 'Pick at least one',
-              1 => 'Hide this one',
-              _ => 'Hide these $count',
+              0 => l10n.pickAtLeastOne,
+              1 => l10n.hideThisOne,
+              _ => l10n.hideThese(count),
             },
             count == 0 ? null : _leavePull,
             count == 0 ? null : CurreGlyphKind.go,
           ),
-          _Action('None of these', () {
+          _Action(l10n.noneOfThese, () {
             setState(_pull.clear);
             _next();
           }),
         );
       case _Step.home:
         if (_homeReady == true) {
-          return (_Action('Continue', _next, CurreGlyphKind.go), null);
+          return (_Action(l10n.continueLabel, _next, CurreGlyphKind.go), null);
         }
         return (
-          _Action(
-            'Make Curre my home screen',
-            _askForHome,
-            CurreGlyphKind.homeRole,
-          ),
+          _Action(l10n.makeCurreMyHome, _askForHome, CurreGlyphKind.homeRole),
           _homeReady == false
-              ? _Action('Open home settings', _openHomeSettings)
+              ? _Action(l10n.openHomeSettings, _openHomeSettings)
               : null,
         );
       case _Step.plan:
-        final session = _planSession.label;
+        final session = _planSession.localizedLabel(l10n);
         return (
           _Action(
-            'Set my $session',
+            l10n.setMySession(session),
             _plan.text.trim().isEmpty ? null : () => _finish(withPlan: true),
             CurreGlyphKind.go,
           ),
-          _Action('I’ll plan later', () => _finish(withPlan: false)),
+          _Action(l10n.planLater, () => _finish(withPlan: false)),
         );
     }
   }
@@ -1013,7 +993,7 @@ class _Stage extends StatelessWidget {
                     if (onBack != null)
                       RoundGlyphButton(
                         glyph: CurreGlyphKind.back,
-                        label: 'Back',
+                        label: context.l10n.back,
                         onPressed: onBack,
                       )
                     else
@@ -1403,8 +1383,6 @@ class _AlwaysOnHome extends StatelessWidget {
   final CurreController controller;
   final Set<String> essentials;
 
-  static const _plainNames = ['Phone', 'Messages', 'Settings'];
-
   /// The essentials this phone has, in Home's order (Phone, Messages,
   /// Settings), then any others by name.
   List<LaunchableApp> get _apps {
@@ -1433,11 +1411,15 @@ class _AlwaysOnHome extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     final apps = _apps;
     final names = apps.isEmpty
-        ? _plainNames
+        ? [
+            context.l10n.phone,
+            context.l10n.messages,
+            context.l10n.androidSettings,
+          ]
         : [for (final app in apps) app.label];
     return Semantics(
       container: true,
-      label: 'Always on Home: ${_spoken(names)}',
+      label: '${context.l10n.alwaysOnHome}: ${_spoken(names)}',
       excludeSemantics: true,
       child: Container(
         width: double.infinity,
@@ -1461,7 +1443,10 @@ class _AlwaysOnHome extends StatelessWidget {
                 ),
                 const SizedBox(width: CurreSpace.s3),
                 Expanded(
-                  child: Text('Always on Home', style: type.label.weight(680)),
+                  child: Text(
+                    context.l10n.alwaysOnHome,
+                    style: type.label.weight(680),
+                  ),
                 ),
               ],
             ),
@@ -1512,7 +1497,7 @@ class _ExampleChip extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     return Semantics(
       button: true,
-      label: 'Use example: $text',
+      label: context.l10n.useExample(text),
       excludeSemantics: true,
       child: Material(
         color: colors.raised,

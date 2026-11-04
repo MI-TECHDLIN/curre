@@ -208,7 +208,10 @@ def test_proof_is_one_pipeline_call_protect_guard_decide_extract_verify(make_cli
     # plan, so a stopping Verify would end every honest note too.
     assert verify["grounding"]["documents"] == [{"id": "plan", "text": TASK}]
     assert verify["grounding"]["answer"] == NOTE
-    assert verify["grounding"]["instructions"] == clocked_pipeline.VERIFY_INSTRUCTIONS
+    assert verify["grounding"]["instructions"].startswith(
+        clocked_pipeline.VERIFY_INSTRUCTIONS
+    )
+    assert "language code en" in verify["grounding"]["instructions"]
     assert "stop" not in verify
 
 
