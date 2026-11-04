@@ -142,6 +142,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                   subtitle: '${settings.candidates.length} apps',
                   onTap: () => _editApps(AppChoiceKind.planApps),
                 ),
+                _SettingsTile(
+                  key: const Key('settings-hidden-apps'),
+                  glyph: CurreGlyphKind.outOfSight,
+                  title: 'Hidden apps',
+                  subtitle: hiddenChoiceSummary(
+                    controller.chosenHiddenPackages.length,
+                  ),
+                  onTap: () => _editApps(AppChoiceKind.hidden),
+                ),
                 const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('How strict should Curre be?'),
                 const SizedBox(height: CurreSpace.s2),
@@ -195,8 +204,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       : settings.quietNotificationsFromHiddenApps &&
                             controller.isRestDay
                       ? 'Resting today. Back tomorrow morning.'
+                      : settings.quietNotificationsFromHiddenApps &&
+                            controller.focusIsOver
+                      ? 'Your focus has ended, so nothing is held'
                       : settings.quietNotificationsFromHiddenApps
-                      ? 'On. You’ll find them in Missed notifications.'
+                      ? 'On. Held until their app comes back.'
                       : 'Off',
                   needsAccess:
                       !_checkingNotificationAccess &&
@@ -925,8 +937,16 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+/// What Curre settings says under "Hidden apps".
+String hiddenChoiceSummary(int count) => switch (count) {
+  0 => 'None. Every app opens as usual.',
+  1 => '1 app. Only it asks “Why now?”.',
+  _ => '$count apps. Only these ask “Why now?”.',
+};
+
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
+    super.key,
     required this.glyph,
     required this.title,
     required this.subtitle,

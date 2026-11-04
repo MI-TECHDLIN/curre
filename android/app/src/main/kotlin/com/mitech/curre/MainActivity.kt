@@ -1,5 +1,6 @@
 package com.mitech.curre
 
+import android.app.ActivityOptions
 import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.app.role.RoleManager
@@ -96,6 +97,8 @@ class MainActivity : FlutterFragmentActivity() {
                 "listMissedNotifications" -> result.success(
                     QuietNotificationListenerService.listMissedNotifications(this),
                 )
+                "openMissedNotification" ->
+                    result.success(openMissedNotification(call.arguments))
                 "clearMissedNotifications" -> {
                     QuietNotificationListenerService.clearMissedNotifications(this)
                     result.success(null)
@@ -356,7 +359,42 @@ class MainActivity : FlutterFragmentActivity() {
             monitoredPackages = monitoredPackages,
             alwaysAllowedPackages = alwaysAllowedPackages,
             allowedUntilMillis = allowedUntilMillis,
+            holdUntilMillis = (map["holdUntilMillis"] as? Number)?.toLong(),
         )
+    }
+
+    /**
+     * Opens a held notification's own tap action while this process still
+     * has it, else its app. Flutter only calls this once the app may open
+     * (straight, or after "Why now?").
+     */
+    private fun openMissedNotification(arguments: Any?): Boolean {
+        val map = arguments as? Map<*, *> ?: return false
+        val packageName = map["package"] as? String ?: return false
+        val key = map["key"] as? String
+        val tap = key?.let { QuietNotificationListenerService.contentIntentFor(it) }
+        if (tap != null) {
+            try {
+                val options = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ActivityOptions.makeBasic()
+                        .setPendingIntentBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+                        )
+                        .toBundle()
+                } else {
+                    null
+                }
+                tap.send(this, 0, null, null, null, null, options)
+                return true
+            } catch (_: Exception) {
+                // Its app may have withdrawn it; open the app instead.
+            }
+        }
+        return try {
+            launchPackage(packageName)
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun listApps(): List<Map<String, String>> {

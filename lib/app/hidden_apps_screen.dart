@@ -6,13 +6,14 @@ import '../core/core.dart';
 import '../design/design.dart';
 import '../platform/platform.dart';
 import 'access_help.dart';
+import 'app_choice_screen.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'unlock_gate_screen.dart';
 
-/// Hidden apps: every app that isn't part of the current plan, by name
-/// only (no icons, so nothing calls out to be opened). Tapping one asks
-/// "Why now?" before bringing it back.
+/// Hidden apps: only the apps the user chose to hide, by name only (no
+/// icons, so nothing calls out to be opened). Tapping one asks "Why now?"
+/// before bringing it back; "Hide another app" edits the list.
 class HiddenAppsScreen extends StatefulWidget {
   const HiddenAppsScreen({super.key, required this.controller});
 
@@ -81,7 +82,7 @@ class _HiddenAppsBody extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) =>
-                        MissedWhileHiddenScreen(notifications: missed),
+                        MissedWhileHiddenScreen(controller: controller),
                   ),
                 ),
                 splashFactory: NoSplash.splashFactory,
@@ -101,6 +102,14 @@ class _HiddenAppsBody extends StatelessWidget {
                               '${missedNotificationsLabel(missed.length)} from hidden apps',
                               style: type.caption.copyWith(color: colors.ink3),
                             ),
+                            if (missed.where((item) => item.held).length
+                                case final held when held > 0)
+                              Text(
+                                '$held held until their app comes back',
+                                style: type.caption.copyWith(
+                                  color: colors.ink3,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -203,10 +212,19 @@ class _HiddenAppsBody extends StatelessWidget {
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(CurreSpace.gutter),
-                      child: Text(
-                        'No hidden apps right now. Everything you planned is on Home.',
-                        style: type.body.copyWith(color: colors.ink2),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            controller.chosenHiddenPackages.isEmpty
+                                ? 'Nothing is hidden. Every app opens as usual from All apps.'
+                                : 'Your hidden apps are out for your plan or for a while right now.',
+                            style: type.body.copyWith(color: colors.ink2),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: CurreSpace.s4),
+                          _HideAnotherApp(controller: controller),
+                        ],
                       ),
                     ),
                   )
@@ -231,6 +249,8 @@ class _HiddenAppsBody extends StatelessWidget {
                               ),
                             ),
                           ...rows,
+                          const SizedBox(height: CurreSpace.s4),
+                          _HideAnotherApp(controller: controller),
                         ],
                       ),
                       if (apps.isNotEmpty)
@@ -259,6 +279,26 @@ class _HiddenAppsBody extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "Hide another app": the full list of apps, where a tap hides one or
+/// stops hiding it.
+class _HideAnotherApp extends StatelessWidget {
+  const _HideAnotherApp({required this.controller});
+
+  final CurreController controller;
+
+  @override
+  Widget build(BuildContext context) => CurreSecondaryButton(
+    key: const Key('hide-another-app'),
+    label: 'Hide another app',
+    onPressed: () => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            AppChoiceScreen(controller: controller, kind: AppChoiceKind.hidden),
+      ),
+    ),
+  );
 }
 
 String missedNotificationsLabel(int count) =>
@@ -295,7 +335,7 @@ class _HiddenAppsTip extends StatelessWidget {
               const SizedBox(width: CurreSpace.s3),
               Expanded(
                 child: Text(
-                  'Apps you didn’t plan for wait here. Tap one to bring it back.',
+                  'Only the apps you chose to hide wait here. Tap one to bring it back for a while.',
                   style: type.body.copyWith(color: colors.ink),
                 ),
               ),
@@ -317,73 +357,153 @@ class _HiddenAppsTip extends StatelessWidget {
   }
 }
 
-/// Notifications Curre kept quiet while their apps were hidden: app, title
-/// and time only.
+/// Notifications Curre held while their apps were hidden: the ones still
+/// held (with their text, kept on this phone until they go back) and the
+/// ones already given back. Tapping one opens its app, through "Why now?"
+/// while the app is still hidden, straight once it's back.
 class MissedWhileHiddenScreen extends StatelessWidget {
-  const MissedWhileHiddenScreen({super.key, required this.notifications});
+  const MissedWhileHiddenScreen({super.key, required this.controller});
 
-  final List<MissedWhileHiddenNotification> notifications;
+  final CurreController controller;
+
+  Future<void> _open(
+    BuildContext context,
+    MissedWhileHiddenNotification notification,
+  ) async {
+    final hidden = controller.hiddenApps
+        .where((app) => app.packageName == notification.packageName)
+        .firstOrNull;
+    if (hidden != null && !controller.isRestDay) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => UnlockGateScreen(controller: controller, app: hidden),
+        ),
+      );
+      return;
+    }
+    final opened = await controller.openMissedNotification(notification);
+    if (!opened && context.mounted) {
+      showCurreSnack(context, 'That app didn’t open. It may not be installed.');
+    }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CurreColors>()!;
-    final type = Theme.of(context).extension<CurreType>()!;
-    return CurrePage(
-      background: colors.sunk,
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              CurreSpace.gutter,
-              CurreSpace.s3,
-              CurreSpace.gutter,
-              CurreSpace.s3,
-            ),
-            child: CurreTopBar(
-              title: 'Missed notifications',
-              subtitle: 'Kept quiet while their apps were hidden. Only the app, title and time are saved, on this phone.',
-              maxTitleLines: 2,
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller,
+    builder: (context, _) {
+      final colors = Theme.of(context).extension<CurreColors>()!;
+      final type = Theme.of(context).extension<CurreType>()!;
+      final notifications = controller.missedWhileHidden;
+      return CurrePage(
+        background: colors.sunk,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
                 CurreSpace.gutter,
-                CurreSpace.s2,
+                CurreSpace.s3,
                 CurreSpace.gutter,
-                CurreSpace.s6,
+                CurreSpace.s3,
               ),
-              itemCount: notifications.length,
-              separatorBuilder: (_, _) => Divider(color: colors.hairline),
-              itemBuilder: (context, index) {
-                final notification = notifications[index];
-                return Semantics(
-                  label:
-                      '${notification.appLabel}, ${notification.title}, ${_notificationTime(notification.at)}',
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: CurreSpace.s3,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(notification.title, style: type.body),
-                        const SizedBox(height: CurreSpace.s1),
-                        Text(
-                          '${notification.appLabel} · ${_notificationTime(notification.at)}',
-                          style: type.caption.copyWith(color: colors.ink3),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+              child: CurreTopBar(
+                title: 'Missed notifications',
+                subtitle: 'Held quietly while their apps were hidden, and given back when the app comes back. Nothing leaves this phone.',
+                maxTitleLines: 2,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
+            Expanded(
+              child: notifications.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(CurreSpace.gutter),
+                        child: Text(
+                          'Nothing held right now.',
+                          style: type.body.copyWith(color: colors.ink2),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(
+                        CurreSpace.gutter,
+                        CurreSpace.s2,
+                        CurreSpace.gutter,
+                        CurreSpace.s6,
+                      ),
+                      itemCount: notifications.length,
+                      separatorBuilder: (_, _) =>
+                          Divider(color: colors.hairline),
+                      itemBuilder: (context, index) {
+                        final notification = notifications[index];
+                        final state = notification.held ? 'Held' : 'Given back';
+                        final meta =
+                            '${notification.appLabel} · ${_notificationTime(notification.at)} · $state';
+                        return Semantics(
+                          button: true,
+                          label: [
+                            notification.title,
+                            ?notification.text,
+                            meta,
+                            'Open ${notification.appLabel}',
+                          ].join(', '),
+                          excludeSemantics: true,
+                          child: InkWell(
+                            key: ValueKey<int>(index),
+                            onTap: () => _open(context, notification),
+                            splashFactory: NoSplash.splashFactory,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: CurreSpace.s3,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          notification.title,
+                                          style: type.body,
+                                        ),
+                                        if (notification.text case final text?)
+                                          Text(
+                                            text,
+                                            style: type.body.copyWith(
+                                              color: colors.ink2,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        const SizedBox(height: CurreSpace.s1),
+                                        Text(
+                                          meta,
+                                          style: type.caption.copyWith(
+                                            color: colors.ink3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: CurreSpace.s2),
+                                  CurreGlyph(
+                                    CurreGlyphKind.go,
+                                    size: 18,
+                                    color: colors.ink3,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 
   static String _notificationTime(DateTime value) {
     final local = value.toLocal();

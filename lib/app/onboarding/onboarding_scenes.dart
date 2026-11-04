@@ -916,7 +916,7 @@ class _MiniHome extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '12 hidden apps',
+            'All apps · 2 hidden apps',
             textAlign: TextAlign.center,
             style: _sceneType(context, size: 6.5, weight: 560),
           ),

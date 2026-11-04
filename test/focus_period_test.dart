@@ -40,6 +40,7 @@ Settings _settings({FocusPeriod? focus}) => Settings(
     'com.spotify.music',
     'com.google.android.apps.maps',
   },
+  hiddenApps: const {'com.instagram.android', 'com.netflix.mediaclient'},
   focus: focus,
 );
 

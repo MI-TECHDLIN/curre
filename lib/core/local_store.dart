@@ -101,7 +101,8 @@ class CurreLocalStore {
   bool get isFocusOfferDismissed =>
       _preferences.getBool(_focusOfferKey) ?? false;
 
-  Future<void> dismissFocusOffer() => _preferences.setBool(_focusOfferKey, true);
+  Future<void> dismissFocusOffer() =>
+      _preferences.setBool(_focusOfferKey, true);
 
   /// Whether the user has put away the Hidden apps explainer.
   bool get isHiddenAppsTipDismissed =>
@@ -128,6 +129,19 @@ class CurreLocalStore {
 
   Future<void> saveSettings(Settings settings) async {
     await _preferences.setString(_settingsKey, jsonEncode(settings.toJson()));
+  }
+
+  /// Whether the saved settings predate the explicit hidden list
+  /// ([Settings.hiddenApps]), so the controller should fill it once from
+  /// what the user picked back then. False when nothing is saved yet.
+  bool get settingsPredateHiddenApps {
+    final encoded = _preferences.getString(_settingsKey);
+    if (encoded == null) return false;
+    try {
+      return !_decodeObject(encoded).containsKey(Settings.hiddenAppsKey);
+    } on Object {
+      return false;
+    }
   }
 
   Settings loadSettings() {

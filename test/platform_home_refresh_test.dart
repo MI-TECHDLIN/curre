@@ -86,7 +86,10 @@ void main() {
       final expiry = DateTime.utc(2026, 10, 24, 5, 1);
       var now = expiry.subtract(const Duration(seconds: 1));
       final state = LauncherState(
-        settings: Settings(essentials: const <String>{'phone'}),
+        settings: Settings(
+          essentials: const <String>{'phone'},
+          hiddenApps: const <String>{'instagram'},
+        ),
         grants: <Grant>[
           Grant(
             packageName: 'instagram',

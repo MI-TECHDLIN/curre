@@ -311,7 +311,7 @@ void main() {
       expect(controller.visiblePackages, contains(_whatsapp));
     });
 
-    testWidgets('hides its apps, drops its reminders and keeps it in History', (
+    testWidgets('ends it, drops its reminders and keeps it in History', (
       tester,
     ) async {
       final (controller, reminders, active) = await allDone(tester);
@@ -327,11 +327,15 @@ void main() {
       await endPlan(tester);
 
       expect(controller.activePlan, isNull);
-      expect(controller.visiblePackages, isNot(contains(_whatsapp)));
-      expect(controller.visiblePackages, isNot(contains(_spotify)));
+      // Its apps weren't hidden by choice, so they still open as usual
+      // from All apps; nothing new joins Hidden apps.
+      expect(
+        controller.openApps.map((app) => app.packageName),
+        containsAll([_whatsapp, _spotify]),
+      );
       expect(
         controller.hiddenApps.map((app) => app.packageName),
-        containsAll([_whatsapp, _spotify]),
+        isNot(contains(_whatsapp)),
       );
       expect(reminders.cancelled, containsAll([headsUp, proof]));
       expect(reminders.scheduled, isEmpty);
@@ -343,10 +347,7 @@ void main() {
       // The proof it earned stays.
       expect(controller.proofSummary.raysToday, 1);
 
-      expect(
-        find.text('Plan ended. Its apps are back in Hidden apps.'),
-        findsOne,
-      );
+      expect(find.text('Plan ended.'), findsOne);
       expect(find.byKey(const Key('home-all-done')), findsNothing);
       expect(find.text('Undo'), findsOneWidget);
 

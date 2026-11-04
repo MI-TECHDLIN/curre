@@ -3,7 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   const zone = FixedOffsetTimeZone(Duration.zero);
-  final settings = Settings(essentials: const <String>{'phone'});
+  // Only the chosen apps are hidden: YouTube, Maps and Instagram here.
+  final settings = Settings(
+    essentials: const <String>{'phone'},
+    hiddenApps: const <String>{'youtube', 'maps', 'instagram'},
+  );
 
   Plan plan({DateTime? endsAt}) => Plan(
     id: 'p1',
@@ -155,5 +159,99 @@ void main() {
       ),
       <String>{'phone', 'youtube', 'maps'},
     );
+  });
+
+  test('every app the user did not hide is visible with no plan or grant', () {
+    final state = LauncherState(settings: settings, grants: const <Grant>[]);
+    final at = DateTime.utc(2026, 10, 24, 5);
+    for (final open in ['camera', 'bank', 'whatsapp', 'clock']) {
+      expect(isVisible(open, at, state, timeZone: zone), isTrue, reason: open);
+    }
+    expect(isVisible('instagram', at, state, timeZone: zone), isFalse);
+  });
+
+  test('with nothing hidden, nothing is hidden', () {
+    final state = LauncherState(settings: Settings(), grants: const <Grant>[]);
+    expect(
+      isVisible(
+        'instagram',
+        DateTime.utc(2026, 10, 24, 5),
+        state,
+        timeZone: zone,
+      ),
+      isTrue,
+    );
+  });
+
+  test('an app always on Home is never hidden, even if listed', () {
+    final both = Settings(
+      essentials: const <String>{'phone'},
+      hiddenApps: const <String>{'phone'},
+    );
+    expect(isHiddenByChoice('phone', both), isFalse);
+    expect(
+      isVisible(
+        'phone',
+        DateTime.utc(2026, 10, 24, 5),
+        LauncherState(settings: both, grants: const <Grant>[]),
+        timeZone: zone,
+      ),
+      isTrue,
+    );
+  });
+
+  test('the hidden list round-trips and older settings load empty', () {
+    expect(Settings.fromJson(settings.toJson()).hiddenApps, {
+      'youtube',
+      'maps',
+      'instagram',
+    });
+    final legacy = settings.toJson()..remove(Settings.hiddenAppsKey);
+    expect(Settings.fromJson(legacy).hiddenApps, isEmpty);
+  });
+
+  group('legacyHiddenApps', () {
+    const pull = <String>['instagram', 'tiktok', 'youtube', 'whatsapp'];
+
+    test('keeps only the installed pull picks plans could not use', () {
+      final old = Settings(
+        essentials: const <String>{'phone', 'whatsapp'},
+        candidates: const <String>{'youtube', 'maps', 'camera'},
+      );
+      expect(
+        legacyHiddenApps(
+          settings: old,
+          installed: const [
+            'phone',
+            'whatsapp',
+            'youtube',
+            'maps',
+            'camera',
+            'instagram',
+            'bank',
+            'clock',
+          ],
+          pullPackages: pull,
+        ),
+        // Not TikTok (not installed), YouTube (plans used it), WhatsApp
+        // (always on Home), and never the bank or clock that the old rule
+        // also hid.
+        {'instagram'},
+      );
+    });
+
+    test('hides nothing when the user picked none', () {
+      final old = Settings(
+        candidates: const <String>{'instagram', 'tiktok', 'youtube'},
+      );
+      expect(
+        legacyHiddenApps(
+          settings: old,
+          installed: const ['instagram', 'tiktok', 'youtube', 'bank'],
+          pullPackages: pull,
+        ),
+        isEmpty,
+      );
+    });
   });
 }

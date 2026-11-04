@@ -196,6 +196,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return [...common, ...rest];
   }
 
+  /// The names of the apps picked so far, in the order they are listed.
+  List<String> get _pickedLabels => [
+    for (final app in _pullChoices)
+      if (_pull.contains(app.packageName)) app.label,
+  ];
+
   static int _byLabel(LaunchableApp a, LaunchableApp b) =>
       a.label.toLowerCase().compareTo(b.label.toLowerCase());
 
@@ -304,6 +310,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         avatarId: _avatarId,
         essentials: _essentials,
         candidates: _planApps,
+        hidden: {..._pull},
         morningStart: _morning,
         firstIntention: withPlan ? _plan.text : null,
         focus: _focusPurpose == null
@@ -644,7 +651,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final shown = _showAllPull ? choices : choices.take(_shortList).toList();
     return [
       const Text(
-        'Pick the ones where a quick look turns into an hour. They go to Hidden apps: off your Home, a tap away when you really need one.',
+        'Pick the ones where a quick look turns into an hour. Curre hides only these: they leave your Home, and opening one asks “Why now?” first. Every other app opens as usual.',
       ),
       const SizedBox(height: CurreSpace.s4),
       _AppChips(
@@ -663,11 +670,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onPressed: () => setState(() => _showAllPull = true),
         ),
       ],
+      const SizedBox(height: CurreSpace.s3),
+      Semantics(
+        liveRegion: true,
+        child: Text(
+          hiddenSummary(_pickedLabels),
+          key: const Key('onboarding-hidden-summary'),
+          style: type.body.copyWith(color: colors.ink2),
+        ),
+      ),
       const SizedBox(height: CurreSpace.s4),
       _AlwaysOnHome(controller: controller, essentials: _essentials),
       const SizedBox(height: CurreSpace.s2),
       Text(
-        'Plans can open the rest. Change any of this in Curre settings.',
+        'Hide another app or bring one back any time from Hidden apps or Curre settings.',
         style: type.caption.copyWith(color: colors.ink3),
       ),
     ];
@@ -683,11 +699,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       const SizedBox(height: CurreSpace.s4),
       const _NumberedPoint(
         number: 1,
-        text: 'Your Home shows only what you plan.',
+        text: 'Your Home shows your plan. Every app you didn’t hide is in All apps and opens as usual.',
       ),
       const _NumberedPoint(
         number: 2,
-        text: 'Every other app stays hidden, a tap away when you need it.',
+        text: 'Only the apps you picked are hidden. Opening one asks “Why now?” first.',
       ),
       const _NumberedPoint(
         number: 3,

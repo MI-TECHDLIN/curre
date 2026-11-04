@@ -167,11 +167,11 @@ void main() {
         expect(find.text('Try again'), findsOneWidget);
         // Curre carries on without it: the hidden apps are all still here.
         await tester.scrollUntilVisible(
-          find.bySemanticsLabel('Bring back Calendar'),
+          find.bySemanticsLabel('Bring back Netflix'),
           300,
           scrollable: find.byType(Scrollable).first,
         );
-        expect(find.bySemanticsLabel('Bring back Calendar'), findsOneWidget);
+        expect(find.bySemanticsLabel('Bring back Netflix'), findsOneWidget);
         expect(
           controller.pendingPrompts,
           isNot(contains(ContextPrompt.askWhy)),

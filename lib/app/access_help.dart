@@ -242,6 +242,12 @@ class _AccessOfferState extends State<AccessOffer>
     showCurreSnack(context, 'No problem. It’s in Curre settings any time.');
   }
 
+  /// The names of the apps whose notifications would be held.
+  List<String> get _hiddenLabels => [
+    for (final package in widget.controller.chosenHiddenPackages)
+      ?widget.controller.appFor(package)?.label,
+  ]..sort();
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -267,7 +273,7 @@ class _AccessOfferState extends State<AccessOffer>
           : 'Keep hidden apps quiet?',
       body: _askWhy
           ? 'Hidden apps can sneak back in through recent apps, links or notifications. Curre can ask “Why now?” then too. It only checks which app opened, never what’s on your screen.'
-          : 'Hidden apps can still buzz you. Curre can keep them quiet until you bring them back, and list what you missed here. Message text is never saved.',
+          : quietOfferBody(_hiddenLabels),
       yesLabel: _on == false
           ? 'Try again'
           : _askWhy
@@ -284,4 +290,17 @@ class _AccessOfferState extends State<AccessOffer>
       ],
     );
   }
+}
+
+/// The "Keep hidden apps quiet?" offer, naming exactly whose notifications
+/// Curre would hold.
+String quietOfferBody(List<String> hiddenLabels) {
+  final names = switch (hiddenLabels.length) {
+    0 => 'the apps you hide',
+    1 => hiddenLabels.single,
+    2 => '${hiddenLabels.first} and ${hiddenLabels.last}',
+    _ =>
+      '${hiddenLabels.take(2).join(', ')} and ${hiddenLabels.length - 2} more',
+  };
+  return 'Curre can hold notifications from $names quietly and give every one back when you open the app. Other apps notify as usual, and calls and alarms always come through.';
 }

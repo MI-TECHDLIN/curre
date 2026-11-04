@@ -70,6 +70,7 @@ class GentleInterceptSnapshot {
     required this.hasUsageAccess,
     required this.launchablePackages,
     required this.essentialPackages,
+    required this.hiddenPackages,
     required this.planPackages,
     required this.grantPackages,
     this.loopGuardPackages = const <String>{
@@ -83,6 +84,9 @@ class GentleInterceptSnapshot {
   final bool hasUsageAccess;
   final Set<String> launchablePackages;
   final Set<String> essentialPackages;
+
+  /// The apps the user chose to hide; only these ever ask "Why now?".
+  final Set<String> hiddenPackages;
   final Set<String> planPackages;
   final Set<String> grantPackages;
   final Set<String> loopGuardPackages;
@@ -94,6 +98,7 @@ enum GentleInterceptDecision {
   usageAccessMissing,
   unknownApp,
   essential,
+  notHidden,
   activePlan,
   activeGrant,
   loopGuard,
@@ -128,6 +133,9 @@ class GentleInterceptDecisionEngine {
     }
     if (snapshot.essentialPackages.contains(packageName)) {
       return GentleInterceptDecision.essential;
+    }
+    if (!snapshot.hiddenPackages.contains(packageName)) {
+      return GentleInterceptDecision.notHidden;
     }
     if (snapshot.planPackages.contains(packageName)) {
       return GentleInterceptDecision.activePlan;
@@ -168,6 +176,10 @@ abstract interface class GentleInterceptGateway
   );
   Future<List<MissedWhileHiddenNotification>> loadMissedNotifications();
   Future<void> clearMissedNotifications();
+
+  /// Opens what a held notification pointed at (its own tap action while
+  /// Android still has it, else its app). False when nothing opened.
+  Future<bool> openMissedNotification(MissedWhileHiddenNotification item);
   Future<void> dispose();
 }
 
@@ -211,6 +223,11 @@ class DisabledGentleInterceptGateway implements GentleInterceptGateway {
 
   @override
   Future<void> clearMissedNotifications() async {}
+
+  @override
+  Future<bool> openMissedNotification(
+    MissedWhileHiddenNotification item,
+  ) async => false;
 
   @override
   Future<void> dispose() async {}
@@ -307,6 +324,16 @@ class AndroidGentleInterceptGateway implements GentleInterceptGateway {
   @override
   Future<void> clearMissedNotifications() =>
       _channel.invokeMethod<void>('clearMissedNotifications');
+
+  @override
+  Future<bool> openMissedNotification(
+    MissedWhileHiddenNotification item,
+  ) async =>
+      await _channel.invokeMethod<bool>(
+        'openMissedNotification',
+        <String, Object?>{'package': item.packageName, 'key': item.key},
+      ) ??
+      false;
 
   @override
   Future<void> dispose() async {

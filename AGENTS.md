@@ -31,9 +31,16 @@ This file is the project's committed home for project-intrinsic agent knowledge:
   it. Connection/battery come from `voiceDownloadConditions` in
   `MainActivity.kt`. Tests use `test/support/voice_fakes.dart`
   (`fakeController` does), since the real store needs path_provider.
-- Hidden-app foreground checks and notification quieting use the Android
-  services beside `MainActivity.kt`; their access adapters and pure policies
-  live in `lib/platform/gentle_intercept.dart` and `quiet_notifications.dart`.
+- Only `Settings.hiddenApps` (the "What pulls you in?" picks plus "Hide
+  this app") is hidden, gated and held; every other app is visible
+  (`isVisible`/`legacyHiddenApps` in `lib/core/visibility.dart`; the
+  controller passes `chosenHiddenPackages` to Android). Foreground checks
+  and notification holding use the Android services beside
+  `MainActivity.kt`; adapters and pure policies are in
+  `lib/platform/gentle_intercept.dart` and `quiet_notifications.dart`.
+  Held notifications are snoozed plus a saved copy, never deleted, and go
+  back whenever the policy stops holding: keep `QuietNotificationPolicy`
+  and the Kotlin `NotificationPolicy.holds` in step.
 - The launcher icon, splash and notification art are code-drawn: vector
   masters in `android/app/src/main/res/drawable/`, PNG fallbacks regenerated
   by `tool/generate_brand_assets.py`.
