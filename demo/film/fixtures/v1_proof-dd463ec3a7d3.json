@@ -1,0 +1,28 @@
+{
+  "route": "/v1/proof",
+  "captured_at": "2026-11-04T11:20:39Z",
+  "source": "https://curre-zdfr.onrender.com",
+  "round_trip_ms": 536.6,
+  "request": {
+    "task": "Revise chapter 4 in Keep Notes and watch the G chord lesson on YouTube until 7",
+    "note": "I can switch from G to C four times in a row now"
+  },
+  "status": 200,
+  "response": {
+    "outcome": "accepted",
+    "kind": "specific_completion",
+    "specific_completion": 0.9351,
+    "result": null,
+    "learning": {
+      "text": "I can switch from G to C four times in a row now",
+      "start": 0,
+      "end": 48
+    },
+    "mismatch": null,
+    "redactions": [],
+    "usage": {
+      "credits": 8,
+      "model_ms": 198.008198
+    }
+  }
+}
