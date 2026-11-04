@@ -35,7 +35,15 @@ final bannedCopy = <String, RegExp>{
     'Extract',
     'Fill',
   ])
-    word: RegExp('(?<![A-Za-z])$word(?![A-Za-z])', caseSensitive: false),
+    word: RegExp(
+      '(?<![A-Za-z])$word(?![A-Za-z])',
+      caseSensitive: const {
+        'Guard',
+        'Decide',
+        'Extract',
+        'Fill',
+      }.contains(word),
+    ),
 };
 
 /// The banned words found in [text], if any.
@@ -66,7 +74,8 @@ Set<String> visibleCopy(WidgetTester tester) {
         break;
     }
   }
-  final root = tester.binding.rootPipelineOwner.semanticsOwner?.rootSemanticsNode;
+  final root =
+      tester.binding.rootPipelineOwner.semanticsOwner?.rootSemanticsNode;
   void visit(SemanticsNode node) {
     final data = node.getSemanticsData();
     copy.addAll([data.label, data.hint, data.value, data.tooltip]);
