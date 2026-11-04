@@ -183,7 +183,11 @@ class GentleInterceptService : Service() {
         lastEventMillis = newestAt
         if (packageName == lastForegroundPackage) return
         lastForegroundPackage = packageName
-        if (policy.shouldIntercept(packageName, now, ignoredPackages)) {
+        // Another home screen is in use: Curre pauses rather than pulling
+        // the user back into it.
+        if (policy.shouldIntercept(packageName, now, ignoredPackages) &&
+            isCurreDefaultHome(this)
+        ) {
             bringGateForward(packageName, now)
         }
     }

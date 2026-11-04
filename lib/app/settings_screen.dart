@@ -9,6 +9,7 @@ import 'access_help.dart';
 import 'app_choice_screen.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
+import 'focus_widgets.dart';
 import 'history_screen.dart';
 import 'privacy_details_screen.dart';
 import 'voice_sheet.dart';
@@ -102,6 +103,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: ListView(
               padding: const EdgeInsets.all(CurreSpace.gutter),
               children: [
+                const _SectionTitle('Your focus'),
+                const SizedBox(height: CurreSpace.s2),
+                AnimatedBuilder(
+                  animation: controller,
+                  builder: (context, _) =>
+                      FocusSettingsCard(controller: controller),
+                ),
+                const SizedBox(height: CurreSpace.s6),
                 const _SectionTitle('Your day'),
                 const SizedBox(height: CurreSpace.s1),
                 Text(
@@ -151,6 +160,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? 'Checking…'
                       : !controller.hasUsageAccess
                       ? 'Needs your OK in Android first'
+                      : settings.askWhyOnHiddenAppOpen &&
+                            controller.pausedAwayFromHome
+                      ? 'Paused while another home screen is in use'
+                      : settings.askWhyOnHiddenAppOpen && controller.isRestDay
+                      ? 'Resting today. Back tomorrow morning.'
                       : settings.askWhyOnHiddenAppOpen
                       ? 'On, even from recent apps, notifications and links'
                       : 'Off',
@@ -175,6 +189,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ? 'Checking…'
                       : !controller.hasNotificationAccess
                       ? 'Needs your OK in Android first'
+                      : settings.quietNotificationsFromHiddenApps &&
+                            controller.pausedAwayFromHome
+                      ? 'Paused while another home screen is in use'
+                      : settings.quietNotificationsFromHiddenApps &&
+                            controller.isRestDay
+                      ? 'Resting today. Back tomorrow morning.'
                       : settings.quietNotificationsFromHiddenApps
                       ? 'On. You’ll find them in Missed notifications.'
                       : 'Off',
@@ -199,6 +219,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   settings: settings,
                   onCheckInChanged: (value) =>
                       _saveNudges(settings.copyWith(checkInNudges: value)),
+                  onEverySessionChanged: (value) => _saveNudges(
+                    settings.copyWith(everySessionNudges: value),
+                  ),
+                  onFocusChanged: (value) =>
+                      _saveNudges(settings.copyWith(focusNudges: value)),
                   onPlanEndingChanged: (value) =>
                       _saveNudges(settings.copyWith(planEndingNudges: value)),
                   onUnlockTimeUpChanged: (value) =>
@@ -211,6 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       planEndingNudges: value,
                       unlockTimeUpNudges: value,
                       proofNudges: value,
+                      focusNudges: value,
                     ),
                   ),
                 ),
@@ -683,6 +709,8 @@ class _ReminderSettingsCard extends StatelessWidget {
   const _ReminderSettingsCard({
     required this.settings,
     required this.onCheckInChanged,
+    required this.onEverySessionChanged,
+    required this.onFocusChanged,
     required this.onPlanEndingChanged,
     required this.onUnlockTimeUpChanged,
     required this.onProofChanged,
@@ -691,6 +719,8 @@ class _ReminderSettingsCard extends StatelessWidget {
 
   final Settings settings;
   final ValueChanged<bool> onCheckInChanged;
+  final ValueChanged<bool> onEverySessionChanged;
+  final ValueChanged<bool> onFocusChanged;
   final ValueChanged<bool> onPlanEndingChanged;
   final ValueChanged<bool> onUnlockTimeUpChanged;
   final ValueChanged<bool> onProofChanged;
@@ -725,10 +755,20 @@ class _ReminderSettingsCard extends StatelessWidget {
             _ReminderSwitch(
               key: const Key('nudge-check-in'),
               title: 'Plan your day',
-              subtitle: 'When a new part of your day begins',
+              subtitle: settings.everySessionNudges
+                  ? 'When each part of your day begins'
+                  : 'Once a day, when your morning begins',
               value: settings.checkInNudges,
               onChanged: onCheckInChanged,
             ),
+            if (settings.checkInNudges)
+              _ReminderSwitch(
+                key: const Key('nudge-every-session'),
+                title: 'Afternoon and evening too',
+                subtitle: 'Also when your afternoon and evening begin',
+                value: settings.everySessionNudges,
+                onChanged: onEverySessionChanged,
+              ),
             _ReminderSwitch(
               key: const Key('nudge-plan-ending'),
               title: 'Plan ending',
@@ -749,6 +789,13 @@ class _ReminderSettingsCard extends StatelessWidget {
               subtitle: 'A few minutes after your plan ends',
               value: settings.proofNudges,
               onChanged: onProofChanged,
+            ),
+            _ReminderSwitch(
+              key: const Key('nudge-focus'),
+              title: 'Focus ends',
+              subtitle: 'On the morning your focus period ends',
+              value: settings.focusNudges,
+              onChanged: onFocusChanged,
             ),
             const SizedBox(height: CurreSpace.s2),
             CurreSecondaryButton(

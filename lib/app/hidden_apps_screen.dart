@@ -152,12 +152,15 @@ class _HiddenAppsBody extends StatelessWidget {
           label: 'Bring back ${app.label}',
           excludeSemantics: true,
           child: InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) =>
-                    UnlockGateScreen(controller: controller, app: app),
-              ),
-            ),
+            // A rest day opens hidden apps without asking why.
+            onTap: controller.isRestDay
+                ? () => controller.plainLaunch(app.packageName)
+                : () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          UnlockGateScreen(controller: controller, app: app),
+                    ),
+                  ),
             splashFactory: NoSplash.splashFactory,
             child: Container(
               constraints: const BoxConstraints(minHeight: 56),
@@ -188,7 +191,11 @@ class _HiddenAppsBody extends StatelessWidget {
             ),
             child: CurreTopBar(
               title: 'Hidden apps',
-              subtitle: apps.length == 1 ? '1 app' : '${apps.length} apps',
+              subtitle: controller.isRestDay
+                  ? 'Rest day: they open without asking'
+                  : apps.length == 1
+                  ? '1 app'
+                  : '${apps.length} apps',
             ),
           ),
           Expanded(

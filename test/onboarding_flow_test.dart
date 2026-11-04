@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/copy_rules.dart';
 import 'support/fakes.dart';
 
 const _instagram = 'com.instagram.android';
@@ -394,6 +395,56 @@ void main() {
     expect(controller.onboardingComplete, isTrue);
     expect(controller.settings.displayName, 'Ada');
     expect(store.pendingPrompts, ContextPrompt.values.toSet());
+  });
+
+  testWidgets('About you asks what the focus is for and until when', (
+    tester,
+  ) async {
+    final controller = newUser();
+    await pump(tester, controller);
+    await walkTo(tester, 'What should Curre call you?');
+    await tester.enterText(find.byType(TextField), 'Ada');
+    await settle(tester);
+    expect(find.text('What’s this focus for?'), findsOneWidget);
+    for (final purpose in FocusPurpose.values) {
+      expect(find.text(purpose.label), findsOneWidget);
+    }
+    await tapText(tester, 'Breaking a habit');
+    // A habit starts at 21 days.
+    expect(find.textContaining('in 21 days'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('focus-goal')),
+      'Stop scrolling at night',
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('focus-length-7')));
+    await tester.tap(find.byKey(const ValueKey('focus-length-7')));
+    await settle(tester);
+    expect(find.textContaining('in 7 days'), findsOneWidget);
+    for (final text in visibleCopy(tester)) {
+      expect(bannedWordsIn(text), isEmpty, reason: text);
+    }
+
+    await tapText(tester, 'Call me Ada');
+    await tapText(tester, 'None of these');
+    await tapText(tester, 'Make Curre my home screen');
+    await tapText(tester, 'Continue');
+    await tapText(tester, 'I’ll plan later');
+
+    final focus = controller.settings.focus!;
+    expect(focus.purpose, FocusPurpose.habit);
+    expect(focus.goal, 'Stop scrolling at night');
+    expect(focus.lengthInDays, 7);
+  });
+
+  testWidgets('skipping the focus is fine; Home offers it later', (
+    tester,
+  ) async {
+    final controller = newUser();
+    await pump(tester, controller);
+    await walkTo(tester, 'What’s this morning for?');
+    await tapText(tester, 'I’ll plan later');
+    expect(controller.settings.focus, isNull);
+    expect(find.byKey(const Key('home-focus-offer')), findsOneWidget);
   });
 
   testWidgets('every step fits a small phone at twice the text size', (

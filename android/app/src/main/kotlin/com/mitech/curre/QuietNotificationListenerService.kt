@@ -21,6 +21,8 @@ class QuietNotificationListenerService : NotificationListenerService() {
         val now = System.currentTimeMillis()
         if (!policy.shouldQuiet(posted.packageName, now)) return
         if (!posted.isClearable || isProtected(posted.packageName, notification)) return
+        // Another home screen is in use: everything comes through as usual.
+        if (!isCurreDefaultHome(this)) return
 
         val appLabel = applicationLabel(posted.packageName)
         val title = notification.extras

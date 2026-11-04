@@ -29,6 +29,8 @@ class CurreLocalStore {
   static const String _contextPromptsKey = 'curre.contextPrompts.v1';
   static const String _laterKey = 'curre.later.v1';
   static const String _laterDismissedKey = 'curre.laterDismissed.v1';
+  static const String _restDaysKey = 'curre.restDays.v1';
+  static const String _focusOfferKey = 'curre.focusOfferDismissed.v1';
   static const Duration historyRetention = Duration(days: 30);
 
   static Future<CurreLocalStore> open({DateTime? now}) async {
@@ -72,6 +74,34 @@ class CurreLocalStore {
 
   /// Reads again what another copy of Curre may have saved meanwhile.
   Future<void> reloadFromDisk() => _preferences.reload();
+
+  /// The rest days taken, oldest first. Like proof days they are kept for
+  /// good (a date each), because Prooflight skips them when it rebuilds a
+  /// run; "Clear history" leaves them.
+  List<LocalDate> loadRestDays() {
+    final days = <LocalDate>{};
+    for (final value in _preferences.getStringList(_restDaysKey) ?? const []) {
+      try {
+        days.add(LocalDate.fromJson(value));
+      } on Object {
+        // Skipped; the next write leaves it out.
+      }
+    }
+    return days.toList()..sort();
+  }
+
+  Future<void> saveRestDays(Iterable<LocalDate> days) {
+    final sorted = days.toSet().toList()..sort();
+    return _preferences.setStringList(_restDaysKey, [
+      for (final day in sorted) day.toJson(),
+    ]);
+  }
+
+  /// Whether "Set a focus" was put away on Home. Settings still has it.
+  bool get isFocusOfferDismissed =>
+      _preferences.getBool(_focusOfferKey) ?? false;
+
+  Future<void> dismissFocusOffer() => _preferences.setBool(_focusOfferKey, true);
 
   /// Whether the user has put away the Hidden apps explainer.
   bool get isHiddenAppsTipDismissed =>

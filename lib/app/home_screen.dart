@@ -12,6 +12,7 @@ import 'app_widgets.dart';
 import 'checkin_screen.dart';
 import 'completion_sheet.dart';
 import 'curre_controller.dart';
+import 'focus_widgets.dart';
 import 'hidden_apps_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
@@ -223,6 +224,12 @@ class _HomeBody extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: CurreSpace.s6),
+                  // The focus sits calmly above the day's plan; once it
+                  // ends, how it went comes first.
+                  if (controller.focus != null) ...[
+                    FocusHomeCard(controller: controller),
+                    const SizedBox(height: CurreSpace.s4),
+                  ],
                   if (plan == null)
                     _CheckinPrompt(
                       session: window.session,
@@ -265,6 +272,13 @@ class _HomeBody extends StatelessWidget {
                       (plan != null || controller.activeGrants.isNotEmpty)) ...[
                     const SizedBox(height: CurreSpace.s4),
                     _NudgeOffer(controller: controller),
+                  ],
+                  // Offered between plans, never on top of one.
+                  if (plan == null &&
+                      controller.focus == null &&
+                      !controller.focusOfferDismissed) ...[
+                    const SizedBox(height: CurreSpace.s4),
+                    FocusHomeCard(controller: controller),
                   ],
                   const SizedBox(height: CurreSpace.s6),
                   _SightHeader(doorCount: doorCount),

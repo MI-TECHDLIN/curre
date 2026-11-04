@@ -67,8 +67,10 @@ class CurreController extends ChangeNotifier {
     List<Attempt> historyAttempts = const <Attempt>[],
     this.appInventoryState = AppInventoryState.ready,
     List<LaterItem> laterItems = const <LaterItem>[],
+    List<LocalDate> restDays = const <LocalDate>[],
     this.onboardingComplete = false,
     this.hiddenAppsTipDismissed = false,
+    this.focusOfferDismissed = false,
     Set<ContextPrompt> pendingPrompts = const <ContextPrompt>{},
     DateTime Function()? now,
   }) : speech = speech ?? SpeechInputService(),
@@ -83,6 +85,7 @@ class CurreController extends ChangeNotifier {
        historyGrants = List<Grant>.of(historyGrants),
        historyAttempts = List<Attempt>.of(historyAttempts),
        laterItems = List<LaterItem>.of(laterItems),
+       restDays = List<LocalDate>.of(restDays),
        pendingPrompts = Set<ContextPrompt>.of(pendingPrompts),
        _now = now ?? DateTime.now;
 
@@ -156,8 +159,10 @@ class CurreController extends ChangeNotifier {
       historyAttempts: historyAttempts,
       appInventoryState: appInventoryState,
       laterItems: laterItems,
+      restDays: store?.loadRestDays() ?? const <LocalDate>[],
       onboardingComplete: store?.isOnboardingComplete ?? false,
       hiddenAppsTipDismissed: store?.isHiddenAppsTipDismissed ?? false,
+      focusOfferDismissed: store?.isFocusOfferDismissed ?? false,
       pendingPrompts: store?.pendingPrompts ?? const <ContextPrompt>{},
     );
     await controller.initializeGentleIntercept();
@@ -234,6 +239,40 @@ class CurreController extends ChangeNotifier {
   /// Whether the Hidden apps explainer has been put away for good.
   bool hiddenAppsTipDismissed;
 
+  /// Rest days taken, oldest first (see [RestDayRules]).
+  List<LocalDate> restDays;
+
+  /// Whether "Set a focus" was put away on Home.
+  bool focusOfferDismissed;
+
+  /// The Curre day reminders were last set for; they are set again once a
+  /// new day starts.
+  LocalDate? _remindersSetFor;
+
+  /// Android's last answer to "is Curre the home screen?"; null until it
+  /// has answered.
+  bool? _curreIsHome;
+
+  /// Another home screen is in use: the hidden-app check and notification
+  /// quieting pause until Curre is Home again, so leaving Curre really
+  /// leaves it. Plans, history and settings stay.
+  bool get pausedAwayFromHome => _curreIsHome == false;
+
+  /// Whether "Why now?" applies at this moment: switched on, Curre is Home
+  /// and today isn't a rest day.
+  bool get _askingWhy =>
+      onboardingComplete &&
+      settings.askWhyOnHiddenAppOpen &&
+      !pausedAwayFromHome &&
+      !isRestDay;
+
+  /// Whether hidden apps' notifications are quieted at this moment.
+  bool get _quieting =>
+      onboardingComplete &&
+      settings.quietNotificationsFromHiddenApps &&
+      !pausedAwayFromHome &&
+      !isRestDay;
+
   /// What setup left to ask in context, until each is answered once.
   final Set<ContextPrompt> pendingPrompts;
   CallReceipt? lastPlanCall;
@@ -268,7 +307,57 @@ class CurreController extends ChangeNotifier {
   ProofSummary get proofSummary => ProoflightRules.summarize(
     records: proofRecords,
     today: currentSession.localStartDate,
+    restDays: restDays,
   );
+
+  /// Today's Curre day, which starts at the morning start.
+  LocalDate get today => currentSession.localStartDate;
+
+  /// What this stretch with Curre is for, if a focus is set.
+  FocusPeriod? get focus => settings.focus;
+
+  /// A focus is set and its end date has come: Home shows how it went.
+  bool get focusIsOver => focus?.isOverOn(today) ?? false;
+
+  /// A focus is set and still running.
+  bool get focusIsRunning => focus != null && !focusIsOver;
+
+  /// Today is a rest day: hidden apps open without asking why and no
+  /// reminders come, until tomorrow's morning start.
+  bool get isRestDay => restDays.contains(today);
+
+  /// Whether today can become a rest day: during a focus, one a week.
+  bool get canRestToday =>
+      focusIsRunning && RestDayRules.canRest(today, restDays);
+
+  /// The next day a rest day can be taken.
+  LocalDate get nextRestDay => RestDayRules.nextAllowed(today, restDays);
+
+  /// When today's rest ends: the next morning start.
+  DateTime get restEndsAt {
+    final schedule = SessionSchedule.fromSettings(settings);
+    var window = currentSession;
+    for (var i = 0; i < SessionName.values.length; i++) {
+      if (window.localStartDate != today) break;
+      window = schedule.current(window.endsAt);
+    }
+    return window.startsAt;
+  }
+
+  /// How the focus has gone so far (or went, once it is over).
+  FocusSummary? get focusSummary {
+    final current = focus;
+    if (current == null) return null;
+    final schedule = SessionSchedule.fromSettings(settings);
+    return FocusSummary.of(
+      focus: current,
+      today: today,
+      proofRecords: proofRecords,
+      attempts: historyAttempts,
+      restDays: restDays,
+      curreDay: (instant) => schedule.current(instant).localStartDate,
+    );
+  }
 
   Plan? get activePlan {
     final instant = now.toUtc();
@@ -290,7 +379,7 @@ class CurreController extends ChangeNotifier {
   GentleInterceptSnapshot get gentleInterceptSnapshot {
     final plan = activePlan;
     return GentleInterceptSnapshot(
-      enabled: onboardingComplete && settings.askWhyOnHiddenAppOpen,
+      enabled: _askingWhy,
       hasUsageAccess: _hasUsageAccess,
       launchablePackages: apps.map((app) => app.packageName).toSet(),
       essentialPackages: <String>{
@@ -307,7 +396,7 @@ class CurreController extends ChangeNotifier {
   QuietNotificationSnapshot get quietNotificationSnapshot {
     final plan = activePlan;
     return QuietNotificationSnapshot(
-      enabled: onboardingComplete && settings.quietNotificationsFromHiddenApps,
+      enabled: _quieting,
       hasNotificationAccess: _hasNotificationAccess,
       launchablePackages: apps.map((app) => app.packageName).toSet(),
       essentialPackages: <String>{
@@ -417,8 +506,9 @@ class CurreController extends ChangeNotifier {
     required Set<String> candidates,
     LocalTime? morningStart,
     String? firstIntention,
+    FocusChoice? focus,
   }) async {
-    final next = settings.copyWith(
+    var next = settings.copyWith(
       displayName: displayName,
       avatarId: avatarId,
       clearAvatarId: avatarId == null,
@@ -431,6 +521,10 @@ class CurreController extends ChangeNotifier {
               SessionName.morning: morningStart,
             },
     );
+    if (focus != null) {
+      final day = SessionSchedule.fromSettings(next).current(now).localStartDate;
+      next = next.copyWith(focus: focus.periodFrom(day));
+    }
     const prompts = <ContextPrompt>{...ContextPrompt.values};
     // Save first: if the phone can't store the answers, onboarding stays
     // open with everything still filled in, ready to try again.
@@ -510,6 +604,7 @@ class CurreController extends ChangeNotifier {
   }
 
   Future<void> initializeGentleIntercept() async {
+    await isDefaultHome();
     await refreshUsageAccess(notify: false);
     await refreshNotificationAccess(notify: false);
     await refreshMissedNotifications(notify: false);
@@ -614,6 +709,15 @@ class CurreController extends ChangeNotifier {
         .map((app) => app.packageName)
         .where((packageName) => packageName != currePackageName)
         .toSet();
+    // A rest day lets every app open without asking, and its notifications
+    // through, until the next morning start; Android picks both up again by
+    // itself after that.
+    if (isRestDay) {
+      final until = restEndsAt;
+      for (final packageName in monitoredPackages) {
+        extend(packageName, until);
+      }
+    }
     final alwaysAllowedPackages = <String>{
       currePackageName,
       ...settings.essentials,
@@ -623,7 +727,10 @@ class CurreController extends ChangeNotifier {
     try {
       await gentleIntercept.configureGentleIntercept(
         GentleInterceptConfiguration(
-          enabled: onboardingComplete && settings.askWhyOnHiddenAppOpen,
+          enabled:
+              onboardingComplete &&
+              settings.askWhyOnHiddenAppOpen &&
+              !pausedAwayFromHome,
           monitoredPackages: monitoredPackages,
           alwaysAllowedPackages: alwaysAllowedPackages,
           allowedUntilUtc: allowedUntil,
@@ -637,7 +744,9 @@ class CurreController extends ChangeNotifier {
       await gentleIntercept.configureQuietNotifications(
         QuietNotificationConfiguration(
           enabled:
-              onboardingComplete && settings.quietNotificationsFromHiddenApps,
+              onboardingComplete &&
+              settings.quietNotificationsFromHiddenApps &&
+              !pausedAwayFromHome,
           monitoredPackages: monitoredPackages,
           alwaysAllowedPackages: alwaysAllowedPackages,
           allowedUntilUtc: allowedUntil,
@@ -683,6 +792,7 @@ class CurreController extends ChangeNotifier {
             planEndingNudges: false,
             unlockTimeUpNudges: false,
             proofNudges: false,
+            focusNudges: false,
           ),
         );
       } on Object {
@@ -701,6 +811,79 @@ class CurreController extends ChangeNotifier {
     } on Object {
       // Showing the tip once more next time is harmless.
     }
+  }
+
+  /// Starts a focus today from [choice], in place of any earlier one.
+  Future<void> startFocus(FocusChoice choice) =>
+      updateSettings(settings.copyWith(focus: choice.periodFrom(today)));
+
+  /// Moves the running focus's end to [day]: later to extend it, or today
+  /// to end it now (Home then shows how it went).
+  Future<void> changeFocusEnd(LocalDate day) async {
+    final current = focus;
+    if (current == null) return;
+    final earliest = today.compareTo(current.startsOn) < 0
+        ? current.startsOn
+        : today;
+    final end = day.compareTo(earliest) < 0 ? earliest : day;
+    await updateSettings(settings.copyWith(focus: current.endingOn(end)));
+  }
+
+  /// Ends the focus today; Home shows how it went.
+  Future<void> endFocusNow() => changeFocusEnd(today);
+
+  /// Puts away "Set a focus" on Home; Curre settings still has it.
+  Future<void> dismissFocusOffer() async {
+    focusOfferDismissed = true;
+    notifyListeners();
+    try {
+      await store?.dismissFocusOffer();
+    } on Object {
+      // Offering it once more next time is harmless.
+    }
+  }
+
+  /// Makes today a rest day, if it can be one ([canRestToday]): hidden apps
+  /// open without asking and reminders stay quiet until the next morning
+  /// start. Prooflight skips the day, so no run ends because of it.
+  Future<bool> takeRestDay() async {
+    if (!canRestToday) return false;
+    await _saveRestDays(<LocalDate>[...restDays, today]);
+    return true;
+  }
+
+  /// Takes today's rest day back: Curre is strict again from now.
+  Future<void> endRestDay() async {
+    if (!isRestDay) return;
+    await _saveRestDays(restDays.where((day) => day != today).toList());
+  }
+
+  Future<void> _saveRestDays(List<LocalDate> days) async {
+    await store?.saveRestDays(days);
+    restDays = days..sort();
+    await _syncGentleInterceptPolicy();
+    try {
+      await _syncReminderSettings(syncGrantNotifications: false);
+    } on Object {
+      // The rest day is saved; reminders are best effort.
+    }
+    notifyListeners();
+  }
+
+  /// "Go back to my old home screen" when a focus ends: Curre stops asking
+  /// why and stops quieting hidden apps (and their "Plan your day"
+  /// reminders), the focus is put away, and Android's home screen choice
+  /// opens. History and proof days stay on this phone.
+  Future<HomeSettingsOpened> leaveForOldHomeScreen() async {
+    await updateSettings(
+      settings.copyWith(
+        clearFocus: true,
+        askWhyOnHiddenAppOpen: false,
+        quietNotificationsFromHiddenApps: false,
+        checkInNudges: false,
+      ),
+    );
+    return openHomeSettings();
   }
 
   Future<void> updateDisplayName(String value) =>
@@ -744,7 +927,12 @@ class CurreController extends ChangeNotifier {
 
   Future<bool> isDefaultHome() async {
     try {
-      return await homePlatform.isDefaultHome();
+      final isHome = await homePlatform.isDefaultHome();
+      if (_curreIsHome != isHome) {
+        _curreIsHome = isHome;
+        await _syncGentleInterceptPolicy();
+      }
+      return isHome;
     } on Object {
       return false;
     }
@@ -821,10 +1009,14 @@ class CurreController extends ChangeNotifier {
       taskTraces = store!.loadTaskTraces(now: instant);
       proofRecords = store!.loadProofRecords(now: instant);
       laterItems = store!.loadLaterItems(now: instant);
+      restDays = store!.loadRestDays();
     } else {
       grants = activeGrants;
     }
+    await isDefaultHome();
     await _syncGentleInterceptPolicy();
+    // Each reminder fires once; a new Curre day sets the next ones.
+    if (_remindersSetFor != today) await _prepareReminders();
     notifyListeners();
     unawaited(retryPendingProofs());
   }
@@ -987,7 +1179,11 @@ class CurreController extends ChangeNotifier {
     await store?.appendPlanHistory(plan, now: now);
     await _syncGentleInterceptPolicy();
     try {
-      await reminders?.schedulePlanReminders(plan, settings: settings);
+      await reminders?.schedulePlanReminders(
+        plan,
+        settings: settings,
+        restDays: restDays,
+      );
     } on Object {
       // The plan is authoritative; reminder delivery is best effort.
     }
@@ -1005,13 +1201,27 @@ class CurreController extends ChangeNotifier {
   Future<void> _syncReminderSettings({
     bool syncGrantNotifications = true,
   }) async {
-    await reminders?.scheduleSessionReminders(settings);
-    for (final plan in plans) {
-      if (plan.endedEarly) {
-        await reminders?.cancelPlanReminders(plan);
+    final service = reminders;
+    if (service != null) {
+      if (!onboardingComplete) {
+        // Nothing to plan yet: no "Plan your day" before setup is done.
+        await service.cancelSessionReminders();
       } else {
-        await reminders?.schedulePlanReminders(plan, settings: settings);
+        await service.scheduleSessionReminders(settings, restDays: restDays);
       }
+      await service.scheduleFocusEnd(settings);
+      for (final plan in plans) {
+        if (plan.endedEarly) {
+          await service.cancelPlanReminders(plan);
+        } else {
+          await service.schedulePlanReminders(
+            plan,
+            settings: settings,
+            restDays: restDays,
+          );
+        }
+      }
+      _remindersSetFor = today;
     }
     if (!syncGrantNotifications) return;
     for (final grant in activeGrants) {

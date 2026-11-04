@@ -9,6 +9,7 @@ import '../doors/door_models.dart';
 import '../platform/platform.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
+import 'focus_widgets.dart';
 import 'onboarding/app_hints.dart';
 import 'onboarding/onboarding_parts.dart';
 import 'onboarding/onboarding_scenes.dart';
@@ -16,8 +17,8 @@ import 'privacy_details_screen.dart';
 
 /// First-run setup in five short steps (onboarding study, 2026-10-25,
 /// cut from twelve on 2026-11-03): the problem and Curre's promise, who
-/// you are, the apps that pull you in, Curre as the home screen, and the
-/// first plan itself.
+/// you are and what this focus is for (until when), the apps that pull you
+/// in, Curre as the home screen, and the first plan itself.
 ///
 /// Everything else waits until it helps: the morning starts at 06:00
 /// (changed in Curre settings), and quiet nudges, Usage access and
@@ -47,6 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   final _name = TextEditingController();
   final _plan = TextEditingController();
+  final _focusGoal = TextEditingController();
   final _nameFocus = FocusNode();
   final _pull = <String>{};
   late final Set<String> _essentials;
@@ -54,6 +56,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   var _step = _Step.welcome;
   String? _avatarId;
+  FocusPurpose? _focusPurpose;
+  int? _focusDays;
+  LocalDate? _focusEndsOn;
   var _showAllPull = false;
   var _sinking = false;
   var _nameTried = false;
@@ -92,6 +97,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pull.addAll(draft.hidden.where(eligible.contains));
     _showAllPull = draft.showAllApps;
     _plan.text = draft.plan;
+    _focusPurpose = FocusPurposeWords.tryParse(draft.focusPurpose);
+    _focusGoal.text = draft.focusGoal;
+    _focusDays = draft.focusDays;
+    try {
+      final end = draft.focusEndsOn;
+      _focusEndsOn = end == null ? null : LocalDate.fromJson(end);
+    } on FormatException {
+      _focusEndsOn = null;
+    }
     _step = _Step.values.asNameMap()[draft.step] ?? _Step.welcome;
     if (_step == _Step.home) unawaited(_resumeAtHome());
   }
@@ -116,6 +130,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         hidden: {..._pull},
         showAllApps: _showAllPull,
         plan: _plan.text,
+        focusPurpose: _focusPurpose?.name,
+        focusGoal: _focusGoal.text,
+        focusDays: _focusDays,
+        focusEndsOn: _focusEndsOn?.toJson(),
       ),
     ),
   );
@@ -125,6 +143,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     WidgetsBinding.instance.removeObserver(this);
     _name.dispose();
     _plan.dispose();
+    _focusGoal.dispose();
     _nameFocus.dispose();
     super.dispose();
   }
@@ -287,6 +306,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         candidates: _planApps,
         morningStart: _morning,
         firstIntention: withPlan ? _plan.text : null,
+        focus: _focusPurpose == null
+            ? null
+            : FocusChoice(
+                purpose: _focusPurpose!,
+                goal: _focusGoal.text,
+                days: _focusDays,
+                endsOn: _focusEndsOn,
+              ),
       );
     } on Object {
       if (!mounted) return;
@@ -576,6 +603,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           onPressed: () => setState(() => _avatarId = null),
         ),
       ],
+      const SizedBox(height: CurreSpace.s6),
+      Text(
+        'What’s this focus for?',
+        style: type.title.copyWith(color: colors.ink),
+      ),
+      const SizedBox(height: CurreSpace.s1),
+      Text(
+        'Curre helps most for a while, with an end date. When it ends, your phone goes back to normal. Skip this if you’re not sure yet.',
+        style: type.body.copyWith(color: colors.ink2),
+      ),
+      const SizedBox(height: CurreSpace.s3),
+      FocusPicker(
+        today: controller.today,
+        purpose: _focusPurpose,
+        goal: _focusGoal,
+        days: _focusDays,
+        endsOn: _focusEndsOn,
+        onPurpose: (value) => setState(() {
+          // Tapping the picked one again lets the user skip after all.
+          _focusPurpose = value == _focusPurpose ? null : value;
+          if (_focusEndsOn == null) _focusDays = null;
+        }),
+        onDays: (value) => setState(() {
+          _focusDays = value;
+          _focusEndsOn = null;
+        }),
+        onEndsOn: (value) => setState(() {
+          _focusEndsOn = value;
+          _focusDays = null;
+        }),
+      ),
     ];
   }
 

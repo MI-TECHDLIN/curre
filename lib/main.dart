@@ -123,6 +123,9 @@ class _CurreAppState extends State<CurreApp> {
       return;
     }
     if (!controller.onboardingComplete) return;
+    // Home is still (no motion), so ask for the frame this waits on;
+    // otherwise a tap while Curre is open waits for the next redraw.
+    WidgetsBinding.instance.ensureVisualUpdate();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final navigator = _navigatorKey.currentState;

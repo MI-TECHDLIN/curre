@@ -1,5 +1,6 @@
 export 'api_client.dart';
 export 'api_models.dart';
+export 'focus.dart';
 export 'grants.dart';
 export 'later.dart';
 export 'local_store.dart';
