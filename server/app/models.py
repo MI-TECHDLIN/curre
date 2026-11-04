@@ -4,9 +4,9 @@ code-point offsets into the source text, end exclusive (never UTF-16 indices).
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 Session = Literal["morning", "afternoon", "evening"]
 Kind = Literal["task", "person", "time_sensitive", "browse", "unclear"]
@@ -23,6 +23,66 @@ MAX_REASON_LEN = 300
 MAX_PROOF_NOTE_LEN = 300
 MAX_LATER_ITEMS = 20
 MAX_LATER_ID_LEN = 64
+MIN_CANDIDATES = 2
+MAX_SHORTCUT_LABELS = 15
+# Answers the plan and unlock steps already use for "no specific part of the
+# app"; a shortcut with the same label would make that option ambiguous.
+RESERVED_SHORTCUT_LABELS = frozenset({"The app itself", "app"})
+
+
+def clean_label(value: Any) -> str | None:
+    """A label a phone sent, tidied: whitespace (including the newlines some
+    launchers put in app names) collapsed and the result cut to
+    MAX_LABEL_LEN. None when nothing usable is left."""
+    if not isinstance(value, str):
+        return None
+    label = " ".join(value.split())[:MAX_LABEL_LEN].rstrip()
+    return label or None
+
+
+def clean_shortcut_labels(value: Any) -> list[str]:
+    """Usable shortcut labels in their original order. An empty, over-long,
+    repeated or reserved label is dropped, never a reason to turn the whole
+    request down: a shortcut is only an optional door into its app."""
+    if not isinstance(value, list):
+        return []
+    labels: list[str] = []
+    for raw in value:
+        if not isinstance(raw, str):
+            continue
+        label = " ".join(raw.split())
+        if not label or len(label) > MAX_LABEL_LEN or label in RESERVED_SHORTCUT_LABELS:
+            continue
+        if label in labels:
+            continue
+        labels.append(label)
+        if len(labels) == MAX_SHORTCUT_LABELS:
+            break
+    return labels
+
+
+def _clean_candidates(value: Any) -> Any:
+    """Keeps every usable candidate (at most MAX_CANDIDATES) instead of
+    rejecting the plan over one odd app: one with an empty id or label, a
+    repeated id or label, or a field of the wrong type is dropped."""
+    if not isinstance(value, list):
+        return value
+    cleaned: list[Candidate] = []
+    ids: set[str] = set()
+    labels: set[str] = set()
+    for raw in value:
+        if len(cleaned) == MAX_CANDIDATES:
+            break
+        try:
+            candidate = Candidate.model_validate(raw)
+        except ValidationError:
+            continue
+        if candidate.id in ids or candidate.label in labels:
+            continue
+        ids.add(candidate.id)
+        labels.add(candidate.label)
+        cleaned.append(candidate)
+    return cleaned
 
 
 class Span(BaseModel):
@@ -46,36 +106,40 @@ class Usage(BaseModel):
 
 
 class Candidate(BaseModel):
+    """One app the plan may pick. Its id is opaque and echoed back exactly,
+    so it is never altered; the labels are cleaned on the way in."""
+
     id: str = Field(min_length=1)
     label: str = Field(min_length=1, max_length=MAX_LABEL_LEN)
     shortcut_labels: list[str] = Field(default_factory=list)
     query_door: bool = False
 
-    @field_validator("shortcut_labels")
+    @field_validator("id")
     @classmethod
-    def _check_shortcut_labels(cls, value: list[str]) -> list[str]:
-        for label in value:
-            if not label or len(label) > MAX_LABEL_LEN:
-                raise ValueError(f"shortcut label must be 1-{MAX_LABEL_LEN} chars: {label!r}")
-        if len(value) != len(set(value)):
-            raise ValueError("shortcut_labels must be unique")
+    def _check_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("id must not be blank")
         return value
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def _clean_label(cls, value: Any) -> Any:
+        return clean_label(value) if isinstance(value, str) else value
+
+    @field_validator("shortcut_labels", mode="before")
+    @classmethod
+    def _clean_shortcut_labels(cls, value: Any) -> list[str]:
+        return clean_shortcut_labels(value)
 
 
 class PlanRequest(BaseModel):
     session: Session
     intention: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
-    candidates: list[Candidate] = Field(min_length=2, max_length=MAX_CANDIDATES)
+    # Cleaned before validation, so only the "at least two usable apps" rule
+    # can turn the request down.
+    candidates: list[Candidate] = Field(min_length=MIN_CANDIDATES, max_length=MAX_CANDIDATES)
 
-    @model_validator(mode="after")
-    def _check_unique_labels(self) -> PlanRequest:
-        labels = [c.label for c in self.candidates]
-        if len(labels) != len(set(labels)):
-            raise ValueError("candidate labels must be unique")
-        ids = [c.id for c in self.candidates]
-        if len(ids) != len(set(ids)):
-            raise ValueError("candidate ids must be unique")
-        return self
+    _clean = field_validator("candidates", mode="before")(_clean_candidates)
 
 
 class PlanApp(BaseModel):
@@ -97,15 +161,15 @@ class UnlockRequest(BaseModel):
     shortcut_labels: list[str] = Field(default_factory=list)
     threshold: float | None = None
 
-    @field_validator("shortcut_labels")
+    @field_validator("app_label", mode="before")
     @classmethod
-    def _check_shortcut_labels(cls, value: list[str]) -> list[str]:
-        for label in value:
-            if not label or len(label) > MAX_LABEL_LEN:
-                raise ValueError(f"shortcut label must be 1-{MAX_LABEL_LEN} chars: {label!r}")
-        if len(value) != len(set(value)):
-            raise ValueError("shortcut_labels must be unique")
-        return value
+    def _clean_app_label(cls, value: Any) -> Any:
+        return clean_label(value) if isinstance(value, str) else value
+
+    @field_validator("shortcut_labels", mode="before")
+    @classmethod
+    def _clean_shortcut_labels(cls, value: Any) -> list[str]:
+        return clean_shortcut_labels(value)
 
 
 class GuardInfo(BaseModel):

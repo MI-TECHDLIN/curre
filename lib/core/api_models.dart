@@ -20,6 +20,92 @@ class ApiUsage {
   };
 }
 
+/// The longest app or shortcut label the backend takes, in code points.
+const int maxApiLabelLength = 60;
+
+/// The most apps one plan request carries.
+const int maxPlanCandidates = 30;
+
+/// The most shortcut labels sent for one app.
+const int maxShortcutLabels = 15;
+
+/// Labels the plan and unlock steps already use for "no specific part of
+/// the app", so a shortcut with one of them would be ambiguous.
+const Set<String> _reservedShortcutLabels = <String>{'The app itself', 'app'};
+
+/// An app or shortcut label tidied for the backend: whitespace (including
+/// the newlines some apps put in their names) collapsed and cut to
+/// [maxApiLabelLength] code points. Null when nothing usable is left.
+String? cleanApiLabel(String value) {
+  final collapsed = value.trim().split(RegExp(r'\s+')).join(' ');
+  final cut = String.fromCharCodes(collapsed.runes.take(maxApiLabelLength))
+      .trimRight();
+  return cut.isEmpty ? null : cut;
+}
+
+/// The shortcut labels worth sending, in order: an empty, over-long,
+/// repeated or reserved one is dropped rather than failing the request,
+/// and at most [maxShortcutLabels] are kept.
+List<String> cleanShortcutLabels(Iterable<String> labels) {
+  final kept = <String>[];
+  for (final raw in labels) {
+    final label = raw.trim().split(RegExp(r'\s+')).join(' ');
+    if (label.isEmpty ||
+        label.runes.length > maxApiLabelLength ||
+        _reservedShortcutLabels.contains(label) ||
+        kept.contains(label)) {
+      continue;
+    }
+    kept.add(label);
+    if (kept.length == maxShortcutLabels) break;
+  }
+  return List.unmodifiable(kept);
+}
+
+/// One installed app as the phone knows it, before it is cleaned into a
+/// [PlanCandidate].
+typedef PlanAppInfo = ({
+  String id,
+  String label,
+  Iterable<String> shortcutLabels,
+  bool hasQueryDoor,
+});
+
+/// Turns the phone's apps into candidates every backend version accepts,
+/// so one odd app never fails the whole plan: an app with an empty id or
+/// label, or an id already used, is left out; labels are tidied and a
+/// repeated label gets a number ("Notes 2"); shortcut labels are cleaned
+/// with [cleanShortcutLabels]; at most [maxPlanCandidates] are kept.
+List<PlanCandidate> planCandidatesFrom(Iterable<PlanAppInfo> apps) {
+  final candidates = <PlanCandidate>[];
+  final ids = <String>{};
+  final labels = <String>{};
+  for (final app in apps) {
+    if (candidates.length == maxPlanCandidates) break;
+    if (app.id.trim().isEmpty || ids.contains(app.id)) continue;
+    final base = cleanApiLabel(app.label);
+    if (base == null) continue;
+    var label = base;
+    for (var n = 2; labels.contains(label); n++) {
+      final suffix = ' $n';
+      final room = maxApiLabelLength - suffix.length;
+      label =
+          '${String.fromCharCodes(base.runes.take(room)).trimRight()}$suffix';
+    }
+    ids.add(app.id);
+    labels.add(label);
+    candidates.add(
+      PlanCandidate(
+        id: app.id,
+        label: label,
+        shortcutLabels: cleanShortcutLabels(app.shortcutLabels),
+        hasQueryDoor: app.hasQueryDoor,
+      ),
+    );
+  }
+  return List.unmodifiable(candidates);
+}
+
 class PlanCandidate {
   PlanCandidate({
     required this.id,

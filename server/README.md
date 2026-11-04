@@ -210,6 +210,15 @@ host's job, not the container's.
   code-point offsets index exactly the copy the phone may keep. A missing,
   failed, malformed, overlapping or out-of-range Protect result changes
   nothing; Curre stores the original and does not claim it was redacted.
+- Odd app data never fails a plan or unlock. `/v1/plan` cleans its
+  candidates instead of rejecting them: labels are whitespace-collapsed and
+  cut to 60 code points; a candidate with a blank id or label, a repeated id
+  or label, or a wrong-typed field is dropped; only the first 30 usable ones
+  are kept. Shortcut labels (plan and unlock) that are empty, over 60, repeated
+  or reserved ("The app itself", "app") are dropped. Only fewer than two
+  usable candidates, or an invalid intention or reason, is a `422`. The phone
+  applies the same cleaning before sending (`planCandidatesFrom` in
+  `lib/core/api_models.dart`), so an older server accepts it too.
 - `/v1/plan` has no `outcome` field, so a pipeline-level failure (the Fill
   step erroring, a timeout, or a Clocked error surviving retries) comes
   back as HTTP `503`, which the phone's existing "no network at check-in"

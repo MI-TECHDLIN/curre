@@ -195,21 +195,7 @@ def test_plan_rejects_fewer_than_two_candidates(make_client):
     assert resp.status_code == 422
 
 
-def test_plan_rejects_more_than_thirty_candidates(make_client):
-    async def handler(*, text, steps, **kwargs):  # pragma: no cover
-        raise AssertionError("must not call Clocked on invalid input")
-
-    client = make_client(handler)
-    payload = _plan_payload()
-    payload["candidates"] = [
-        {"id": f"c{i}", "label": f"App {i}", "shortcut_labels": [], "query_door": False}
-        for i in range(31)
-    ]
-    resp = client.post("/v1/plan", json=payload)
-    assert resp.status_code == 422
-
-
-def test_plan_rejects_duplicate_labels(make_client):
+def test_plan_rejects_when_a_repeated_label_leaves_one_app(make_client):
     async def handler(*, text, steps, **kwargs):  # pragma: no cover
         raise AssertionError("must not call Clocked on invalid input")
 
@@ -233,15 +219,116 @@ def test_plan_rejects_intention_over_cap(make_client):
     assert resp.status_code == 422
 
 
-def test_plan_rejects_label_over_cap(make_client):
+def _picks_first_app(captured: list):
+    async def handler(*, text, steps, **kwargs):
+        captured.append(steps)
+        first = steps[0]["fill"]["fields"]["apps"]["options"][0]
+        return make_pipeline_result(
+            [
+                ok_step("plan", "fill", {"fields": {"apps": fill_multiselect([first])}}),
+                ok_step("spans", "extract", {"fields": {}}),
+            ]
+        )
+
+    return handler
+
+
+def _odd_plan(candidates: list) -> dict:
+    return {"session": "morning", "intention": DEFAULT_INTENTION, "candidates": candidates}
+
+
+def test_plan_drops_empty_long_and_repeated_shortcut_labels(make_client):
+    captured: list = []
+    client = make_client(_picks_first_app(captured))
+    resp = client.post(
+        "/v1/plan",
+        json=_odd_plan(
+            [
+                {
+                    "id": "yt",
+                    "label": "YouTube",
+                    "shortcut_labels": ["", "Search", "x" * 61, "Search", "  ", "The app itself"],
+                },
+                {"id": "sp", "label": "Spotify", "shortcut_labels": [""]},
+            ]
+        ),
+    )
+
+    assert resp.status_code == 200
+    assert [app["id"] for app in resp.json()["apps"]] == ["yt"]
+    fields = captured[0][0]["fill"]["fields"]
+    assert fields["door_yt"]["options"] == ["Search", "The app itself"]
+    assert "door_sp" not in fields
+
+
+def test_plan_trims_an_over_long_app_label(make_client):
+    captured: list = []
+    client = make_client(_picks_first_app(captured))
+    resp = client.post(
+        "/v1/plan",
+        json=_odd_plan(
+            [
+                {"id": "a", "label": "x" * 61, "shortcut_labels": [], "query_door": False},
+                {"id": "b", "label": "y\nz", "shortcut_labels": [], "query_door": False},
+            ]
+        ),
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["apps"][0]["id"] == "a"
+    assert captured[0][0]["fill"]["fields"]["apps"]["options"] == ["x" * 60, "y z"]
+
+
+def test_plan_keeps_the_first_thirty_of_more_candidates(make_client):
+    captured: list = []
+    client = make_client(_picks_first_app(captured))
+    resp = client.post(
+        "/v1/plan",
+        json=_odd_plan(
+            [
+                {"id": f"c{i}", "label": f"App {i}", "shortcut_labels": [], "query_door": False}
+                for i in range(45)
+            ]
+        ),
+    )
+
+    assert resp.status_code == 200
+    options = captured[0][0]["fill"]["fields"]["apps"]["options"]
+    assert options == [f"App {i}" for i in range(30)]
+
+
+def test_plan_drops_repeated_ids_and_unusable_candidates(make_client):
+    captured: list = []
+    client = make_client(_picks_first_app(captured))
+    resp = client.post(
+        "/v1/plan",
+        json=_odd_plan(
+            [
+                {"id": "a", "label": "Maps"},
+                {"id": "a", "label": "Maps again"},
+                {"id": "", "label": "No id"},
+                {"id": "  ", "label": "Blank id"},
+                {"id": "c", "label": "   "},
+                {"id": "d", "label": 7},
+                "not an app",
+                {"id": "e", "label": "Maps"},
+                {"id": "f", "label": "Notes"},
+            ]
+        ),
+    )
+
+    assert resp.status_code == 200
+    assert captured[0][0]["fill"]["fields"]["apps"]["options"] == ["Maps", "Notes"]
+    assert resp.json()["apps"] == [{"id": "a", "door": None, "query": None}]
+
+
+def test_plan_rejects_when_fewer_than_two_usable_candidates_remain(make_client):
     async def handler(*, text, steps, **kwargs):  # pragma: no cover
         raise AssertionError("must not call Clocked on invalid input")
 
     client = make_client(handler)
-    payload = _plan_payload()
-    payload["candidates"] = [
-        {"id": "a", "label": "x" * 61, "shortcut_labels": [], "query_door": False},
-        {"id": "b", "label": "y", "shortcut_labels": [], "query_door": False},
-    ]
-    resp = client.post("/v1/plan", json=payload)
+    resp = client.post(
+        "/v1/plan",
+        json=_odd_plan([{"id": "a", "label": "Maps"}, {"id": "", "label": "Notes"}]),
+    )
     assert resp.status_code == 422
