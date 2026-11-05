@@ -112,6 +112,7 @@ async def plan(
             clocked,
             req.intention,
             req.candidates,
+            language=req.language,
             idempotency_key=idempotency_key,
         )
     except PipelineUnavailable:
@@ -140,6 +141,7 @@ async def unlock(
         req.reason,
         req.shortcut_labels,
         _bounded_decide_threshold(req.threshold, settings.decide_threshold),
+        language=req.language,
     )
     latency_ms = (time.monotonic() - start) * 1000
     credits = response.usage.credits if response.usage else None
@@ -156,7 +158,7 @@ async def proof(
 ) -> ProofResponse:
     limiter.check(client_ip(request))
     start = time.monotonic()
-    response = await run_proof_pipeline(clocked, req.task, req.note)
+    response = await run_proof_pipeline(clocked, req.task, req.note, language=req.language)
     latency_ms = (time.monotonic() - start) * 1000
     credits = response.usage.credits if response.usage else None
     _log_call("proof", 200, latency_ms, credits)
@@ -173,7 +175,7 @@ async def later(
     limiter.check(client_ip(request))
     start = time.monotonic()
     try:
-        response = await run_later_rerank(clocked, req.plan, req.items)
+        response = await run_later_rerank(clocked, req.plan, req.items, language=req.language)
     except PipelineUnavailable:
         latency_ms = (time.monotonic() - start) * 1000
         _log_call("later", 503, latency_ms, None)

@@ -6,6 +6,7 @@
   "request": {
     "session": "evening",
     "intention": "Learn the Essence chords on YouTube and revise chapter 5 in Keep Notes until 9",
+    "language": "en",
     "candidates": [
       {
         "id": "com.google.android.calendar",

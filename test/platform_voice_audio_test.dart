@@ -111,6 +111,10 @@ void main() {
 
   test("the phone's language steers Whisper only when Whisper knows it", () {
     expect(whisperLanguageFor('en'), 'en');
+    expect(whisperLanguageFor('es'), 'es');
+    expect(whisperLanguageFor('fr'), 'fr');
+    expect(whisperLanguageFor('pt'), 'pt');
+    expect(whisperLanguageFor('de'), 'de');
     expect(whisperLanguageFor('EN'), 'en');
     expect(whisperLanguageFor('yo'), 'yo');
     expect(whisperLanguageFor('ha'), 'ha');

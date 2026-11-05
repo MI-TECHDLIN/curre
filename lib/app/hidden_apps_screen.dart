@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'access_help.dart';
 import 'app_choice_screen.dart';
@@ -69,8 +70,7 @@ class _HiddenAppsBody extends StatelessWidget {
           padding: const EdgeInsets.only(top: CurreSpace.s2),
           child: Semantics(
             button: true,
-            label:
-                '${missedNotificationsLabel(missed.length)} from hidden apps. Open the list.',
+            label: context.l10n.missedFromHidden(missed.length),
             excludeSemantics: true,
             child: Material(
               color: colors.raised,
@@ -97,15 +97,18 @@ class _HiddenAppsBody extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Missed notifications', style: type.label),
                             Text(
-                              '${missedNotificationsLabel(missed.length)} from hidden apps',
+                              context.l10n.missedNotifications,
+                              style: type.label,
+                            ),
+                            Text(
+                              context.l10n.missedFromHidden(missed.length),
                               style: type.caption.copyWith(color: colors.ink3),
                             ),
                             if (missed.where((item) => item.held).length
                                 case final held when held > 0)
                               Text(
-                                '$held held until their app comes back',
+                                context.l10n.heldUntilAppBack(held),
                                 style: type.caption.copyWith(
                                   color: colors.ink3,
                                 ),
@@ -158,7 +161,7 @@ class _HiddenAppsBody extends StatelessWidget {
       rows.add(
         Semantics(
           button: true,
-          label: 'Bring back ${app.label}',
+          label: context.l10n.bringBackApp(app.label),
           excludeSemantics: true,
           child: InkWell(
             // A rest day opens hidden apps without asking why.
@@ -199,12 +202,10 @@ class _HiddenAppsBody extends StatelessWidget {
               CurreSpace.s3,
             ),
             child: CurreTopBar(
-              title: 'Hidden apps',
+              title: context.l10n.hiddenApps,
               subtitle: controller.isRestDay
-                  ? 'Rest day: they open without asking'
-                  : apps.length == 1
-                  ? '1 app'
-                  : '${apps.length} apps',
+                  ? context.l10n.restDayTheyOpen
+                  : context.l10n.appsCount(apps.length),
             ),
           ),
           Expanded(
@@ -217,8 +218,8 @@ class _HiddenAppsBody extends StatelessWidget {
                         children: [
                           Text(
                             controller.chosenHiddenPackages.isEmpty
-                                ? 'Nothing is hidden. Every app opens as usual from All apps.'
-                                : 'Your hidden apps are out for your plan or for a while right now.',
+                                ? context.l10n.nothingHidden
+                                : context.l10n.hiddenAppsOut,
                             style: type.body.copyWith(color: colors.ink2),
                             textAlign: TextAlign.center,
                           ),
@@ -291,7 +292,7 @@ class _HideAnotherApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CurreSecondaryButton(
     key: const Key('hide-another-app'),
-    label: 'Hide another app',
+    label: context.l10n.hideAnotherApp,
     onPressed: () => Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) =>
@@ -301,8 +302,9 @@ class _HideAnotherApp extends StatelessWidget {
   );
 }
 
-String missedNotificationsLabel(int count) =>
-    count == 1 ? '1 notification' : '$count notifications';
+String missedNotificationsLabel(int count, [AppLocalizations? l10n]) =>
+    l10n?.notificationsCount(count) ??
+    (count == 1 ? '1 notification' : '$count notifications');
 
 /// The first-time explainer, until the user puts it away.
 class _HiddenAppsTip extends StatelessWidget {
@@ -335,7 +337,7 @@ class _HiddenAppsTip extends StatelessWidget {
               const SizedBox(width: CurreSpace.s3),
               Expanded(
                 child: Text(
-                  'Only the apps you chose to hide wait here. Tap one to bring it back for a while.',
+                  context.l10n.hiddenAppsTip,
                   style: type.body.copyWith(color: colors.ink),
                 ),
               ),
@@ -346,7 +348,7 @@ class _HiddenAppsTip extends StatelessWidget {
             child: TextButton(
               onPressed: onDismiss,
               child: Text(
-                'Got it',
+                context.l10n.gotIt,
                 style: type.label.copyWith(color: colors.emberText),
               ),
             ),
@@ -383,7 +385,7 @@ class MissedWhileHiddenScreen extends StatelessWidget {
     }
     final opened = await controller.openMissedNotification(notification);
     if (!opened && context.mounted) {
-      showCurreSnack(context, 'That app didn’t open. It may not be installed.');
+      showCurreSnack(context, context.l10n.appOpenFailed);
     }
   }
 
@@ -398,16 +400,16 @@ class MissedWhileHiddenScreen extends StatelessWidget {
         background: colors.sunk,
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                 CurreSpace.gutter,
                 CurreSpace.s3,
                 CurreSpace.gutter,
                 CurreSpace.s3,
               ),
               child: CurreTopBar(
-                title: 'Missed notifications',
-                subtitle: 'Held quietly while their apps were hidden, and given back when the app comes back. Nothing leaves this phone.',
+                title: context.l10n.missedNotifications,
+                subtitle: context.l10n.missedNotificationsBody,
                 maxTitleLines: 2,
               ),
             ),
@@ -417,7 +419,7 @@ class MissedWhileHiddenScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(CurreSpace.gutter),
                         child: Text(
-                          'Nothing held right now.',
+                          context.l10n.nothingHeld,
                           style: type.body.copyWith(color: colors.ink2),
                           textAlign: TextAlign.center,
                         ),
@@ -435,16 +437,20 @@ class MissedWhileHiddenScreen extends StatelessWidget {
                           Divider(color: colors.hairline),
                       itemBuilder: (context, index) {
                         final notification = notifications[index];
-                        final state = notification.held ? 'Held' : 'Given back';
+                        final state = notification.held
+                            ? context.l10n.held
+                            : context.l10n.givenBack;
                         final meta =
-                            '${notification.appLabel} · ${_notificationTime(notification.at)} · $state';
+                            '${notification.appLabel} · ${_notificationTime(notification.at, MaterialLocalizations.of(context))} · $state';
                         return Semantics(
                           button: true,
                           label: [
                             notification.title,
                             ?notification.text,
                             meta,
-                            'Open ${notification.appLabel}',
+                            context.l10n.openNotificationApp(
+                              notification.appLabel,
+                            ),
                           ].join(', '),
                           excludeSemantics: true,
                           child: InkWell(
@@ -505,16 +511,21 @@ class MissedWhileHiddenScreen extends StatelessWidget {
     },
   );
 
-  static String _notificationTime(DateTime value) {
+  static String _notificationTime(
+    DateTime value,
+    MaterialLocalizations localizations,
+  ) {
     final local = value.toLocal();
     final now = DateTime.now();
-    final time =
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final time = localizations.formatTimeOfDay(
+      TimeOfDay.fromDateTime(local),
+      alwaysUse24HourFormat: false,
+    );
     if (local.year == now.year &&
         local.month == now.month &&
         local.day == now.day) {
       return time;
     }
-    return '${local.day}/${local.month} · $time';
+    return '${localizations.formatMediumDate(local)} · $time';
   }
 }

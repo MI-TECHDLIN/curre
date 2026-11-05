@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/speech_input.dart';
 import 'app_widgets.dart';
 
@@ -10,10 +11,6 @@ import 'app_widgets.dart';
 const voicePermissionExplanation =
     'Curre listens only while you hold or tap the mic. '
     'Your voice never leaves your phone.';
-
-const _micOffMessage = 'Voice typing needs the mic. You can type instead.';
-const _couldNotStartMessage =
-    "Voice typing couldn't start. You can type instead.";
 
 /// The mic's note while the voice files are still on their way.
 const voiceGettingReadyMessage =
@@ -136,10 +133,7 @@ class _VoiceSheetState extends State<VoiceSheet> with WidgetsBindingObserver {
     if (prefetch.phase == VoicePrefetchPhase.ready) {
       // Ready while the sheet was open: the mic, then a tap to talk.
       unawaited(
-        _prepare(
-          autoStart: false,
-          readyNote: 'Ready. Voice typing now works offline.',
-        ),
+        _prepare(autoStart: false, readyNote: context.l10n.voiceReadyOffline),
       );
     } else {
       setState(() {});
@@ -153,13 +147,14 @@ class _VoiceSheetState extends State<VoiceSheet> with WidgetsBindingObserver {
       _note = note;
     });
     widget.onDismissResult?.call(switch (step) {
-      VoiceSheetStep.askMic when note != null =>
-        const SpeechInputResult.unavailable(_micOffMessage),
-      VoiceSheetStep.micBlocked => const SpeechInputResult.unavailable(
-        _micOffMessage,
+      VoiceSheetStep.askMic when note != null => SpeechInputResult.unavailable(
+        context.l10n.voiceMicNeeded,
       ),
-      VoiceSheetStep.failed => const SpeechInputResult.unavailable(
-        _couldNotStartMessage,
+      VoiceSheetStep.micBlocked => SpeechInputResult.unavailable(
+        context.l10n.voiceMicNeeded,
+      ),
+      VoiceSheetStep.failed => SpeechInputResult.unavailable(
+        context.l10n.voiceCouldNotStart,
       ),
       _ => const SpeechInputResult.cancelled(),
     });
@@ -222,25 +217,23 @@ class _VoiceSheetState extends State<VoiceSheet> with WidgetsBindingObserver {
   }
 
   Future<void> _allowMic() async {
+    final l10n = context.l10n;
     final MicAccess access;
     try {
       access = await speech.microphone.requestAccess();
     } on Object {
-      _show(VoiceSheetStep.askMic, note: _micStillOff);
+      _show(VoiceSheetStep.askMic, note: l10n.voiceMicStillOff);
       return;
     }
     switch (access) {
       case MicAccess.granted:
         await _prepare(autoStart: false);
       case MicAccess.denied:
-        _show(VoiceSheetStep.askMic, note: _micStillOff);
+        _show(VoiceSheetStep.askMic, note: l10n.voiceMicStillOff);
       case MicAccess.blocked:
         _show(VoiceSheetStep.micBlocked);
     }
   }
-
-  static const _micStillOff =
-      'The mic is still off. Allow it to speak, or type instead.';
 
   Future<void> _openSettings() async {
     try {
@@ -292,10 +285,7 @@ class _VoiceSheetState extends State<VoiceSheet> with WidgetsBindingObserver {
       case VoiceHeard(:final text):
         Navigator.of(context).pop(SpeechInputResult.recognized(text));
       case VoiceNothingHeard():
-        _show(
-          VoiceSheetStep.ready,
-          note: 'I didn’t catch that. Try again, a little closer to the mic.',
-        );
+        _show(VoiceSheetStep.ready, note: context.l10n.voiceNothingHeard);
       case VoiceCaptureCancelled():
         _show(VoiceSheetStep.ready);
       case VoiceCaptureFailed(:final problem):
@@ -438,6 +428,9 @@ class VoiceDownloadView {
   /// "47 MB of 104 MB".
   String get amount =>
       '${formatMegabytes(received)} of ${formatMegabytes(total)}';
+
+  String localizedAmount(AppLocalizations l10n) =>
+      l10n.voiceAmount(formatMegabytes(received), formatMegabytes(total));
 }
 
 /// Renders one step of the voice sheet. It decides nothing: [VoiceSheet]
@@ -496,6 +489,7 @@ class VoiceSheetView extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     return Column(
       key: ValueKey('voice-${step.name}'),
       mainAxisSize: MainAxisSize.min,
@@ -508,7 +502,7 @@ class VoiceSheetView extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.only(top: CurreSpace.s2),
                 child: Text(
-                  prompt ?? 'Say it instead',
+                  prompt ?? l10n.sayItInstead,
                   style: type.title.weight(680).copyWith(fontSize: 22),
                 ),
               ),
@@ -516,7 +510,7 @@ class VoiceSheetView extends StatelessWidget {
             const SizedBox(width: CurreSpace.s3),
             RoundGlyphButton(
               glyph: CurreGlyphKind.close,
-              label: 'Close',
+              label: l10n.close,
               onPressed: onClose,
             ),
           ],
@@ -528,12 +522,7 @@ class VoiceSheetView extends StatelessWidget {
           children: [
             CurreGlyph(CurreGlyphKind.privacy, size: 16, color: colors.ink3),
             const SizedBox(width: CurreSpace.s2),
-            Expanded(
-              child: Text(
-                'On this phone · nothing you say is saved or sent',
-                style: type.meta,
-              ),
-            ),
+            Expanded(child: Text(l10n.voicePrivacyLine, style: type.meta)),
           ],
         ),
       ],
@@ -541,6 +530,7 @@ class VoiceSheetView extends StatelessWidget {
   }
 
   List<Widget> _body(BuildContext context, CurreColors colors, CurreType type) {
+    final l10n = context.l10n;
     final size = formatMegabytes(download.total);
     Widget lead(String text) => Text(text, style: type.label.weight(640));
     Widget line(String text) =>
@@ -558,7 +548,7 @@ class VoiceSheetView extends StatelessWidget {
       const SizedBox(height: CurreSpace.s5),
       primary,
       const SizedBox(height: CurreSpace.s2),
-      CurreSecondaryButton(label: 'Type instead', onPressed: onTypeInstead),
+      CurreSecondaryButton(label: l10n.typeInstead, onPressed: onTypeInstead),
     ];
 
     switch (step) {
@@ -567,41 +557,44 @@ class VoiceSheetView extends StatelessWidget {
           const SizedBox(height: CurreSpace.s8),
           HorizonLine(
             scanning: !MediaQuery.disableAnimationsOf(context),
-            semanticLabel: 'Getting voice typing ready',
+            semanticLabel: l10n.gettingVoiceReady,
           ),
           const SizedBox(height: CurreSpace.s8),
         ];
       case VoiceSheetStep.gettingReady:
         return [
-          lead(voiceGettingReadyMessage),
+          lead(l10n.voiceGettingReady),
           const SizedBox(height: CurreSpace.s4),
           VoiceDownloadGauge(download: download),
           const SizedBox(height: CurreSpace.s5),
           if (download.downloading)
-            CurrePrimaryButton(label: 'Type instead', onPressed: onTypeInstead)
+            CurrePrimaryButton(
+              label: l10n.typeInstead,
+              onPressed: onTypeInstead,
+            )
           else ...[
             CurrePrimaryButton(
               key: const Key('voice-download-now'),
-              label: 'Download now · ${formatMegabytes(download.remaining)}',
+              label: l10n.downloadNowSize(formatMegabytes(download.remaining)),
               onPressed: onDownloadNow,
             ),
             const SizedBox(height: CurreSpace.s2),
             CurreSecondaryButton(
-              label: 'Type instead',
+              label: l10n.typeInstead,
               onPressed: onTypeInstead,
             ),
           ],
         ];
       case VoiceSheetStep.askMic:
         return [
-          lead('Speak instead of typing'),
+          lead(l10n.speakInsteadTyping),
           const SizedBox(height: CurreSpace.s2),
-          line(voicePermissionExplanation),
+          line(l10n.voicePermissionExplanation),
           ?noteLine(),
           ...actions(
             CurrePrimaryButton(
               key: const Key('voice-allow-mic'),
-              label: 'Allow the mic',
+              label: l10n.allowMic,
               glyph: CurreGlyphKind.speak,
               onPressed: onAllowMic,
             ),
@@ -609,16 +602,13 @@ class VoiceSheetView extends StatelessWidget {
         ];
       case VoiceSheetStep.micBlocked:
         return [
-          lead('The mic is off for Curre'),
+          lead(l10n.micOffForCurre),
           const SizedBox(height: CurreSpace.s2),
-          line(
-            'Turn on Microphone for Curre in your phone’s settings, then come '
-            'back. $voicePermissionExplanation',
-          ),
+          line(l10n.micSettingsBody(l10n.voicePermissionExplanation)),
           ...actions(
             CurrePrimaryButton(
               key: const Key('voice-open-settings'),
-              label: 'Open phone settings',
+              label: l10n.openPhoneSettings,
               glyph: CurreGlyphKind.androidSettings,
               onPressed: onOpenSettings,
             ),
@@ -640,10 +630,10 @@ class VoiceSheetView extends StatelessWidget {
           const SizedBox(height: CurreSpace.s3),
           Text(
             !listening
-                ? 'Tap or hold the mic, then speak.'
+                ? l10n.tapOrHoldMic
                 : holding
-                ? 'Listening… let go when you’re done.'
-                : 'Listening… pause when you’re done, or tap the mic.',
+                ? l10n.listeningHeld
+                : l10n.listeningPause,
             style: type.body.copyWith(color: colors.ink2),
             textAlign: TextAlign.center,
           ),
@@ -662,11 +652,11 @@ class VoiceSheetView extends StatelessWidget {
           const SizedBox(height: CurreSpace.s8),
           HorizonLine(
             scanning: !MediaQuery.disableAnimationsOf(context),
-            semanticLabel: 'Writing down what you said',
+            semanticLabel: l10n.writingSaid,
           ),
           const SizedBox(height: CurreSpace.s3),
           Text(
-            'Writing it down…',
+            l10n.writingProgress,
             style: type.body.copyWith(color: colors.ink2),
             textAlign: TextAlign.center,
           ),
@@ -675,17 +665,13 @@ class VoiceSheetView extends StatelessWidget {
       case VoiceSheetStep.failed:
         final model = captureProblem == VoiceCaptureProblem.model;
         return [
-          lead(model ? 'Voice typing couldn’t start' : 'The mic didn’t start'),
+          lead(model ? l10n.voiceStartFailed : l10n.micStartFailed),
           const SizedBox(height: CurreSpace.s2),
-          line(
-            model
-                ? 'Downloading the voice files again ($size) usually fixes it.'
-                : 'If another app is using the mic, close it and try again.',
-          ),
+          line(model ? l10n.voiceModelFix(size) : l10n.voiceMicBusy),
           ...actions(
             CurrePrimaryButton(
               key: const Key('voice-failed-retry'),
-              label: model ? 'Download again' : 'Try again',
+              label: model ? l10n.downloadAgain : l10n.tryAgain,
               onPressed: model ? onDownloadAgain : onTryAgain,
             ),
           ),
@@ -695,24 +681,44 @@ class VoiceSheetView extends StatelessWidget {
 }
 
 /// One plain line for where the voice download stands.
-String voiceDownloadStatus(VoiceDownloadView download) {
+String voiceDownloadStatus(
+  VoiceDownloadView download, [
+  AppLocalizations? l10n,
+]) {
   final size = formatMegabytes(download.total);
-  final soFar = download.received > 0 ? ' · ${download.amount} so far' : '';
+  final amount = l10n?.voiceAmount(
+    formatMegabytes(download.received),
+    formatMegabytes(download.total),
+  );
+  final soFar = download.received > 0
+      ? l10n?.voiceStatusExtra(amount!) ?? ' · ${download.amount} so far'
+      : '';
   return switch (download.phase) {
-    VoicePrefetchPhase.checking => 'Checking…',
-    VoicePrefetchPhase.ready => 'Ready · works offline',
+    VoicePrefetchPhase.checking => l10n?.checking ?? 'Checking…',
+    VoicePrefetchPhase.ready =>
+      l10n?.voiceStatusReady ?? 'Ready · works offline',
     VoicePrefetchPhase.downloading =>
-      'Getting ready ${download.percent}% · ${download.amount}',
-    VoicePrefetchPhase.waitingForWifi => 'Waiting for Wi-Fi$soFar',
-    VoicePrefetchPhase.waitingForConnection => 'Waiting for a connection$soFar',
-    VoicePrefetchPhase.waitingForBattery => 'Waiting for more battery$soFar',
+      l10n?.voiceStatusGetting(download.percent, amount!) ??
+          'Getting ready ${download.percent}% · ${download.amount}',
+    VoicePrefetchPhase.waitingForWifi =>
+      l10n?.voiceWaitingWifi(soFar) ?? 'Waiting for Wi-Fi$soFar',
+    VoicePrefetchPhase.waitingForConnection =>
+      l10n?.voiceWaitingConnection(soFar) ?? 'Waiting for a connection$soFar',
+    VoicePrefetchPhase.waitingForBattery =>
+      l10n?.voiceWaitingBattery(soFar) ?? 'Waiting for more battery$soFar',
     VoicePrefetchPhase.stopped => switch (download.problem) {
-      VoiceDownloadProblem.storage => 'Stopped · your phone needs $size free',
-      _ => 'Stopped · it tries again later$soFar',
+      VoiceDownloadProblem.storage =>
+        l10n?.voiceStoppedStorage(size) ??
+            'Stopped · your phone needs $size free',
+      _ =>
+        l10n?.voiceStoppedLater(soFar) ??
+            'Stopped · it tries again later$soFar',
     },
     VoicePrefetchPhase.off =>
-      'Not on this phone · $size, when you next use the mic',
-    VoicePrefetchPhase.unavailable => 'Not available on this phone',
+      l10n?.voiceNotOnPhone(size) ??
+          'Not on this phone · $size, when you next use the mic',
+    VoicePrefetchPhase.unavailable =>
+      l10n?.voiceUnavailable ?? 'Not available on this phone',
   };
 }
 
@@ -732,6 +738,7 @@ class VoiceDownloadGauge extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final brightness = Theme.of(context).brightness;
+    final l10n = context.l10n;
     final ready = download.phase == VoicePrefetchPhase.ready;
     return Row(
       key: const Key('voice-download-gauge'),
@@ -751,7 +758,7 @@ class VoiceDownloadGauge extends StatelessWidget {
               // Only a running download moves; a waiting one holds still.
               animate: download.downloading,
               style: SkyScene.waterStyle(colors, brightness, Session.afternoon),
-              semanticLabel: 'Voice download',
+              semanticLabel: l10n.voiceDownload,
             ),
           ),
         ),
@@ -765,7 +772,7 @@ class VoiceDownloadGauge extends StatelessWidget {
                 style: type.label.weight(640),
               ),
               Text(
-                _detail(download),
+                _detail(download, l10n),
                 style: type.caption.copyWith(color: colors.ink2),
               ),
             ],
@@ -775,27 +782,21 @@ class VoiceDownloadGauge extends StatelessWidget {
     );
   }
 
-  static String _detail(VoiceDownloadView download) {
+  static String _detail(VoiceDownloadView download, AppLocalizations l10n) {
     final size = formatMegabytes(download.total);
+    final amount = download.localizedAmount(l10n);
     return switch (download.phase) {
-      VoicePrefetchPhase.downloading =>
-        '${download.amount}. It keeps going if you close this.',
-      VoicePrefetchPhase.waitingForWifi =>
-        'It downloads by itself on Wi-Fi, $size once.',
-      VoicePrefetchPhase.waitingForConnection =>
-        'No connection right now. It picks up where it stopped.',
-      VoicePrefetchPhase.waitingForBattery =>
-        'It waits for more battery, or a charger.',
+      VoicePrefetchPhase.downloading => l10n.voiceKeepsGoing(amount),
+      VoicePrefetchPhase.waitingForWifi => l10n.voiceDownloadsWifi(size),
+      VoicePrefetchPhase.waitingForConnection => l10n.voiceNoConnection,
+      VoicePrefetchPhase.waitingForBattery => l10n.voiceWaitBattery,
       VoicePrefetchPhase.stopped => switch (download.problem) {
-        VoiceDownloadProblem.storage =>
-          'Your phone is short on space. Voice typing needs $size free.',
-        VoiceDownloadProblem.damaged =>
-          'A file arrived damaged, so it was thrown away. Try again.',
-        _ =>
-          'The voice files couldn’t be reached. Try again in a little while.',
+        VoiceDownloadProblem.storage => l10n.voiceNoSpace(size),
+        VoiceDownloadProblem.damaged => l10n.voiceDamaged,
+        _ => l10n.voiceFilesUnreachable,
       },
-      VoicePrefetchPhase.ready => 'Ready. Voice typing now works offline.',
-      _ => 'Voice typing runs on this phone and needs $size once.',
+      VoicePrefetchPhase.ready => l10n.voiceReadyOffline,
+      _ => l10n.voiceRunsHere(size),
     };
   }
 }
@@ -822,10 +823,11 @@ class _MicButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
+    final l10n = context.l10n;
     return Semantics(
       key: const Key('voice-mic'),
       button: true,
-      label: listening ? 'Stop and write it down' : 'Start listening',
+      label: listening ? l10n.stopAndWrite : l10n.startListening,
       excludeSemantics: true,
       onTap: onToggle,
       child: Listener(
@@ -910,25 +912,23 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
   }
 
   Future<void> _confirmRemove() async {
+    final l10n = context.l10n;
     final size = formatMegabytes(
       prefetch.received > 0 ? prefetch.received : prefetch.total,
     );
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove the voice files?'),
-        content: Text(
-          'This frees $size. Voice typing downloads again only when you '
-          'next use the mic, or turn it back on here.',
-        ),
+        title: Text(l10n.removeVoiceQuestion),
+        content: Text(l10n.removeVoiceBody(size)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep them'),
+            child: Text(l10n.keepFiles),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Remove'),
+            child: Text(l10n.remove),
           ),
         ],
       ),
@@ -943,7 +943,7 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
     if (!mounted) return;
     showCurreSnack(
       context,
-      removed ? 'Voice files removed.' : 'The voice files couldn’t be removed.',
+      removed ? l10n.voiceFilesRemoved : l10n.voiceFilesRemoveFailed,
     );
   }
 
@@ -953,6 +953,7 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final download = VoiceDownloadView.of(prefetch);
     final phase = download.phase;
     final showWater =
@@ -981,9 +982,9 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Voice: on this phone', style: type.label),
+                      Text(l10n.voiceOnPhone, style: type.label),
                       Text(
-                        voiceDownloadStatus(download),
+                        voiceDownloadStatus(download, l10n),
                         key: const Key('voice-status'),
                         style: type.caption.copyWith(color: colors.ink2),
                       ),
@@ -998,18 +999,16 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
             ],
             const SizedBox(height: CurreSpace.s2),
             Text(
-              'Voice typing needs no account and, once downloaded, no '
-              'internet. Nothing you say is saved or sent.',
+              l10n.voiceSettingsBody,
               style: type.caption.copyWith(color: colors.ink3),
             ),
             if (phase != VoicePrefetchPhase.unavailable)
               SwitchListTile.adaptive(
                 key: const Key('voice-mobile-data'),
                 contentPadding: EdgeInsets.zero,
-                title: Text('Download voice on mobile data', style: type.body),
+                title: Text(l10n.downloadMobile, style: type.body),
                 subtitle: Text(
-                  'Off: it waits for Wi-Fi. About '
-                  '${formatMegabytes(download.total)}, once.',
+                  l10n.mobileOffHelp(formatMegabytes(download.total)),
                   style: type.caption.copyWith(color: colors.ink2),
                 ),
                 value: prefetch.onMobileData,
@@ -1019,7 +1018,7 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
               const SizedBox(height: CurreSpace.s2),
               CurreSecondaryButton(
                 key: const Key('voice-turn-on'),
-                label: 'Download voice files',
+                label: l10n.downloadVoiceFiles,
                 onPressed: () => unawaited(prefetch.wantVoice()),
               ),
             ],
@@ -1027,7 +1026,7 @@ class _VoiceSettingsCardState extends State<VoiceSettingsCard> {
               const SizedBox(height: CurreSpace.s2),
               CurreSecondaryButton(
                 key: const Key('voice-remove'),
-                label: 'Remove voice files',
+                label: l10n.removeVoiceFiles,
                 onPressed: _confirmRemove,
               ),
             ],

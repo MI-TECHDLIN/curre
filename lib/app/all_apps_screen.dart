@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../doors/door_models.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
@@ -36,18 +37,15 @@ class _AllAppsScreenState extends State<AllAppsScreen> {
       await controller.hideApp(app.packageName);
     } on Object {
       if (mounted) {
-        showCurreSnack(
-          context,
-          'Curre couldn’t save that on this phone. Please try again.',
-        );
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
       return;
     }
     if (!mounted) return;
     showCurreSnack(
       context,
-      '${app.label} is hidden. Opening it asks “Why now?” first.',
-      actionLabel: 'Undo',
+      context.l10n.appHiddenAsk(app.label),
+      actionLabel: context.l10n.undo,
       onAction: () async {
         try {
           await controller.stopHidingApp(app.packageName);
@@ -68,16 +66,16 @@ class _AllAppsScreenState extends State<AllAppsScreen> {
       return CurrePage(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
                 CurreSpace.gutter,
                 CurreSpace.s3,
                 CurreSpace.gutter,
                 0,
               ),
               child: CurreTopBar(
-                title: 'All apps',
-                subtitle: 'Every app you didn’t hide. They open as usual.',
+                title: context.l10n.allApps,
+                subtitle: context.l10n.allAppsDescription,
               ),
             ),
             Expanded(
@@ -87,7 +85,7 @@ class _AllAppsScreenState extends State<AllAppsScreen> {
                   TextField(
                     key: const Key('all-apps-find'),
                     decoration: InputDecoration(
-                      labelText: 'Find an app',
+                      labelText: context.l10n.findApp,
                       filled: true,
                       fillColor: colors.raised,
                     ),
@@ -99,8 +97,8 @@ class _AllAppsScreenState extends State<AllAppsScreen> {
                       padding: const EdgeInsets.all(CurreSpace.s6),
                       child: Text(
                         _query.isEmpty
-                            ? 'Every app on this phone is hidden.'
-                            : 'No app matches “$_query”.',
+                            ? context.l10n.everyAppHidden
+                            : context.l10n.noAppMatches(_query),
                         style: type.body.copyWith(color: colors.ink2),
                         textAlign: TextAlign.center,
                       ),
@@ -149,8 +147,8 @@ class _AllAppsRow extends StatelessWidget {
           Expanded(
             child: Semantics(
               button: true,
-              label: 'Open ${app.label}',
-              onLongPressHint: canHide ? 'Hide this app' : null,
+              label: context.l10n.openApp(app.label),
+              onLongPressHint: canHide ? context.l10n.hideThisApp : null,
               excludeSemantics: true,
               child: InkWell(
                 onTap: onOpen,
@@ -169,7 +167,7 @@ class _AllAppsRow extends StatelessWidget {
           if (canHide)
             IconButton(
               key: ValueKey<String>('hide-${app.packageName}'),
-              tooltip: 'Hide ${app.label}',
+              tooltip: context.l10n.hideApp(app.label),
               onPressed: onHide,
               icon: CurreGlyph(
                 CurreGlyphKind.outOfSight,
@@ -184,7 +182,7 @@ class _AllAppsRow extends StatelessWidget {
                 CurreGlyphKind.essential,
                 size: 18,
                 color: colors.ink3,
-                semanticLabel: 'Always on Home',
+                semanticLabel: context.l10n.alwaysOnHome,
               ),
             ),
         ],

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'access_help.dart';
 import 'app_choice_screen.dart';
@@ -87,23 +88,23 @@ class _SettingsScreenState extends State<SettingsScreen>
     return CurrePage(
       child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               CurreSpace.gutter,
               CurreSpace.s3,
               CurreSpace.gutter,
               0,
             ),
             child: CurreTopBar(
-              title: 'Curre settings',
-              subtitle: 'Changes here only affect Curre.',
+              title: context.l10n.curreSettings,
+              subtitle: context.l10n.settingsSubtitle,
             ),
           ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(CurreSpace.gutter),
               children: [
-                const _SectionTitle('Your focus'),
+                _SectionTitle(context.l10n.sectionYourFocus),
                 const SizedBox(height: CurreSpace.s2),
                 AnimatedBuilder(
                   animation: controller,
@@ -111,48 +112,58 @@ class _SettingsScreenState extends State<SettingsScreen>
                       FocusSettingsCard(controller: controller),
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Your day'),
+                _SettingsTile(
+                  glyph: CurreGlyphKind.curreSettings,
+                  title: context.l10n.language,
+                  subtitle: _languageName(context.l10n, settings.languageCode),
+                  onTap: _pickLanguage,
+                ),
+                const SizedBox(height: CurreSpace.s6),
+                _SectionTitle(context.l10n.sectionYourDay),
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'When each part of your day starts, Curre asks what it’s for.',
+                  context.l10n.dayStartsHelp,
                   style: type.caption.copyWith(color: colors.ink3),
                 ),
                 const SizedBox(height: CurreSpace.s2),
                 for (final session in SessionName.values)
                   _SettingsTile(
                     glyph: session.glyph,
-                    title: _capitalise(session.label),
-                    subtitle: 'Starts at ${settings.sessionStarts[session]}',
+                    title: _capitalise(session.localizedLabel(context.l10n)),
+                    subtitle: context.l10n.startsAt(
+                      settings.sessionStarts[session].toString(),
+                    ),
                     onTap: () => _pickTime(session),
                   ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Your apps'),
+                _SectionTitle(context.l10n.sectionYourApps),
                 const SizedBox(height: CurreSpace.s2),
                 _SettingsTile(
                   glyph: CurreGlyphKind.essential,
-                  title: 'Always on Home',
+                  title: context.l10n.alwaysOnHome,
                   subtitle: extraEssentials <= 3
-                      ? 'Phone, Messages and Settings'
-                      : 'Phone, Messages, Settings and ${extraEssentials - 3} more',
+                      ? context.l10n.defaultEssentials
+                      : context.l10n.defaultEssentialsMore(extraEssentials - 3),
                   onTap: () => _editApps(AppChoiceKind.alwaysOnHome),
                 ),
                 _SettingsTile(
                   glyph: CurreGlyphKind.door,
-                  title: 'Apps your plans can use',
-                  subtitle: '${settings.candidates.length} apps',
+                  title: context.l10n.planApps,
+                  subtitle: context.l10n.appsCount(settings.candidates.length),
                   onTap: () => _editApps(AppChoiceKind.planApps),
                 ),
                 _SettingsTile(
                   key: const Key('settings-hidden-apps'),
                   glyph: CurreGlyphKind.outOfSight,
-                  title: 'Hidden apps',
+                  title: context.l10n.hiddenApps,
                   subtitle: hiddenChoiceSummary(
                     controller.chosenHiddenPackages.length,
+                    context.l10n,
                   ),
                   onTap: () => _editApps(AppChoiceKind.hidden),
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('How strict should Curre be?'),
+                _SectionTitle(context.l10n.strictQuestion),
                 const SizedBox(height: CurreSpace.s2),
                 _StrictnessCard(
                   value: _threshold,
@@ -160,29 +171,29 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onChangeEnd: _saveThreshold,
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Hidden apps'),
+                _SectionTitle(context.l10n.sectionHiddenApps),
                 const SizedBox(height: CurreSpace.s2),
                 _AccessCard(
                   key: const Key('settings-ask-why'),
-                  title: 'Ask “Why now?” when a hidden app opens',
+                  title: context.l10n.askWhyHidden,
                   status: _checkingUsageAccess
-                      ? 'Checking…'
+                      ? context.l10n.checking
                       : !controller.hasUsageAccess
-                      ? 'Needs your OK in Android first'
+                      ? context.l10n.needsAndroidOk
                       : settings.askWhyOnHiddenAppOpen &&
                             controller.pausedAwayFromHome
-                      ? 'Paused while another home screen is in use'
+                      ? context.l10n.pausedOtherHome
                       : settings.askWhyOnHiddenAppOpen && controller.isRestDay
-                      ? 'Resting today. Back tomorrow morning.'
+                      ? context.l10n.restingToday
                       : settings.askWhyOnHiddenAppOpen
-                      ? 'On, even from recent apps, notifications and links'
-                      : 'Off',
+                      ? context.l10n.askWhyOn
+                      : context.l10n.off,
                   needsAccess:
                       !_checkingUsageAccess && !controller.hasUsageAccess,
                   value: settings.askWhyOnHiddenAppOpen,
                   onChanged: _setGentleInterceptEnabled,
                   explanation: usageAccessExplanation,
-                  allowLabel: 'Turn on Usage access',
+                  allowLabel: context.l10n.turnOnUsageAccess,
                   allowGlyph: CurreGlyphKind.outOfSight,
                   onAllow: _requestUsageAccess,
                   help: RestrictedSettingsHelp(
@@ -193,30 +204,30 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: CurreSpace.s3),
                 _AccessCard(
                   key: const Key('settings-quiet-notifications'),
-                  title: 'Keep hidden apps quiet',
+                  title: context.l10n.keepHiddenQuiet,
                   status: _checkingNotificationAccess
-                      ? 'Checking…'
+                      ? context.l10n.checking
                       : !controller.hasNotificationAccess
-                      ? 'Needs your OK in Android first'
+                      ? context.l10n.needsAndroidOk
                       : settings.quietNotificationsFromHiddenApps &&
                             controller.pausedAwayFromHome
-                      ? 'Paused while another home screen is in use'
+                      ? context.l10n.pausedOtherHome
                       : settings.quietNotificationsFromHiddenApps &&
                             controller.isRestDay
-                      ? 'Resting today. Back tomorrow morning.'
+                      ? context.l10n.restingToday
                       : settings.quietNotificationsFromHiddenApps &&
                             controller.focusIsOver
-                      ? 'Your focus has ended, so nothing is held'
+                      ? context.l10n.focusEndedNothingHeld
                       : settings.quietNotificationsFromHiddenApps
-                      ? 'On. Held until their app comes back.'
-                      : 'Off',
+                      ? context.l10n.heldUntilBack
+                      : context.l10n.off,
                   needsAccess:
                       !_checkingNotificationAccess &&
                       !controller.hasNotificationAccess,
                   value: settings.quietNotificationsFromHiddenApps,
                   onChanged: _setQuietNotificationsEnabled,
                   explanation: notificationAccessExplanation,
-                  allowLabel: 'Turn on notification access',
+                  allowLabel: context.l10n.turnOnNotificationAccess,
                   allowGlyph: CurreGlyphKind.notify,
                   onAllow: _requestNotificationAccess,
                   help: RestrictedSettingsHelp(
@@ -225,15 +236,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Quiet nudges'),
+                _SectionTitle(context.l10n.sectionQuietNudges),
                 const SizedBox(height: CurreSpace.s2),
                 _ReminderSettingsCard(
                   settings: settings,
                   onCheckInChanged: (value) =>
                       _saveNudges(settings.copyWith(checkInNudges: value)),
-                  onEverySessionChanged: (value) => _saveNudges(
-                    settings.copyWith(everySessionNudges: value),
-                  ),
+                  onEverySessionChanged: (value) =>
+                      _saveNudges(settings.copyWith(everySessionNudges: value)),
                   onFocusChanged: (value) =>
                       _saveNudges(settings.copyWith(focusNudges: value)),
                   onPlanEndingChanged: (value) =>
@@ -255,37 +265,39 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(height: CurreSpace.s2),
                 _SettingsTile(
                   glyph: CurreGlyphKind.notify,
-                  title: 'Allow notifications',
+                  title: context.l10n.allowNotifications,
                   subtitle: _checkingNotifications
-                      ? 'Checking…'
+                      ? context.l10n.checking
                       : switch (_notificationsAllowed) {
-                          true =>
-                            'Allowed. The quiet nudges you choose can appear.',
-                          false => 'Not allowed yet. Tap to allow.',
-                          null => 'Android controls whether the quiet nudges you choose can appear',
+                          true => context.l10n.notificationsAllowed,
+                          false => context.l10n.notificationsNotAllowed,
+                          null => context.l10n.notificationsAndroidControls,
                         },
                   onTap: _askForNotificationPermission,
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Voice typing'),
+                _SectionTitle(context.l10n.sectionVoiceTyping),
                 const SizedBox(height: CurreSpace.s2),
                 VoiceSettingsCard(speech: controller.speech),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Your name'),
+                _SectionTitle(context.l10n.sectionYourName),
                 const SizedBox(height: CurreSpace.s2),
                 TextField(
                   controller: _name,
                   maxLength: 60,
                   textCapitalization: TextCapitalization.words,
                   decoration: InputDecoration(
-                    labelText: 'Name in your greeting',
+                    labelText: context.l10n.nameInGreeting,
                     filled: true,
                     fillColor: colors.raised,
                   ),
                 ),
-                CurrePrimaryButton(label: 'Save name', onPressed: _saveName),
+                CurrePrimaryButton(
+                  label: context.l10n.saveName,
+                  onPressed: _saveName,
+                ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('Your home screen'),
+                _SectionTitle(context.l10n.sectionHomeScreen),
                 const SizedBox(height: CurreSpace.s2),
                 _HomeScreenCard(
                   isHome: _isHome,
@@ -293,12 +305,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   onMakeHome: _makeCurreHome,
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('History and privacy'),
+                _SectionTitle(context.l10n.sectionHistoryPrivacy),
                 const SizedBox(height: CurreSpace.s2),
                 _SettingsTile(
                   glyph: CurreGlyphKind.history,
-                  title: 'History',
-                  subtitle: 'Your plans and the apps you brought back, from the last 30 days. Only on this phone.',
+                  title: context.l10n.history,
+                  subtitle: context.l10n.historySettingsBody,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => HistoryScreen(controller: controller),
@@ -307,8 +319,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 _SettingsTile(
                   glyph: CurreGlyphKind.privacy,
-                  title: 'Privacy details',
-                  subtitle: 'What is read online, what stays here and when online copies are deleted',
+                  title: context.l10n.privacyDetails,
+                  subtitle: context.l10n.privacySettingsBody,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const PrivacyDetailsScreen(),
@@ -317,23 +329,23 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 _SettingsTile(
                   glyph: CurreGlyphKind.close,
-                  title: 'Clear history',
-                  subtitle: 'Delete past plans, reasons, notes and missed notifications from this phone',
+                  title: context.l10n.clearHistory,
+                  subtitle: context.l10n.clearHistorySettingsBody,
                   onTap: _confirmClearHistory,
                   destructive: true,
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                const _SectionTitle('About'),
+                _SectionTitle(context.l10n.sectionAbout),
                 const SizedBox(height: CurreSpace.s2),
                 _SettingsTile(
                   glyph: CurreGlyphKind.info,
-                  title: 'Licences',
-                  subtitle: 'The fonts, icons, illustrations and voice typing Curre uses',
+                  title: context.l10n.licences,
+                  subtitle: context.l10n.licencesBody,
                   onTap: () => showLicensePage(
                     context: context,
                     applicationName: 'Curre',
                     applicationVersion: '1.0.0',
-                    applicationLegalese: 'Curre opens the task, not the app.',
+                    applicationLegalese: context.l10n.appLegalese,
                   ),
                 ),
               ],
@@ -349,7 +361,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     final selected = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: current.hour, minute: current.minute),
-      helpText: 'Your ${session.label} starts at',
+      helpText: context.l10n.sessionStartsAt(
+        session.localizedLabel(context.l10n),
+      ),
     );
     if (selected == null || !mounted) return;
     final starts = Map<SessionName, LocalTime>.of(
@@ -359,17 +373,65 @@ class _SettingsScreenState extends State<SettingsScreen>
     try {
       next = controller.settings.copyWith(sessionStarts: starts);
     } on ArgumentError {
-      showCurreSnack(
-        context,
-        'Mornings start before afternoons, and afternoons before evenings. Try a different time.',
-      );
+      showCurreSnack(context, context.l10n.sessionOrderError);
       return;
     }
     await _save(
       next,
-      saved: 'Your ${session.label} now starts at ${starts[session]}.',
+      saved: context.l10n.sessionStartSaved(
+        session.localizedLabel(context.l10n),
+        starts[session].toString(),
+      ),
     );
   }
+
+  Future<void> _pickLanguage() async {
+    const system = 'system';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final l10n = context.l10n;
+        final current = controller.settings.languageCode ?? system;
+        return SimpleDialog(
+          title: Text(l10n.language),
+          children: [
+            for (final code in const [system, 'en', 'es', 'fr', 'pt', 'de'])
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(context).pop(code),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _languageName(l10n, code == system ? null : code),
+                      ),
+                    ),
+                    if (current == code)
+                      const CurreGlyph(CurreGlyphKind.check, size: 20),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    await _save(
+      selected == system
+          ? controller.settings.copyWith(clearLanguageCode: true)
+          : controller.settings.copyWith(languageCode: selected),
+    );
+  }
+
+  static String _languageName(AppLocalizations l10n, String? code) =>
+      switch (code) {
+        null => l10n.systemLanguage,
+        'en' => l10n.languageEnglish,
+        'es' => l10n.languageSpanish,
+        'fr' => l10n.languageFrench,
+        'pt' => l10n.languagePortuguese,
+        'de' => l10n.languageGerman,
+        _ => code,
+      };
 
   Future<void> _saveThreshold(double value) => _save(
     controller.settings.copyWith(threshold: value),
@@ -383,7 +445,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         displayName: _name.text,
         clearDisplayName: Settings.normalizeDisplayName(_name.text) == null,
       ),
-      saved: 'Saved. Curre will greet you by this name.',
+      saved: context.l10n.nameSaved,
     );
   }
 
@@ -402,10 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     } on Object {
       onError?.call();
       if (mounted) {
-        showCurreSnack(
-          context,
-          'Curre couldn’t save that on this phone. Please try again.',
-        );
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
     }
   }
@@ -447,9 +506,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     });
     showCurreSnack(
       context,
-      granted
-          ? 'Done. Curre will ask “Why now?” when a hidden app opens.'
-          : 'It’s still off. You can turn it on here any time.',
+      granted ? context.l10n.usageAccessDone : context.l10n.accessStillOff,
     );
   }
 
@@ -463,8 +520,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     showCurreSnack(
       context,
       granted
-          ? 'Done. Hidden apps will stay quiet until you bring them back.'
-          : 'It’s still off. You can turn it on here any time.',
+          ? context.l10n.notificationAccessDone
+          : context.l10n.accessStillOff,
     );
   }
 
@@ -487,8 +544,8 @@ class _SettingsScreenState extends State<SettingsScreen>
     showCurreSnack(
       context,
       allowed
-          ? 'Notifications are allowed. Curre will use the quiet nudge choices above.'
-          : 'Notifications are not allowed. You can allow them for Curre in your phone’s Settings.',
+          ? context.l10n.notificationsPermissionDone
+          : context.l10n.notificationsPermissionOff,
     );
   }
 
@@ -497,10 +554,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     final help = switch (opened) {
       HomeSettingsOpened.homeApps => null,
-      HomeSettingsOpened.defaultApps =>
-        'Tap “Home app”, then choose the one you want.',
-      HomeSettingsOpened.settings => 'Your phone opened Settings. Search for “Home app” (or open Apps, then Default apps), then choose the one you want.',
-      HomeSettingsOpened.none => 'Open your phone’s Settings app and search for “Home app”. Choose the one you want there.',
+      HomeSettingsOpened.defaultApps => context.l10n.chooseHomeApp,
+      HomeSettingsOpened.settings => context.l10n.searchHomeApp,
+      HomeSettingsOpened.none => context.l10n.openSettingsHomeApp,
     };
     if (help != null) showCurreSnack(context, help);
   }
@@ -510,10 +566,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (!mounted) return;
     setState(() => _isHome = isHome);
     if (!isHome) {
-      showCurreSnack(
-        context,
-        'Curre isn’t your home screen yet. Open your phone’s Settings, search for “Home app” and choose Curre.',
-      );
+      showCurreSnack(context, context.l10n.curreNotHomeSettings);
     }
   }
 
@@ -521,18 +574,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear your history?'),
-        content: const Text(
-          'This deletes your past plans, the reasons you gave for bringing apps back, the notes you wrote after tasks and your missed notifications. Your proof days, today’s plan and any time already running stay as they are.',
-        ),
+        title: Text(context.l10n.clearHistoryQuestion),
+        content: Text(context.l10n.clearHistoryBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep it'),
+            child: Text(context.l10n.keepIt),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Clear history'),
+            child: Text(context.l10n.clearHistory),
           ),
         ],
       ),
@@ -540,13 +591,10 @@ class _SettingsScreenState extends State<SettingsScreen>
     if (confirmed != true || !mounted) return;
     try {
       await controller.clearHistory();
-      if (mounted) showCurreSnack(context, 'History cleared.');
+      if (mounted) showCurreSnack(context, context.l10n.historyCleared);
     } on Object {
       if (mounted) {
-        showCurreSnack(
-          context,
-          'Curre couldn’t clear your history. Please try again.',
-        );
+        showCurreSnack(context, context.l10n.historyClearFailed);
       }
     }
   }
@@ -594,14 +642,14 @@ class _HomeScreenCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Switch to another home screen',
+                      context.l10n.switchHome,
                       style: type.label.weight(700).copyWith(fontSize: 16),
                     ),
                     const SizedBox(height: CurreSpace.s1),
                     Text(
                       notHome
-                          ? 'Curre isn’t your home screen right now. Your plans and history are still here, ready when you want them.'
-                          : 'Want a different home screen for a while? That’s okay. Android lets you choose which app opens when you press Home. Your plans and history stay on this phone, and you can switch back any time.',
+                          ? context.l10n.curreNotHomeBody
+                          : context.l10n.switchHomeBody,
                       style: type.body.copyWith(color: colors.ink2),
                     ),
                   ],
@@ -612,24 +660,24 @@ class _HomeScreenCard extends StatelessWidget {
           const SizedBox(height: CurreSpace.s4),
           if (notHome) ...[
             CurrePrimaryButton(
-              label: 'Make Curre my home screen',
+              label: context.l10n.makeCurreMyHome,
               glyph: CurreGlyphKind.homeRole,
               onPressed: onMakeHome,
             ),
             const SizedBox(height: CurreSpace.s2),
             CurreSecondaryButton(
-              label: 'Open home screen settings',
+              label: context.l10n.openHomeScreenSettings,
               onPressed: onSwitch,
             ),
           ] else
             CurreSecondaryButton(
-              label: 'Choose a home screen app',
+              label: context.l10n.chooseHomeScreenApp,
               glyph: CurreGlyphKind.go,
               onPressed: onSwitch,
             ),
           const SizedBox(height: CurreSpace.s3),
           Text(
-            'If your phone opens its Settings instead, look for Apps, then Default apps, then Home app.',
+            context.l10n.homeSettingsPath,
             style: type.caption.copyWith(color: colors.ink3),
           ),
         ],
@@ -760,60 +808,60 @@ class _ReminderSettingsCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Choose which silent notes Curre sends. Turning one off also cancels any of that kind already waiting.',
+              context.l10n.nudgesHelp,
               style: type.caption.copyWith(color: colors.ink2),
             ),
             const SizedBox(height: CurreSpace.s2),
             _ReminderSwitch(
               key: const Key('nudge-check-in'),
-              title: 'Plan your day',
+              title: context.l10n.planYourDay,
               subtitle: settings.everySessionNudges
-                  ? 'When each part of your day begins'
-                  : 'Once a day, when your morning begins',
+                  ? context.l10n.eachSessionBegins
+                  : context.l10n.morningBegins,
               value: settings.checkInNudges,
               onChanged: onCheckInChanged,
             ),
             if (settings.checkInNudges)
               _ReminderSwitch(
                 key: const Key('nudge-every-session'),
-                title: 'Afternoon and evening too',
-                subtitle: 'Also when your afternoon and evening begin',
+                title: context.l10n.afternoonEveningToo,
+                subtitle: context.l10n.afternoonEveningBegins,
                 value: settings.everySessionNudges,
                 onChanged: onEverySessionChanged,
               ),
             _ReminderSwitch(
               key: const Key('nudge-plan-ending'),
-              title: 'Plan ending',
-              subtitle: 'Ten minutes before your plan ends',
+              title: context.l10n.planEnding,
+              subtitle: context.l10n.tenMinutesBeforePlan,
               value: settings.planEndingNudges,
               onChanged: onPlanEndingChanged,
             ),
             _ReminderSwitch(
               key: const Key('nudge-unlock-time-up'),
-              title: 'App time up',
-              subtitle: 'When time for a hidden app runs out',
+              title: context.l10n.appTimeUp,
+              subtitle: context.l10n.hiddenAppTimeEnds,
               value: settings.unlockTimeUpNudges,
               onChanged: onUnlockTimeUpChanged,
             ),
             _ReminderSwitch(
               key: const Key('nudge-proof'),
-              title: 'Add proof',
-              subtitle: 'A few minutes after your plan ends',
+              title: context.l10n.addProof,
+              subtitle: context.l10n.addProofLater,
               value: settings.proofNudges,
               onChanged: onProofChanged,
             ),
             _ReminderSwitch(
               key: const Key('nudge-focus'),
-              title: 'Focus ends',
-              subtitle: 'On the morning your focus period ends',
+              title: context.l10n.focusEnds,
+              subtitle: context.l10n.focusEndsMorning,
               value: settings.focusNudges,
               onChanged: onFocusChanged,
             ),
             const SizedBox(height: CurreSpace.s2),
             CurreSecondaryButton(
               label: settings.hasAnyNudges
-                  ? 'Turn all quiet nudges off'
-                  : 'Turn all quiet nudges on',
+                  ? context.l10n.turnAllNudgesOff
+                  : context.l10n.turnAllNudgesOn,
               onPressed: () => onAllChanged(!settings.hasAnyNudges),
             ),
           ],
@@ -865,11 +913,11 @@ class _StrictnessCard extends StatelessWidget {
   final ValueChanged<double> onChanged;
   final ValueChanged<double> onChangeEnd;
 
-  static String wordFor(double value) => value < .65
-      ? 'Gentle'
+  static String wordFor(AppLocalizations l10n, double value) => value < .65
+      ? l10n.gentle
       : value < .8
-      ? 'Balanced'
-      : 'Strict';
+      ? l10n.balanced
+      : l10n.strict;
 
   @override
   Widget build(BuildContext context) {
@@ -886,33 +934,34 @@ class _StrictnessCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(wordFor(value), style: type.title),
+            Text(wordFor(context.l10n, value), style: type.title),
             Slider(
               value: value,
               min: .5,
               max: .9,
               divisions: 8,
-              label: wordFor(value),
-              semanticFormatterCallback: wordFor,
+              label: wordFor(context.l10n, value),
+              semanticFormatterCallback: (value) =>
+                  wordFor(context.l10n, value),
               onChanged: onChanged,
               onChangeEnd: onChangeEnd,
             ),
             Row(
               children: [
                 Text(
-                  'Gentle',
+                  context.l10n.gentle,
                   style: type.caption.copyWith(color: colors.ink3),
                 ),
                 const Spacer(),
                 Text(
-                  'Strict',
+                  context.l10n.strict,
                   style: type.caption.copyWith(color: colors.ink3),
                 ),
               ],
             ),
             const SizedBox(height: CurreSpace.s2),
             Text(
-              'When you bring back a hidden app, Curre checks your reason. The stricter it is, the clearer your reason needs to be before the app opens.',
+              context.l10n.strictnessBody,
               style: type.caption.copyWith(color: colors.ink2),
             ),
           ],
@@ -938,11 +987,14 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// What Curre settings says under "Hidden apps".
-String hiddenChoiceSummary(int count) => switch (count) {
-  0 => 'None. Every app opens as usual.',
-  1 => '1 app. Only it asks “Why now?”.',
-  _ => '$count apps. Only these ask “Why now?”.',
-};
+String hiddenChoiceSummary(int count, [AppLocalizations? l10n]) =>
+    switch (count) {
+      0 => l10n?.hiddenChoiceNone ?? 'None. Every app opens as usual.',
+      1 => l10n?.hiddenChoiceOne ?? '1 app. Only it asks “Why now?”.',
+      _ =>
+        l10n?.hiddenChoiceMany(count) ??
+            '$count apps. Only these ask “Why now?”.',
+    };
 
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({

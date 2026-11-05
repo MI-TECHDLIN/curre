@@ -6,6 +6,8 @@ library;
 
 import 'dart:math' as math;
 
+import '../../l10n/l10n.dart';
+
 /// Apps that commonly turn a quick look into an hour, most common first.
 /// Onboarding lists the ones installed before every other app.
 const commonPullPackages = <String>[
@@ -111,3 +113,44 @@ String hiddenSummary(List<String> labels) {
       : '${shown.sublist(0, shown.length - 1).join(', ')} and ${shown.last}';
   return 'Hidden: $names. Every other app opens as usual.';
 }
+
+String localizedHiddenSummary(List<String> labels, AppLocalizations l10n) {
+  if (labels.isEmpty) return l10n.nothingHiddenYet;
+  if (labels.length == 1) return l10n.hiddenSummaryOne(labels.single);
+  final shown = labels.length <= 3 ? labels : labels.take(2).toList();
+  final more = labels.length - shown.length;
+  final names = more > 0
+      ? l10n.hiddenSummaryMore(shown.join(', '), more)
+      : shown.length == 2
+      ? l10n.hiddenNamesTwo(shown.first, shown.last)
+      : shown.join(', ');
+  return l10n.hiddenSummaryMany(names);
+}
+
+String? localizedAppTaskExample(String packageName, AppLocalizations l10n) =>
+    switch (packageName) {
+      'com.google.android.youtube' => l10n.taskExampleLearn,
+      'com.google.android.apps.maps' => l10n.taskExampleFindWay,
+      'com.whatsapp' || 'org.telegram.messenger' => l10n.taskExampleReply,
+      'com.google.android.apps.messaging' => l10n.taskExampleTextBack,
+      'com.spotify.music' => l10n.taskExamplePlaylist,
+      'com.android.chrome' => l10n.taskExampleLookUp,
+      'com.google.android.gm' => l10n.taskExampleEmail,
+      'com.google.android.calendar' => l10n.taskExampleToday,
+      'com.google.android.keep' => l10n.taskExampleWrite,
+      'com.google.android.photos' ||
+      'com.google.android.apps.photos' => l10n.taskExamplePhoto,
+      'com.google.android.drive' ||
+      'com.google.android.apps.docs' => l10n.taskExampleFile,
+      'com.instagram.android' ||
+      'com.linkedin.android' => l10n.taskExampleMessage,
+      'com.netflix.mediaclient' => l10n.taskExampleEpisode,
+      'com.facebook.katana' => l10n.taskExampleGroup,
+      'com.zhiliaoapp.musically' ||
+      'com.ss.android.ugc.trill' => l10n.taskExampleVideo,
+      'com.twitter.android' => l10n.taskExamplePost,
+      'com.reddit.frontpage' => l10n.taskExampleThread,
+      'com.pinterest' => l10n.taskExampleIdea,
+      'com.snapchat.android' => l10n.taskExampleFriend,
+      _ => null,
+    };

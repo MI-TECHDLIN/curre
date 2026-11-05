@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/core.dart';
 import '../../design/design.dart';
 import '../../doors/door_models.dart';
+import '../../l10n/l10n.dart';
 import '../app_widgets.dart';
 import '../curre_controller.dart';
 import 'onboarding_parts.dart';
@@ -114,7 +115,7 @@ class StoryScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Scene(
-      label: 'Late at night, a phone full of posts pulls a note that says “just check the bus time” into a tangle of yarn, while the sun is still asleep.',
+      label: context.l10n.sceneStory,
       children: [
         _blob(palette, const Rect.fromLTWH(118, -4, 248, 226), seed: 5),
         for (final (x, y, s) in const [
@@ -191,7 +192,7 @@ class StoryScene extends StatelessWidget {
             child: SizedBox(
               width: 92,
               child: Text(
-                'Just check the bus time',
+                context.l10n.sceneBusTime,
                 style: _sceneType(context, size: 15, you: true),
               ),
             ),
@@ -479,8 +480,10 @@ class PullScene extends StatelessWidget {
     final reduce = MediaQuery.disableAnimationsOf(context);
     return _Scene(
       label: shown.isEmpty
-          ? 'A magnet waits for the apps that pull you in.'
-          : 'A magnet pulls ${shown.map((app) => app.label).join(', ')}.',
+          ? context.l10n.sceneMagnetEmpty
+          : context.l10n.sceneMagnetApps(
+              shown.map((app) => app.label).join(', '),
+            ),
       children: [
         _blob(palette, const Rect.fromLTWH(26, 0, 330, 220), seed: 2),
         _horizon(palette, 216),
@@ -667,8 +670,8 @@ class FaceScene extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Scene(
       label: avatarId == null
-          ? 'Your initial, waving hello.'
-          : 'The face you picked, waving hello.',
+          ? context.l10n.sceneInitial
+          : context.l10n.sceneFace,
       children: [
         Positioned(
           left: 82,
@@ -769,7 +772,7 @@ class HomeScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Scene(
-      label: 'A phone showing Curre’s calm home screen: a greeting, one plan and two apps that open right at the task.',
+      label: context.l10n.sceneHome,
       children: [
         _blob(palette, const Rect.fromLTWH(20, 10, 320, 226), seed: 12),
         _at(
@@ -871,7 +874,9 @@ class _MiniHome extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  name == null ? 'Good morning' : 'Good morning, $name',
+                  name == null
+                      ? context.l10n.goodMorning
+                      : context.l10n.goodMorningName(name!),
                   maxLines: 2,
                   style: _sceneType(context, size: 10.5, weight: 740),
                 ),
@@ -887,7 +892,7 @@ class _MiniHome extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'Learn the G chord on YouTube till 7',
+              context.l10n.planExampleGuitar,
               style: _sceneType(context, size: 8.6, you: true),
             ),
           ),
@@ -896,9 +901,14 @@ class _MiniHome extends StatelessWidget {
             _cardPink,
             'com.google.android.youtube',
             'YouTube',
-            '→ Search “G chord”',
+            context.l10n.sceneSearch(context.l10n.sceneGChord),
           ),
-          door(_cardBlue, 'com.spotify.music', 'Spotify', '→ Search “worship”'),
+          door(
+            _cardBlue,
+            'com.spotify.music',
+            'Spotify',
+            context.l10n.sceneSearch(context.l10n.sceneWorship),
+          ),
           const Spacer(),
           Container(height: 1.5, color: sceneInk),
           const SizedBox(height: 4),
@@ -916,7 +926,7 @@ class _MiniHome extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'All apps · 2 hidden apps',
+            context.l10n.miniAllApps(context.l10n.hiddenAppsCount(2)),
             textAlign: TextAlign.center,
             style: _sceneType(context, size: 6.5, weight: 560),
           ),
@@ -981,7 +991,7 @@ class PlanScene extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Scene(
-      label: 'The sun is up, and you wave good morning to Peek.',
+      label: context.l10n.scenePlan,
       children: [
         _at(
           34,

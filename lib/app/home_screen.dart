@@ -6,6 +6,7 @@ import '../core/core.dart';
 import '../design/design.dart';
 import '../doors/door_models.dart';
 import '../doors/door_router.dart';
+import '../l10n/l10n.dart';
 import '../platform/home_refresh.dart';
 import 'access_help.dart';
 import 'all_apps_screen.dart';
@@ -121,7 +122,11 @@ class _HomeBody extends StatelessWidget {
     final window = controller.currentSession;
     final plan = controller.activePlan;
     final name = controller.settings.displayName;
-    final greeting = 'Good ${window.session.label}';
+    final l10n = context.l10n;
+    final sessionLabel = window.session.localizedLabel(l10n);
+    final greeting = name == null
+        ? l10n.goodSession(sessionLabel)
+        : l10n.goodSessionName(sessionLabel, name);
     final today = controller.now;
     final proof = controller.proofSummary;
     final offlineTasks = controller.offlineTasksOnHome;
@@ -199,14 +204,15 @@ class _HomeBody extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              name == null ? greeting : '$greeting, $name',
+                              greeting,
                               style: type.headline,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: CurreSpace.s1),
                             Text(
-                              _date(today),
+                              MaterialLocalizations.of(context)
+                                  .formatFullDate(today),
                               style: type.caption.copyWith(color: colors.ink3),
                             ),
                             const SizedBox(height: CurreSpace.s2),
@@ -268,7 +274,8 @@ class _HomeBody extends StatelessWidget {
                     _GrantBanner(
                       grant: grant,
                       appLabel:
-                          controller.appFor(grant.packageName)?.label ?? 'App',
+                          controller.appFor(grant.packageName)?.label ??
+                          l10n.app,
                       now: controller.now,
                     ),
                   ],
@@ -326,7 +333,7 @@ class _HomeBody extends StatelessWidget {
                   ],
                   if (extraEssentials.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s5),
-                    Text('Always on Home', style: type.label),
+                    Text(l10n.alwaysOnHome, style: type.label),
                     const SizedBox(height: CurreSpace.s2),
                     for (final app in extraEssentials) ...[
                       _EssentialDoor(controller: controller, app: app),
@@ -336,7 +343,7 @@ class _HomeBody extends StatelessWidget {
                   if (plan != null && plan.apps.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s3),
                     Text(
-                      'Press and hold an app to open it the usual way.',
+                      l10n.pressHoldApp,
                       style: type.caption.copyWith(color: colors.ink3),
                       textAlign: TextAlign.center,
                     ),
@@ -354,33 +361,6 @@ class _HomeBody extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _date(DateTime date) {
-    const weekdays = <String>[
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ];
-    const months = <String>[
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${weekdays[date.weekday - 1]}, ${date.day} ${months[date.month - 1]}';
   }
 }
 
@@ -405,9 +385,7 @@ class _NudgeOfferState extends State<_NudgeOffer> {
     setState(() => _working = false);
     showCurreSnack(
       context,
-      allowed
-          ? 'Quiet nudges are on. You can choose which ones in Curre settings.'
-          : 'No problem. You can turn quiet nudges on later in Curre settings.',
+      allowed ? context.l10n.quietNudgeOn : context.l10n.quietNudgeOff,
     );
   }
 
@@ -415,9 +393,9 @@ class _NudgeOfferState extends State<_NudgeOffer> {
   Widget build(BuildContext context) => ContextOfferCard(
     key: const Key('nudge-offer'),
     prop: CurreProp.bell,
-    title: 'Want a quiet nudge when time’s up?',
-    body: 'Curre can let you know when your plan or an app’s time runs out. No sound, no buzz, never ads.',
-    yesLabel: 'Yes, nudge me',
+    title: context.l10n.quietNudgeQuestion,
+    body: context.l10n.quietNudgeBody,
+    yesLabel: context.l10n.quietNudgeYes,
     yesGlyph: CurreGlyphKind.notify,
     onYes: _working ? null : () => unawaited(_answer(allow: true)),
     onNotNow: _working ? null : () => unawaited(_answer(allow: false)),
@@ -444,7 +422,7 @@ class _CheckinPrompt extends StatelessWidget {
     return Semantics(
       key: const Key('home-checkin-card'),
       button: true,
-      label: 'Plan this ${session.label}',
+      label: context.l10n.planThisSession(session.localizedLabel(context.l10n)),
       excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,
@@ -469,8 +447,7 @@ class _CheckinPrompt extends StatelessWidget {
               keepClear: Rect.fromLTWH(0, 0, largeText ? 420 : 248, 246),
               water: progress,
               waterFrom: (progress - .16).clamp(0.0, 1.0),
-              waterLabel:
-                  'Today is ${(progress * 100).round()} percent complete',
+              waterLabel: context.l10n.todayPercent((progress * 100).round()),
               borderRadius: CurreShape.lg,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,7 +457,7 @@ class _CheckinPrompt extends StatelessWidget {
                       CurreGlyph(session.glyph, size: 23, color: sky.fg),
                       const SizedBox(width: CurreSpace.s2),
                       Text(
-                        _capitalise(session.label),
+                        _capitalise(session.localizedLabel(context.l10n)),
                         style: type.label.weight(680).copyWith(color: sky.fg),
                       ),
                     ],
@@ -489,7 +466,9 @@ class _CheckinPrompt extends StatelessWidget {
                   FractionallySizedBox(
                     widthFactor: .74,
                     child: Text(
-                      'What’s this ${session.label} for?',
+                      context.l10n.whatsThisSessionFor(
+                        session.localizedLabel(context.l10n),
+                      ),
                       style: type.headline.weight(730).copyWith(color: sky.fg),
                     ),
                   ),
@@ -497,7 +476,7 @@ class _CheckinPrompt extends StatelessWidget {
                   FractionallySizedBox(
                     widthFactor: .68,
                     child: Text(
-                      'Say it in one sentence. Curre puts just the apps you need on Home.',
+                      context.l10n.sayOneSentence,
                       style: type.body.copyWith(
                         color: sky.fg.withValues(alpha: .86),
                       ),
@@ -520,7 +499,7 @@ class _CheckinPrompt extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Plan now',
+                            context.l10n.planNow,
                             style: type.label
                                 .weight(680)
                                 .copyWith(color: sky.bg),
@@ -559,14 +538,6 @@ class _PlanCard extends StatelessWidget {
 
   /// How many of the plan's tasks are done.
   final int doneCount;
-
-  /// The pill under the plan: its tasks, then how many are done.
-  static String taskCountCopy(int tasks, int done) {
-    if (done == 0 || tasks == 0) {
-      return '$tasks ${tasks == 1 ? 'task' : 'tasks'} ready';
-    }
-    return '$done of $tasks done';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -625,8 +596,7 @@ class _PlanCard extends StatelessWidget {
           keepClear: Rect.fromLTWH(0, 0, largeText ? 440 : 258, 210),
           water: progress,
           waterFrom: (progress - .16).clamp(0.0, 1.0),
-          waterLabel:
-              'This plan is ${(progress * 100).round()} percent complete',
+          waterLabel: context.l10n.planPercent((progress * 100).round()),
           borderRadius: CurreShape.lg,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -637,20 +607,27 @@ class _PlanCard extends StatelessWidget {
                   const SizedBox(width: CurreSpace.s2),
                   Expanded(
                     child: Text(
-                      'Your ${plan.session.label}',
+                      context.l10n.yourSession(
+                        plan.session.localizedLabel(context.l10n),
+                      ),
                       style: type.label.weight(680).copyWith(color: sky.fg),
                     ),
                   ),
                   if (!largeText) ...[
                     Text(
-                      'until ${formatClock(plan.endsAt)}',
+                      context.l10n.untilTime(
+                        formatClock(
+                          plan.endsAt,
+                          locale: context.l10n.localeName,
+                        ),
+                      ),
                       style: type.meta.copyWith(color: sky.fg),
                     ),
                     const SizedBox(width: CurreSpace.s2),
                   ],
                   IconButton(
                     onPressed: onEdit,
-                    tooltip: 'Change this plan',
+                    tooltip: context.l10n.changeThisPlan,
                     icon: CurreGlyph(
                       CurreGlyphKind.editSpecify,
                       size: 20,
@@ -662,7 +639,9 @@ class _PlanCard extends StatelessWidget {
               if (largeText) ...[
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'until ${formatClock(plan.endsAt)}',
+                  context.l10n.untilTime(
+                    formatClock(plan.endsAt, locale: context.l10n.localeName),
+                  ),
                   style: type.meta.copyWith(color: sky.fg),
                 ),
               ],
@@ -689,7 +668,9 @@ class _PlanCard extends StatelessWidget {
                     vertical: CurreSpace.s2,
                   ),
                   child: Text(
-                    taskCountCopy(plan.apps.length, doneCount),
+                    doneCount == 0 || plan.apps.isEmpty
+                        ? context.l10n.tasksReady(plan.apps.length)
+                        : context.l10n.tasksDone(doneCount, plan.apps.length),
                     style: type.caption.weight(680).copyWith(color: sky.bg),
                   ),
                 ),
@@ -748,12 +729,12 @@ class _SightHeader extends StatelessWidget {
     final words = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('On Home now', style: type.title),
+        Text(context.l10n.onHomeNow, style: type.title),
         const SizedBox(height: 2),
         Text(
           doorCount == 0
-              ? 'Your always-there apps are below.'
-              : 'Tap one to go straight to it.',
+              ? context.l10n.alwaysAppsBelow
+              : context.l10n.tapStraightThere,
           style: type.caption.copyWith(color: colors.ink3),
         ),
       ],
@@ -769,7 +750,9 @@ class _SightHeader extends StatelessWidget {
           vertical: CurreSpace.s2,
         ),
         child: Text(
-          doorCount == 0 ? 'Nothing planned yet' : '$doorCount ready',
+          doorCount == 0
+              ? context.l10n.nothingPlanned
+              : context.l10n.appsReady(doorCount),
           style: type.meta.copyWith(color: colors.ink2),
         ),
       ),
@@ -804,7 +787,8 @@ class _EmptySightNote extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     return Semantics(
       key: const Key('home-empty-state'),
-      label: 'Nothing planned yet. Plan your day and its apps show up here.',
+      label:
+          '${context.l10n.nothingPlanned}. ${context.l10n.nothingPlannedBody}',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colors.raised,
@@ -819,7 +803,7 @@ class _EmptySightNote extends StatelessWidget {
               const SizedBox(width: CurreSpace.s3),
               Expanded(
                 child: Text(
-                  'Plan your day and its apps show up here.',
+                  context.l10n.nothingPlannedBody,
                   style: type.body.copyWith(color: colors.ink2),
                 ),
               ),
@@ -874,7 +858,7 @@ class _GrantBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '$appLabel is back for now',
+                        context.l10n.appBackForNow(appLabel),
                         style: type.label.weight(680).copyWith(color: open.fg),
                       ),
                       Text(
@@ -918,15 +902,15 @@ class _EssentialDoor extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DoorRow(
     appName: app.label,
-    destination: 'Always available',
+    destination: context.l10n.alwaysAvailable,
     appIcon: InstalledAppIcon(
       controller: controller,
       packageName: app.packageName,
     ),
-    trailing: const CurreGlyph(
+    trailing: CurreGlyph(
       CurreGlyphKind.essential,
       size: 19,
-      semanticLabel: 'Always on Home',
+      semanticLabel: context.l10n.alwaysOnHome,
     ),
     onTap: () => controller.plainLaunch(app.packageName),
     onLongPress: () => controller.plainLaunch(app.packageName),
@@ -973,6 +957,14 @@ String? doneTaskCopy(TaskDoneState state) => switch (state) {
   TaskDoneState.checkedOff => 'Done · tap to add a note',
 };
 
+String? _localizedDoneTaskCopy(TaskDoneState state, AppLocalizations l10n) =>
+    switch (state) {
+      TaskDoneState.open => null,
+      TaskDoneState.proved => l10n.doneWithProof,
+      TaskDoneState.waiting => l10n.doneWaiting,
+      TaskDoneState.checkedOff => l10n.doneAddNote,
+    };
+
 class _PlanDoor extends StatelessWidget {
   const _PlanDoor({
     required this.controller,
@@ -993,8 +985,8 @@ class _PlanDoor extends StatelessWidget {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final entry = controller.appFor(app.packageName);
     final appName = entry?.label ?? app.packageName;
-    final destination = controller.destinationFor(app, plan);
-    final done = doneTaskCopy(state);
+    final destination = controller.destinationFor(app, plan, context.l10n);
+    final done = _localizedDoneTaskCopy(state, context.l10n);
     return DoorRow(
       appName: appName,
       destination: done ?? '→ $destination',
@@ -1009,7 +1001,7 @@ class _PlanDoor extends StatelessWidget {
           : null,
       semanticLabel: done == null
           ? null
-          : '$appName, $done, opens $destination',
+          : context.l10n.doneDoorSemantics(appName, done, destination),
       onTap: () async {
         final task = PlannedTask.forDoor(plan, app);
         // Asked once per task; a check-off row invites its note, so a tap
@@ -1062,12 +1054,12 @@ class _DoneTodayGroupState extends State<_DoneTodayGroup> {
     final type = Theme.of(context).extension<CurreType>()!;
     final count = widget.done.length;
     final folds = count > PlanCompletion.doneRowsShown;
-    final countLabel = '$count ${count == 1 ? 'task' : 'tasks'}';
+    final countLabel = context.l10n.tasksCount(count);
     if (folds && !_open) {
       return Semantics(
         key: const Key('done-today-folded'),
         button: true,
-        label: 'Done today, $countLabel. Show them',
+        label: context.l10n.doneTodayShow(countLabel),
         excludeSemantics: true,
         child: InkWell(
           onTap: () => setState(() => _open = true),
@@ -1085,13 +1077,16 @@ class _DoneTodayGroupState extends State<_DoneTodayGroup> {
                 const SizedBox(width: CurreSpace.s2),
                 Expanded(
                   child: Text(
-                    'Done today · $count',
+                    context.l10n.doneTodayCount(count),
                     style: type.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text('Show', style: type.label.copyWith(color: colors.ink2)),
+                Text(
+                  context.l10n.show,
+                  style: type.label.copyWith(color: colors.ink2),
+                ),
               ],
             ),
           ),
@@ -1104,12 +1099,12 @@ class _DoneTodayGroupState extends State<_DoneTodayGroup> {
       children: [
         Row(
           children: [
-            Expanded(child: Text('Done today', style: type.label)),
+            Expanded(child: Text(context.l10n.doneToday, style: type.label)),
             if (folds)
               TextButton(
                 onPressed: () => setState(() => _open = false),
                 child: Text(
-                  'Hide',
+                  context.l10n.hide,
                   style: type.label.copyWith(color: colors.ink2),
                 ),
               ),
@@ -1168,8 +1163,8 @@ class _AllDoneCard extends StatelessWidget {
                   size: 56,
                   lineColor: colors.ink3,
                   semanticLabel: proof.raysToday > 0
-                      ? 'Today’s sun is up'
-                      : 'Today’s sun',
+                      ? context.l10n.todaySunUp
+                      : context.l10n.todaySun,
                 ),
                 const SizedBox(width: CurreSpace.s3),
                 Expanded(
@@ -1177,12 +1172,14 @@ class _AllDoneCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'All done for this ${session.label}',
+                        context.l10n.allDoneSession(
+                          session.localizedLabel(context.l10n),
+                        ),
                         style: type.title,
                       ),
                       const SizedBox(height: CurreSpace.s1),
                       Text(
-                        'Every task in this plan is done. You can end it now and plan again whenever you like.',
+                        context.l10n.allDoneBody,
                         style: type.body.copyWith(color: colors.ink2),
                       ),
                     ],
@@ -1191,7 +1188,10 @@ class _AllDoneCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: CurreSpace.s4),
-            CurreSecondaryButton(label: 'End plan now', onPressed: onEndPlan),
+            CurreSecondaryButton(
+              label: context.l10n.endPlanNow,
+              onPressed: onEndPlan,
+            ),
           ],
         ),
       ),
@@ -1207,18 +1207,16 @@ Future<void> _confirmEndPlan(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('End this plan now?'),
-      content: const Text(
-        'Its tasks leave Home. You can plan again whenever you like.',
-      ),
+      title: Text(context.l10n.endPlanQuestion),
+      content: Text(context.l10n.endPlanBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Keep it'),
+          child: Text(context.l10n.keepIt),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('End plan'),
+          child: Text(context.l10n.endPlan),
         ),
       ],
     ),
@@ -1230,17 +1228,18 @@ Future<void> _confirmEndPlan(
     ended = await controller.endPlanNow();
   } on Object {
     if (context.mounted) {
-      showCurreSnack(context, 'Curre couldn’t end the plan. Please try again.');
+      showCurreSnack(context, context.l10n.endPlanFailed);
     }
     return;
   }
   if (ended == null || !context.mounted) return;
   final colors = Theme.of(context).extension<CurreColors>()!;
   final type = Theme.of(context).extension<CurreType>()!;
+  final l10n = context.l10n;
   showCurreSnack(
     context,
-    'Plan ended.',
-    actionLabel: 'Undo',
+    l10n.planEnded,
+    actionLabel: l10n.undo,
     duration: endPlanUndoWindow,
     onAction: () async {
       final back = await controller.undoEndPlan(ended!);
@@ -1250,7 +1249,7 @@ Future<void> _confirmEndPlan(
         ..showSnackBar(
           SnackBar(
             content: Text(
-              'That plan’s time is already up.',
+              l10n.planTimeUp,
               style: type.body.copyWith(color: colors.paper),
             ),
             backgroundColor: colors.ink,
@@ -1282,26 +1281,28 @@ class _OfflineTaskRow extends StatelessWidget {
     final String destination;
     final String? action;
     if (trace == null) {
-      destination = 'Tap Start when you begin';
-      action = 'Start';
+      destination = context.l10n.tapStart;
+      action = context.l10n.start;
     } else if (record == null) {
-      destination = 'Started ${formatClock(trace.at)} · tap when you’re done';
-      action = 'Done';
+      destination = context.l10n.startedAt(
+        formatClock(trace.at, locale: context.l10n.localeName),
+      );
+      action = context.l10n.done;
     } else if (record.countsForProoflight) {
-      destination = 'Done, with proof';
+      destination = context.l10n.doneWithProof;
       action = null;
     } else if (record.isPending) {
-      destination = 'Done · your note is waiting to be checked';
+      destination = context.l10n.doneWaiting;
       action = null;
     } else {
-      destination = 'Done · tap to add a note';
+      destination = context.l10n.doneAddNote;
       action = null;
     }
     final proved = record?.countsForProoflight ?? false;
     // A waiting note is checked on its own; supported proof is complete.
     final closed = proved || (record?.isPending ?? false);
     return DoorRow(
-      appName: 'Away from your phone',
+      appName: context.l10n.awayFromPhone,
       destination: destination,
       appIcon: Center(
         child: CurreGlyph(
@@ -1330,7 +1331,11 @@ class _OfflineTaskRow extends StatelessWidget {
           : proved
           ? CurreGlyph(CurreGlyphKind.check, size: 22, color: colors.emberText)
           : null,
-      semanticLabel: ['Away from your phone', destination, ?action].join(', '),
+      semanticLabel: [
+        context.l10n.awayFromPhone,
+        destination,
+        ?action,
+      ].join(', '),
       onTap: trace == null
           ? () => controller.startOfflineTask(task)
           : closed
@@ -1358,7 +1363,7 @@ class _GrantDoor extends StatelessWidget {
     final tint = colors.outcome(Outcome.open, laterTarget: Session.evening);
     return DoorRow(
       appName: entry?.label ?? grant.packageName,
-      destination: '→ ${controller.grantDestinationFor(grant)}',
+      destination: '→ ${controller.grantDestinationFor(grant, context.l10n)}',
       appIcon: InstalledAppIcon(
         controller: controller,
         packageName: grant.packageName,
@@ -1384,12 +1389,9 @@ void _reportDoorResult(
   String? target,
 ) {
   if (result.kind == DoorLaunchKind.failed) {
-    showCurreSnack(
-      context,
-      'That didn’t open. Press and hold the app to open it the usual way.',
-    );
+    showCurreSnack(context, context.l10n.doorOpenFailed);
   } else if (result.usedFallback && target != null) {
-    showCurreSnack(context, 'Copied “$target”. Paste it into the search box.');
+    showCurreSnack(context, context.l10n.copiedSearch(target));
   }
 }
 
@@ -1447,22 +1449,23 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     const SizedBox(width: CurreSpace.s3),
                     Expanded(
                       child: Text(
-                        widget.controller.settings.displayName ?? 'You',
+                        widget.controller.settings.displayName ??
+                            context.l10n.you,
                         style: type.title,
                       ),
                     ),
                     RoundGlyphButton(
                       glyph: CurreGlyphKind.close,
-                      label: 'Close profile',
+                      label: context.l10n.closeProfile,
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
                 ),
                 const SizedBox(height: CurreSpace.s5),
-                Text('Your face', style: type.label),
+                Text(context.l10n.yourFace, style: type.label),
                 const SizedBox(height: CurreSpace.s1),
                 Text(
-                  'Pick the one that feels like you.',
+                  context.l10n.pickYourFace,
                   style: type.caption.copyWith(color: colors.ink2),
                 ),
                 const SizedBox(height: CurreSpace.s3),
@@ -1480,7 +1483,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
                 if (_avatarId != null) ...[
                   const SizedBox(height: CurreSpace.s2),
                   CurreSecondaryButton(
-                    label: 'Use my initial instead',
+                    label: context.l10n.useInitial,
                     onPressed: () {
                       setState(() => _avatarId = null);
                       unawaited(
@@ -1500,23 +1503,21 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     children: [
                       Expanded(
                         child: _ProfileStat(
-                          label: 'Proof days',
+                          label: context.l10n.proofDays,
                           value: '${proof.totalProofDays}',
                         ),
                       ),
                       const SizedBox(width: CurreSpace.s3),
                       Expanded(
                         child: _ProfileStat(
-                          label: 'Best run',
-                          value: proof.bestRun == 1
-                              ? '1 day'
-                              : '${proof.bestRun} days',
+                          label: context.l10n.bestRun,
+                          value: context.l10n.daysCount(proof.bestRun),
                         ),
                       ),
                       const SizedBox(width: CurreSpace.s3),
                       Expanded(
                         child: _ProfileStat(
-                          label: 'Cloud days',
+                          label: context.l10n.cloudDays,
                           value: '${proof.cloudDays}',
                         ),
                       ),
@@ -1525,7 +1526,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
                 ),
                 const SizedBox(height: CurreSpace.s4),
                 CurreSecondaryButton(
-                  label: 'History',
+                  label: context.l10n.history,
                   glyph: CurreGlyphKind.history,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -1540,10 +1541,12 @@ class _ProfileSheetState extends State<ProfileSheet> {
                     controller: _name,
                     autofocus: true,
                     maxLength: 60,
-                    decoration: const InputDecoration(labelText: 'Your name'),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.yourName,
+                    ),
                   ),
                   CurrePrimaryButton(
-                    label: 'Save name',
+                    label: context.l10n.saveName,
                     onPressed: () async {
                       await widget.controller.updateDisplayName(_name.text);
                       if (mounted) setState(() => _editing = false);
@@ -1551,7 +1554,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
                   ),
                 ] else
                   CurreSecondaryButton(
-                    label: 'Edit name',
+                    label: context.l10n.editName,
                     glyph: CurreGlyphKind.editSpecify,
                     onPressed: () => setState(() => _editing = true),
                   ),

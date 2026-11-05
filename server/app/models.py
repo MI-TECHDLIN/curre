@@ -14,6 +14,7 @@ Outcome = Literal["open", "later", "specify", "flagged", "unavailable"]
 ProofOutcome = Literal["accepted", "vague", "pending"]
 ProofKind = Literal["specific_completion", "vague", "future", "unrelated"]
 PersonalDetail = Literal["person", "phone", "email", "address", "credit_card", "bank_account"]
+LanguageCode = str
 
 MAX_LABEL_LEN = 60
 MAX_CANDIDATES = 30
@@ -28,6 +29,13 @@ MAX_SHORTCUT_LABELS = 15
 # Answers the plan and unlock steps already use for "no specific part of the
 # app"; a shortcut with the same label would make that option ambiguous.
 RESERVED_SHORTCUT_LABELS = frozenset({"The app itself", "app"})
+
+
+def _language_code(value: str) -> str:
+    code = value.strip().lower()
+    if len(code) != 2 or not code.isalpha() or not code.isascii():
+        raise ValueError("language must be a two-letter code")
+    return code
 
 
 def clean_label(value: Any) -> str | None:
@@ -135,11 +143,13 @@ class Candidate(BaseModel):
 class PlanRequest(BaseModel):
     session: Session
     intention: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
+    language: LanguageCode = "en"
     # Cleaned before validation, so only the "at least two usable apps" rule
     # can turn the request down.
     candidates: list[Candidate] = Field(min_length=MIN_CANDIDATES, max_length=MAX_CANDIDATES)
 
     _clean = field_validator("candidates", mode="before")(_clean_candidates)
+    _language = field_validator("language")(_language_code)
 
 
 class PlanApp(BaseModel):
@@ -160,6 +170,7 @@ class UnlockRequest(BaseModel):
     reason: str = Field(min_length=MIN_REASON_LEN, max_length=MAX_REASON_LEN)
     shortcut_labels: list[str] = Field(default_factory=list)
     threshold: float | None = None
+    language: LanguageCode = "en"
 
     @field_validator("app_label", mode="before")
     @classmethod
@@ -170,6 +181,8 @@ class UnlockRequest(BaseModel):
     @classmethod
     def _clean_shortcut_labels(cls, value: Any) -> list[str]:
         return clean_shortcut_labels(value)
+
+    _language = field_validator("language")(_language_code)
 
 
 class GuardInfo(BaseModel):
@@ -194,6 +207,9 @@ class UnlockResponse(BaseModel):
 class ProofRequest(BaseModel):
     task: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
     note: str = Field(min_length=1, max_length=MAX_PROOF_NOTE_LEN)
+    language: LanguageCode = "en"
+
+    _language = field_validator("language")(_language_code)
 
 
 class ProofResponse(BaseModel):
@@ -219,6 +235,9 @@ class LaterItem(BaseModel):
 class LaterRequest(BaseModel):
     plan: str = Field(min_length=1, max_length=MAX_INTENTION_LEN)
     items: list[LaterItem] = Field(min_length=1, max_length=MAX_LATER_ITEMS)
+    language: LanguageCode = "en"
+
+    _language = field_validator("language")(_language_code)
 
     @model_validator(mode="after")
     def _check_unique_ids(self) -> LaterRequest:

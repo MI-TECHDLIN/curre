@@ -159,12 +159,8 @@ void main() {
     expect(find.text('2 / 5'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Ada');
     await settle(tester);
-    await tester.ensureVisible(
-      find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-    );
-    await tester.tap(
-      find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-    );
+    await tester.ensureVisible(find.bySemanticsLabel('Profile avatar 3'));
+    await tester.tap(find.bySemanticsLabel('Profile avatar 3'));
     await settle(tester);
     await tapText(tester, 'Call me Ada');
 
@@ -268,12 +264,8 @@ void main() {
     await tapText(tester, 'Show me how');
     await tester.enterText(find.byType(TextField), 'Ada');
     await settle(tester);
-    await tester.ensureVisible(
-      find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-    );
-    await tester.tap(
-      find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-    );
+    await tester.ensureVisible(find.bySemanticsLabel('Profile avatar 3'));
+    await tester.tap(find.bySemanticsLabel('Profile avatar 3'));
     await settle(tester);
     await tapText(tester, 'Call me Ada');
     await tapText(tester, 'Instagram');
@@ -663,12 +655,8 @@ void main() {
       await tapText(tester, 'Show me how');
       await tester.enterText(find.byType(TextField), 'Ada');
       await settle(tester);
-      await tester.ensureVisible(
-        find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-      );
-      await tester.tap(
-        find.bySemanticsLabel(RegExp('Avatar 3, light skin, soft curls')),
-      );
+      await tester.ensureVisible(find.bySemanticsLabel('Profile avatar 3'));
+      await tester.tap(find.bySemanticsLabel('Profile avatar 3'));
       await settle(tester);
       await tapText(tester, 'Call me Ada');
       await tapText(tester, 'Instagram');

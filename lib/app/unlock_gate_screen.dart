@@ -6,6 +6,7 @@ import '../core/core.dart';
 import '../design/design.dart';
 import '../doors/door_models.dart';
 import '../doors/query_door_allowlist.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
@@ -82,6 +83,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
+    final l10n = context.l10n;
     return PopScope(
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
@@ -101,10 +103,10 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 0,
               ),
               child: CurreTopBar(
-                title: 'Why now?',
+                title: l10n.whyNow,
                 subtitle: widget.openedFromOutside
-                    ? 'You opened ${widget.app.label}. It\'s one of your hidden apps.'
-                    : '${widget.app.label} is in your hidden apps.',
+                    ? l10n.openedHiddenApp(widget.app.label)
+                    : l10n.appIsHidden(widget.app.label),
                 maxTitleLines: 2,
               ),
             ),
@@ -128,6 +130,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   Widget _ask(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final length = _reason.text.runes.length;
     return Column(
       key: const ValueKey('ask'),
@@ -141,13 +144,13 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 Semantics(
                   header: true,
                   child: Text(
-                    'What do you need ${widget.app.label} for right now?',
+                    l10n.whyNeedAppNow(widget.app.label),
                     style: type.title,
                   ),
                 ),
                 const SizedBox(height: CurreSpace.s2),
                 Text(
-                  'Say what you’ll do, who it’s for, and for how long. Curre opens the app right where you need it.',
+                  l10n.whyNowHelp,
                   style: type.body.copyWith(color: colors.ink2),
                 ),
                 const SizedBox(height: CurreSpace.s4),
@@ -168,9 +171,9 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                       maxLength: 300,
                       style: type.youLarge,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        labelText: 'Your reason',
-                        hintText: 'reply Ada about rehearsal',
+                      decoration: InputDecoration(
+                        labelText: l10n.yourReason,
+                        hintText: l10n.reasonHint,
                         border: InputBorder.none,
                         counterText: '',
                       ),
@@ -185,7 +188,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                       child: Text(
                         controller.activePlan == null
                             ? ''
-                            : 'Your plan: ${controller.activePlan!.intention}',
+                            : l10n.yourPlan(controller.activePlan!.intention),
                         style: type.caption.copyWith(color: colors.ink3),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -207,7 +210,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                     const SizedBox(height: CurreSpace.s2),
                   ],
                   Text(
-                    'One more try: say exactly what you’ll do.',
+                    l10n.oneMoreTry,
                     style: type.caption.copyWith(color: colors.emberText),
                   ),
                 ],
@@ -218,7 +221,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         Padding(
           padding: const EdgeInsets.all(CurreSpace.gutter),
           child: CurrePrimaryButton(
-            label: _retryCount == 0 ? 'Bring it back' : 'Ask again',
+            label: _retryCount == 0 ? l10n.bringItBack : l10n.askAgain,
             glyph: CurreGlyphKind.go,
             onPressed: length < 8 || length > 300 ? null : _judge,
           ),
@@ -230,6 +233,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   Widget _thinking(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     return SingleChildScrollView(
       key: const ValueKey('thinking'),
       padding: const EdgeInsets.all(CurreSpace.gutter),
@@ -239,15 +243,12 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
           const SizedBox(height: CurreSpace.s6),
           Text(_reason.text, style: type.youLarge),
           const SizedBox(height: CurreSpace.s6),
-          const HorizonLine(
-            scanning: true,
-            semanticLabel: 'Reading your reason',
-          ),
+          HorizonLine(scanning: true, semanticLabel: l10n.readingReason),
           const SizedBox(height: CurreSpace.s4),
           GettingReadyNote(
             waking: controller.waking,
             child: Text(
-              'Reading your reason…',
+              l10n.readingReasonProgress,
               style: type.body.copyWith(color: colors.ink2),
             ),
           ),
@@ -260,6 +261,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     final response = _response!;
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final outcome = response.outcome.designOutcome;
     return Column(
       key: ValueKey('result-${response.outcome.name}'),
@@ -281,7 +283,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 body: _body(response),
               ),
               const SizedBox(height: CurreSpace.s4),
-              Text('Your reason', style: type.label),
+              Text(l10n.yourReason, style: type.label),
               const SizedBox(height: CurreSpace.s2),
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -301,7 +303,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
               if (response.guardQuoteText case final quote?) ...[
                 const SizedBox(height: CurreSpace.s3),
                 Text(
-                  'These words read like an instruction to Curre: “$quote”',
+                  l10n.guardQuote(quote),
                   style: type.caption.copyWith(color: colors.emberText),
                 ),
               ],
@@ -322,6 +324,8 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   }
 
   Widget _resultActions(BuildContext context, UnlockResponse response) {
+    final l10n = context.l10n;
+    final wait = overrideWaitWordsFor(l10n);
     return switch (response.outcome) {
       UnlockOutcome.open => CurrePrimaryButton(
         label: _openLabel(response),
@@ -332,7 +336,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
         children: [
           if (_retryCount == 0) ...[
             CurrePrimaryButton(
-              label: 'Ask again',
+              label: l10n.askAgain,
               glyph: CurreGlyphKind.editSpecify,
               onPressed: () => setState(() {
                 _retryCount = 1;
@@ -344,7 +348,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             const SizedBox(height: CurreSpace.s2),
           ],
           CurreSecondaryButton(
-            label: 'Open after $overrideWaitWords',
+            label: l10n.openAfter(wait),
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
@@ -353,19 +357,19 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.later => Column(
         children: [
           CurrePrimaryButton(
-            label: 'Save for later',
+            label: l10n.saveForLater,
             glyph: CurreGlyphKind.later,
             onPressed: _saving ? null : _saveForLater,
           ),
           const SizedBox(height: CurreSpace.s2),
           CurreSecondaryButton(
-            label: 'Open after $overrideWaitWords',
+            label: l10n.openAfter(wait),
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
           const SizedBox(height: CurreSpace.s2),
           CurreSecondaryButton(
-            label: 'Back',
+            label: l10n.back,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
@@ -373,19 +377,19 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.flagged => Column(
         children: [
           CurreSecondaryButton(
-            label: 'Open after $overrideWaitWords',
+            label: l10n.openAfter(wait),
             glyph: CurreGlyphKind.overrideWait,
             onPressed: _startOverride,
           ),
           const SizedBox(height: CurreSpace.s2),
           CurreSecondaryButton(
-            label: 'Back',
+            label: l10n.back,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),
       UnlockOutcome.unavailable => CurreSecondaryButton(
-        label: 'Try again',
+        label: l10n.tryAgain,
         onPressed: () {
           _timer?.cancel();
           setState(() => _state = _GateState.ask);
@@ -398,6 +402,8 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     final response = _response!;
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
+    final wait = overrideWaitWordsFor(l10n);
     return Column(
       key: const ValueKey('waiting'),
       children: [
@@ -412,13 +418,13 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                 ],
                 OutcomeCard(
                   outcome: response.outcome.designOutcome,
-                  headline: '${widget.app.label} opens in $overrideWaitWords',
+                  headline: l10n.appOpensInDuration(widget.app.label, wait),
                   body: response.outcome == UnlockOutcome.unavailable
-                      ? 'Curre couldn’t check your reason, so it opens after a short wait instead.'
-                      : 'You chose to wait, and that’s allowed.',
+                      ? l10n.waitUnavailableBody
+                      : l10n.waitAllowedBody,
                 ),
                 const SizedBox(height: CurreSpace.s6),
-                Text('${widget.app.label} opens in', style: type.title),
+                Text(l10n.appOpensIn(widget.app.label), style: type.title),
                 const SizedBox(height: CurreSpace.s2),
                 Text(
                   formatDuration(_remaining),
@@ -429,12 +435,14 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
                   key: ValueKey(_deadline),
                   duration: widget.overrideDuration,
                   onComplete: _finishOverride,
-                  semanticLabel:
-                      '${formatDuration(_remaining)} until ${widget.app.label} opens',
+                  semanticLabel: l10n.untilAppOpens(
+                    formatDuration(_remaining),
+                    widget.app.label,
+                  ),
                 ),
                 const SizedBox(height: CurreSpace.s3),
                 Text(
-                  'Leave this screen to cancel. If you wait it out, it shows in your history.',
+                  l10n.waitCancelHelp,
                   style: type.caption.copyWith(color: colors.ink3),
                   textAlign: TextAlign.center,
                 ),
@@ -448,13 +456,13 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
             children: [
               if (response.outcome == UnlockOutcome.unavailable) ...[
                 CurrePrimaryButton(
-                  label: 'Try again',
+                  label: l10n.tryAgain,
                   onPressed: _retryUnavailable,
                 ),
                 const SizedBox(height: CurreSpace.s2),
               ],
               CurreSecondaryButton(
-                label: 'Cancel',
+                label: l10n.cancel,
                 onPressed: () {
                   _timer?.cancel();
                   setState(() => _state = _GateState.result);
@@ -519,20 +527,25 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     ];
   }
 
-  String _headline(UnlockResponse response) => switch (response.outcome) {
-    UnlockOutcome.open
-        when _resolvedDestination == null ||
-            _resolvedDestination!.kind == DoorResolutionKind.plain =>
-      'Opens ${widget.app.label}',
-    UnlockOutcome.open => 'Opens at ${_destination(response)}',
-    UnlockOutcome.later => 'Not now',
-    UnlockOutcome.specify => 'What exactly will you do?',
-    UnlockOutcome.flagged => 'That reads like an instruction, not a reason',
-    UnlockOutcome.unavailable => 'Couldn’t check your reason',
-  };
+  String _headline(UnlockResponse response) {
+    final l10n = context.l10n;
+    return switch (response.outcome) {
+      UnlockOutcome.open
+          when _resolvedDestination == null ||
+              _resolvedDestination!.kind == DoorResolutionKind.plain =>
+        l10n.outcomeOpenApp(widget.app.label),
+      UnlockOutcome.open => l10n.outcomeOpenAt(_destination(response)),
+      UnlockOutcome.later => l10n.notNow,
+      UnlockOutcome.specify => l10n.outcomeSpecify,
+      UnlockOutcome.flagged => l10n.outcomeFlagged,
+      UnlockOutcome.unavailable => l10n.outcomeUnavailable,
+    };
+  }
 
   String _body(UnlockResponse response) {
     final app = widget.app.label;
+    final l10n = context.l10n;
+    final wait = overrideWaitWordsFor(l10n);
     final minutes = grantMinutesFor(
       response,
       fallbackUnlockMinutes: controller.settings.unlockMinutes,
@@ -541,16 +554,12 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       UnlockOutcome.open
           when response.kind == ReasonKind.person &&
               _resolvedDestination?.kind != DoorResolutionKind.conversation =>
-        'Curre didn’t find a matching chat on this phone, so it opens $app. You have $minutes minutes.',
-      UnlockOutcome.open => 'You have $minutes minutes.',
-      UnlockOutcome.later =>
-        'That sounds like browsing, so it can wait. Save it for later and it comes back when you next plan, or wait $overrideWaitWords to open $app now.',
-      UnlockOutcome.specify =>
-        'Say a bit more about what you’ll do, or wait $overrideWaitWords to open $app.',
-      UnlockOutcome.flagged =>
-        'Tell Curre what you’ll do in $app instead. Or wait $overrideWaitWords to open it.',
-      UnlockOutcome.unavailable =>
-        'No problem: $app opens after you wait $overrideWaitWords. You can also try again now.',
+        l10n.openNoChatBody(app, l10n.youHaveMinutes(minutes)),
+      UnlockOutcome.open => l10n.youHaveMinutes(minutes),
+      UnlockOutcome.later => l10n.laterBody(wait, app),
+      UnlockOutcome.specify => l10n.specifyBody(wait, app),
+      UnlockOutcome.flagged => l10n.flaggedBody(app, wait),
+      UnlockOutcome.unavailable => l10n.unavailableBody(app, wait),
     };
   }
 
@@ -560,7 +569,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
           kind: DoorResolutionKind.conversation,
           value: final value?,
         ) =>
-          '${widget.app.label} → Chat with $value',
+          '${widget.app.label} → ${context.l10n.chatWith(value)}',
         DoorResolution(kind: DoorResolutionKind.query, value: final value?) =>
           '${widget.app.label} → ${_queryAction()} “$value”',
         DoorResolution(
@@ -572,11 +581,17 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       };
 
   String _openLabel(UnlockResponse response) =>
-      'Open ${_destination(response)}';
+      context.l10n.openDestination(_destination(response));
 
-  String _queryAction() =>
-      QueryDoorAllowlist.forPackage(widget.app.packageName)?.actionLabel ??
-      'Open app with';
+  String _queryAction() {
+    final l10n = context.l10n;
+    return switch (QueryDoorAllowlist.forPackage(widget.app.packageName)?.id) {
+      'gmail_compose' => l10n.queryDraft,
+      'calendar_event' => l10n.queryNewEvent,
+      'youtube' || 'maps' || 'spotify' || 'play_store' => l10n.querySearch,
+      _ => l10n.queryOpenWith,
+    };
+  }
 
   Future<void> _judge() async {
     FocusScope.of(context).unfocus();
@@ -646,14 +661,11 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     } on Object {
       if (!mounted) return;
       setState(() => _saving = false);
-      showCurreSnack(
-        context,
-        'Curre couldn’t save that on this phone. Please try again.',
-      );
+      showCurreSnack(context, context.l10n.couldNotSave);
       return;
     }
     if (!mounted) return;
-    showCurreSnack(context, 'Saved. It comes back when you next plan.');
+    showCurreSnack(context, context.l10n.savedForNextPlan);
     Navigator.of(context).pop();
   }
 
@@ -667,7 +679,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
     if (!result.succeeded) {
       showCurreSnack(
         context,
-        '${widget.app.label} didn’t open there. Your time is still running, so try it from Home.',
+        context.l10n.appDidNotOpenThere(widget.app.label),
       );
       return;
     }
@@ -690,7 +702,7 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
 (int, int)? _durationSpan(String reason, int? minutes) {
   if (minutes == null) return null;
   final match = RegExp(
-    r'\b\d{1,2}\s*(?:minutes?|mins?|min|hours?|hrs?|hr|h)\b',
+    r'\b\d{1,2}\s*(?:minutes?|mins?|min|hours?|hrs?|hr|h|minutos?|horas?|heures?|minuten?|stunden?)\b',
     caseSensitive: false,
   ).firstMatch(reason);
   if (match == null) return null;

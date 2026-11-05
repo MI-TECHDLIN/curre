@@ -136,6 +136,7 @@ class PlanRequest {
     required this.session,
     required this.intention,
     required List<PlanCandidate> candidates,
+    this.language = 'en',
   }) : candidates = List.unmodifiable(candidates) {
     _checkLength(intention, 'intention', minimum: 1, maximum: 500);
     if (candidates.length < 2 || candidates.length > 30) {
@@ -146,15 +147,18 @@ class PlanRequest {
       candidates.map((candidate) => candidate.label),
       'candidate labels',
     );
+    _checkLanguage(language);
   }
 
   final SessionName session;
   final String intention;
   final List<PlanCandidate> candidates;
+  final String language;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'session': session.wireValue,
     'intention': intention,
+    'language': language,
     'candidates': candidates
         .map((candidate) => candidate.toJson())
         .toList(growable: false),
@@ -208,6 +212,7 @@ class UnlockRequest {
     required this.reason,
     this.planIntention,
     this.threshold = 0.7,
+    this.language = 'en',
     List<String> shortcutLabels = const <String>[],
   }) : shortcutLabels = List.unmodifiable(shortcutLabels) {
     _checkLength(appLabel, 'appLabel', minimum: 1, maximum: 60);
@@ -219,6 +224,7 @@ class UnlockRequest {
     if (!threshold.isFinite) {
       throw ArgumentError.value(threshold, 'threshold', 'must be finite');
     }
+    _checkLanguage(language);
   }
 
   final String appLabel;
@@ -226,6 +232,7 @@ class UnlockRequest {
   final String reason;
   final List<String> shortcutLabels;
   final double threshold;
+  final String language;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'app_label': appLabel,
@@ -233,6 +240,7 @@ class UnlockRequest {
     'reason': reason,
     'shortcut_labels': shortcutLabels,
     'threshold': threshold,
+    'language': language,
   };
 }
 
@@ -423,9 +431,10 @@ extension ProofKindWire on ProofKind {
 }
 
 class ProofRequest {
-  ProofRequest({required this.task, required this.note}) {
+  ProofRequest({required this.task, required this.note, this.language = 'en'}) {
     _checkLength(task, 'task', minimum: 1, maximum: 500);
     _checkLength(note, 'note', minimum: 1, maximum: 300);
+    _checkLanguage(language);
   }
 
   /// The plan in the user's words.
@@ -433,10 +442,12 @@ class ProofRequest {
 
   /// What the user said changed, finished or became clear.
   final String note;
+  final String language;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'task': task,
     'note': note,
+    'language': language,
   };
 }
 
@@ -538,21 +549,27 @@ class LaterRequestItem {
 }
 
 class LaterRequest {
-  LaterRequest({required this.plan, required List<LaterRequestItem> items})
-    : items = List.unmodifiable(items) {
+  LaterRequest({
+    required this.plan,
+    required List<LaterRequestItem> items,
+    this.language = 'en',
+  }) : items = List.unmodifiable(items) {
     _checkLength(plan, 'plan', minimum: 1, maximum: 500);
     if (items.isEmpty || items.length > 20) {
       throw RangeError.range(items.length, 1, 20, 'items.length');
     }
     _checkUnique(items.map((item) => item.id), 'item ids');
+    _checkLanguage(language);
   }
 
   /// The plan sentence the saved items are ranked against.
   final String plan;
   final List<LaterRequestItem> items;
+  final String language;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'plan': plan,
+    'language': language,
     'items': items.map((item) => item.toJson()).toList(growable: false),
   };
 }
@@ -600,6 +617,12 @@ void _checkLength(String value, String name, {int minimum = 0, int? maximum}) {
   final length = value.runes.length;
   if (length < minimum || (maximum != null && length > maximum)) {
     throw RangeError.range(length, minimum, maximum, '$name code-point length');
+  }
+}
+
+void _checkLanguage(String value) {
+  if (!RegExp(r'^[a-z]{2}$').hasMatch(value)) {
+    throw ArgumentError.value(value, 'language', 'must be a two-letter code');
   }
 }
 

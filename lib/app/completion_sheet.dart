@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/speech_input.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
@@ -112,7 +113,7 @@ class _CompletionSheetState extends State<CompletionSheet> {
                 builder: (context, _) => CompletionSheetView(
                   state: _state,
                   task: task,
-                  title: controller.taskTitle(task),
+                  title: controller.taskTitle(task, context.l10n),
                   link: _link(task),
                   session: controller.currentSession.session.designSession,
                   noteController: _note,
@@ -151,7 +152,9 @@ class _CompletionSheetState extends State<CompletionSheet> {
       String.fromCharCodes(_note.text.trim().runes.take(completionNoteLimit));
 
   Future<void> _listen() async {
-    final result = await controller.speech.listen(prompt: completionQuestion);
+    final result = await controller.speech.listen(
+      prompt: context.l10n.completionQuestion,
+    );
     if (!mounted) return;
     switch (result.status) {
       case SpeechInputStatus.recognized:
@@ -325,7 +328,7 @@ class CompletionSheetView extends StatelessWidget {
         const SizedBox(width: CurreSpace.s3),
         RoundGlyphButton(
           glyph: CurreGlyphKind.close,
-          label: 'Close',
+          label: context.l10n.close,
           onPressed: onClose,
         ),
       ],
@@ -339,11 +342,11 @@ class CompletionSheetView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          completionQuestion,
+          context.l10n.completionQuestion,
           style: type.headline.copyWith(fontSize: 24, height: 30 / 24),
         ),
         const SizedBox(height: CurreSpace.s3),
-        _field(context, hint: 'One sentence is enough'),
+        _field(context, hint: context.l10n.oneSentenceEnough),
         ..._actions(context),
       ],
     );
@@ -354,17 +357,17 @@ class CompletionSheetView extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     final mismatch = submission?.mismatch?.trim();
     final prompt = mismatch != null && mismatch.isNotEmpty
-        ? '“${_shortMismatch(mismatch)}” doesn’t match the task you planned. What changed, finished, or became clear?'
+        ? context.l10n.proofMismatchPrompt(_shortMismatch(mismatch))
         : switch (submission?.kind) {
-            ProofKind.future => 'That sounds like what comes next. What changed, finished, or became clear?',
-            ProofKind.unrelated => 'Say how it connects to your plan. What changed, finished, or became clear?',
-            _ => 'A name, a number or a step is enough. What changed, finished, or became clear?',
+            ProofKind.future => context.l10n.proofFuturePrompt,
+            ProofKind.unrelated => context.l10n.proofUnrelatedPrompt,
+            _ => context.l10n.proofDetailPrompt,
           };
     return Column(
       key: const Key('proof-vague-follow-up'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Add one detail', style: type.title),
+        Text(context.l10n.addOneDetail, style: type.title),
         const SizedBox(height: CurreSpace.s1),
         Text(
           prompt,
@@ -372,7 +375,7 @@ class CompletionSheetView extends StatelessWidget {
           style: type.body.copyWith(color: colors.ink2),
         ),
         const SizedBox(height: CurreSpace.s3),
-        _field(context, hint: 'Add what changed'),
+        _field(context, hint: context.l10n.addWhatChanged),
         ..._actions(context),
       ],
     );
@@ -388,12 +391,15 @@ class CompletionSheetView extends StatelessWidget {
       ],
       const SizedBox(height: CurreSpace.s4),
       CurrePrimaryButton(
-        label: 'Add proof',
+        label: context.l10n.addProof,
         glyph: CurreGlyphKind.check,
         onPressed: onSubmit,
       ),
       const SizedBox(height: CurreSpace.s2),
-      CurreSecondaryButton(label: 'Just mark it done', onPressed: onMarkDone),
+      CurreSecondaryButton(
+        label: context.l10n.justMarkDone,
+        onPressed: onMarkDone,
+      ),
     ];
   }
 
@@ -408,7 +414,7 @@ class CompletionSheetView extends StatelessWidget {
       hintText: hint,
       suffixIcon: IconButton(
         onPressed: onSpeak,
-        tooltip: 'Say it instead',
+        tooltip: context.l10n.sayItInstead,
         icon: const CurreGlyph(CurreGlyphKind.speak, size: 21),
       ),
     ),
@@ -423,13 +429,13 @@ class CompletionSheetView extends StatelessWidget {
         children: [
           HorizonLine(
             scanning: !MediaQuery.disableAnimationsOf(context),
-            semanticLabel: 'Reading your note',
+            semanticLabel: context.l10n.readingYourNote,
           ),
           const SizedBox(height: CurreSpace.s3),
           GettingReadyNote(
             waking: waking ?? _notWaking,
             textAlign: TextAlign.center,
-            child: Text('Reading your note…', style: type.body),
+            child: Text(context.l10n.readingYourNoteProgress, style: type.body),
           ),
         ],
       ),
@@ -443,18 +449,18 @@ class CompletionSheetView extends StatelessWidget {
       key: const Key('proof-pending'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _NoteCard(
+        _NoteCard(
           glyph: CurreGlyphKind.later,
-          headline: 'Your note is saved',
-          body: 'Couldn’t check it right now. It will be checked once you’re back online.',
+          headline: context.l10n.noteSaved,
+          body: context.l10n.noteSavedBody,
         ),
         const SizedBox(height: CurreSpace.s3),
         Text(
-          'Your run stays safe while it waits.',
+          context.l10n.runSafeWhileWaiting,
           style: type.caption.copyWith(color: colors.ink3),
         ),
         const SizedBox(height: CurreSpace.s4),
-        CurrePrimaryButton(label: 'Done', onPressed: onClose),
+        CurrePrimaryButton(label: context.l10n.done, onPressed: onClose),
       ],
     );
   }
@@ -463,13 +469,13 @@ class CompletionSheetView extends StatelessWidget {
     key: const Key('proof-self-reported'),
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _NoteCard(
+      _NoteCard(
         glyph: CurreGlyphKind.kindTask,
-        headline: 'Marked as done',
-        body: 'It’s in your history. Proof days come from a note about what changed.',
+        headline: context.l10n.markedAsDone,
+        body: context.l10n.markedDoneBody,
       ),
       const SizedBox(height: CurreSpace.s4),
-      CurrePrimaryButton(label: 'Done', onPressed: onClose),
+      CurrePrimaryButton(label: context.l10n.done, onPressed: onClose),
     ],
   );
 }
@@ -614,6 +620,8 @@ class _ProoflightMomentState extends State<ProoflightMoment>
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final proof = widget.submission;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final after = proof.after;
     final sunrise = proof.earnedProofDay;
 
@@ -636,13 +644,15 @@ class _ProoflightMomentState extends State<ProoflightMoment>
     final to = after.currentRun;
     final rays = proof.isToday ? after.raysToday : 1;
     final headline = switch (proof) {
-      _ when sunrise && proof.isToday => 'Today’s sun is up',
-      _ when sunrise => '${weekdayName(proof.record.date)}’s sun is up',
-      _ when proof.addedRay => 'One more ray',
-      _ => 'Proof added',
+      _ when sunrise && proof.isToday => l10n.todaySunUp,
+      _ when sunrise => l10n.weekdaySunUp(
+        weekdayName(proof.record.date, locale),
+      ),
+      _ when proof.addedRay => l10n.oneMoreRay,
+      _ => l10n.proofAdded,
     };
     final caption = proof.record.caption?.text ?? proof.record.note;
-    final milestone = sunrise ? milestoneLine(to) : null;
+    final milestone = sunrise ? milestoneLine(to, l10n) : null;
 
     return Column(
       key: const Key('proof-accepted'),
@@ -661,7 +671,7 @@ class _ProoflightMomentState extends State<ProoflightMoment>
                     Text(headline, style: type.headline),
                     const SizedBox(height: CurreSpace.s1),
                     Text(
-                      'Your note counts as proof.',
+                      l10n.noteCountsAsProof,
                       style: type.body.copyWith(color: colors.ink2),
                     ),
                   ],
@@ -676,7 +686,7 @@ class _ProoflightMomentState extends State<ProoflightMoment>
               proofToday: proof.isToday,
               expression: AvatarExpression.happy,
               motion: reacting ? AvatarMotion.reactOnce : AvatarMotion.still,
-              semanticLabel: 'Your profile, smiling',
+              semanticLabel: l10n.profileSmiling,
             ),
           ],
         ),
@@ -711,8 +721,8 @@ class _ProoflightMomentState extends State<ProoflightMoment>
                       rise: rise,
                       grow: ray,
                       semanticLabel: rays == 1
-                          ? 'Today’s sun, one ray: one task with proof'
-                          : 'Today’s sun, $rays rays: $rays tasks with proof',
+                          ? l10n.sunOneRay
+                          : l10n.sunManyRays(rays),
                     ),
                   ),
                 ],
@@ -742,11 +752,11 @@ class _ProoflightMomentState extends State<ProoflightMoment>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    to == 1 ? 'proof day' : 'proof days',
+                    l10n.proofDayUnit(to),
                     style: type.title.copyWith(fontSize: 20, height: 26 / 20),
                   ),
                   Text(
-                    runRange(after),
+                    runRange(after, l10n: l10n, locale: locale),
                     style: type.caption.copyWith(color: colors.ink3),
                   ),
                 ],
@@ -756,7 +766,7 @@ class _ProoflightMomentState extends State<ProoflightMoment>
         ),
         const SizedBox(height: CurreSpace.s4),
         WeekStrip(
-          days: proofWeek(after),
+          days: proofWeek(after, locale),
           session: widget.session,
           todayLit: todayLit,
         ),
@@ -779,7 +789,7 @@ class _ProoflightMomentState extends State<ProoflightMoment>
                 const SizedBox(width: CurreSpace.s3),
                 Expanded(
                   child: Text(
-                    'You earned a cloud day. $cloudDayLine',
+                    l10n.earnedCloudDay(cloudDayLineFor(l10n)),
                     style: type.body,
                   ),
                 ),
@@ -797,20 +807,23 @@ class _ProoflightMomentState extends State<ProoflightMoment>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('A new run starts here.', style: type.body),
-                if (RunEndedNote.record(
-                      best: after.bestRun,
-                      total: after.totalProofDays,
-                    )
-                    case final record?) ...[
-                  const SizedBox(height: CurreSpace.s1),
-                  Text(record, style: type.meta),
-                ],
+                Text(l10n.newRunStarts, style: type.body),
+                const SizedBox(height: CurreSpace.s1),
+                Text(
+                  [
+                    l10n.bestRunCount(after.bestRun),
+                    l10n.proofDaysInAll(after.totalProofDays),
+                  ].join(' · '),
+                  style: type.meta,
+                ),
               ],
             ),
           ),
         const SizedBox(height: CurreSpace.s5),
-        CurrePrimaryButton(label: 'Continue', onPressed: widget.onContinue),
+        CurrePrimaryButton(
+          label: l10n.continueLabel,
+          onPressed: widget.onContinue,
+        ),
       ],
     );
   }
@@ -866,7 +879,7 @@ class _ProofCard extends StatelessWidget {
             CurreGlyphKind.check,
             size: 24,
             color: card.fg,
-            semanticLabel: 'Supported',
+            semanticLabel: context.l10n.supported,
           ),
           const SizedBox(width: CurreSpace.s3),
           Expanded(
@@ -891,8 +904,8 @@ class _ProofCard extends StatelessWidget {
                 const SizedBox(height: CurreSpace.s1),
                 Text(
                   offline
-                      ? 'Backed by starting the task and your note'
-                      : 'Backed by the app you opened and your note',
+                      ? context.l10n.backedByStart
+                      : context.l10n.backedByApp,
                   style: type.meta.copyWith(
                     color: card.fg.withValues(alpha: .78),
                   ),

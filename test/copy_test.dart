@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:curre/app/checkin_screen.dart';
 import 'package:curre/app/hidden_apps_screen.dart';
@@ -39,6 +40,25 @@ void main() {
       for (final literal in stringLiterals(File(path).readAsStringSync())) {
         for (final word in bannedWordsIn(literal)) {
           problems.add('$path: “$word” in “$literal”');
+        }
+      }
+    }
+    expect(problems, isEmpty);
+  });
+
+  test('no translated string uses a banned word', () {
+    final problems = <String>[];
+    final files = Directory('lib/l10n')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.arb'));
+    for (final file in files) {
+      final messages =
+          jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      for (final entry in messages.entries) {
+        if (entry.key.startsWith('@') || entry.value is! String) continue;
+        for (final word in bannedWordsIn(entry.value! as String)) {
+          problems.add('${file.path}:${entry.key}: “$word”');
         }
       }
     }

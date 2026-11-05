@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
@@ -18,6 +19,14 @@ const restrictedSettingsSteps = <String>[
   'Tap “Allow restricted settings”.',
   'Confirm with your PIN or fingerprint.',
   'Come back here and switch access on.',
+];
+
+List<String> _restrictedSettingsSteps(AppLocalizations l10n) => <String>[
+  l10n.restrictedStepOne,
+  l10n.restrictedStepTwo,
+  l10n.restrictedStepThree,
+  l10n.restrictedStepFour,
+  l10n.restrictedStepFive,
 ];
 
 /// The restricted-setting note: shown before Curre opens Android's access
@@ -58,15 +67,17 @@ class RestrictedSettingsHelp extends StatelessWidget {
                 Expanded(
                   child: Text(
                     stillOff
-                        ? 'It’s still off. That’s okay, Curre works without it. If Android said the setting is restricted, allow it once:'
-                        : 'If Android says the setting is restricted, allow it once:',
+                        ? context.l10n.restrictedStillOff
+                        : context.l10n.restrictedHelp,
                     style: type.body.copyWith(color: colors.ink),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: CurreSpace.s2),
-            for (final (index, step) in restrictedSettingsSteps.indexed)
+            for (final (index, step) in _restrictedSettingsSteps(
+              context.l10n,
+            ).indexed)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
@@ -76,7 +87,7 @@ class RestrictedSettingsHelp extends StatelessWidget {
               ),
             const SizedBox(height: CurreSpace.s3),
             CurreSecondaryButton(
-              label: 'Open Curre’s App info',
+              label: context.l10n.openCurreAppInfo,
               glyph: CurreGlyphKind.go,
               onPressed: () => unawaited(_openAppInfo(context)),
             ),
@@ -89,10 +100,7 @@ class RestrictedSettingsHelp extends StatelessWidget {
   Future<void> _openAppInfo(BuildContext context) async {
     final opened = await controller.openAppInfo();
     if (!opened && context.mounted) {
-      showCurreSnack(
-        context,
-        'Open your phone’s Settings, then Apps, then Curre.',
-      );
+      showCurreSnack(context, context.l10n.openSettingsAppsCurre);
     }
   }
 }
@@ -239,7 +247,7 @@ class _AccessOfferState extends State<AccessOffer>
   void _notNow() {
     unawaited(widget.controller.settlePrompt(widget.prompt));
     setState(() => _closed = true);
-    showCurreSnack(context, 'No problem. It’s in Curre settings any time.');
+    showCurreSnack(context, context.l10n.noProblemSettings);
   }
 
   /// The names of the apps whose notifications would be held.
@@ -255,11 +263,11 @@ class _AccessOfferState extends State<AccessOffer>
     if (_on == true) {
       return ContextOfferCard(
         prop: CurreProp.sparkles,
-        title: 'All set.',
+        title: context.l10n.allSet,
         body: _askWhy
-            ? 'Curre will ask “Why now?” when a hidden app opens.'
-            : 'Hidden apps will stay quiet until you bring them back.',
-        yesLabel: 'Done',
+            ? context.l10n.usageAccessAllSet
+            : context.l10n.notificationAccessAllSet,
+        yesLabel: context.l10n.done,
         yesGlyph: CurreGlyphKind.check,
         onYes: () => setState(() => _closed = true),
         notNowLabel: null,
@@ -268,20 +276,19 @@ class _AccessOfferState extends State<AccessOffer>
     }
     return ContextOfferCard(
       prop: _askWhy ? CurreProp.shield : CurreProp.zzz,
-      title: _askWhy
-          ? 'Ask “Why now?” when a hidden app opens?'
-          : 'Keep hidden apps quiet?',
+      title: _askWhy ? context.l10n.askWhyPrompt : context.l10n.quietPrompt,
       body: _askWhy
-          ? 'Hidden apps can sneak back in through recent apps, links or notifications. Curre can ask “Why now?” then too. It only checks which app opened, never what’s on your screen.'
-          : quietOfferBody(_hiddenLabels),
+          ? context.l10n.askWhyPromptBody
+          : quietOfferBody(_hiddenLabels, context.l10n),
       yesLabel: _on == false
-          ? 'Try again'
+          ? context.l10n.tryAgainAccess
           : _askWhy
-          ? 'Turn on Usage access'
-          : 'Turn on notification access',
+          ? context.l10n.turnOnUsageAccess
+          : context.l10n.turnOnNotificationAccess,
       yesGlyph: _askWhy ? CurreGlyphKind.outOfSight : CurreGlyphKind.notify,
       onYes: _working ? null : _allow,
       onNotNow: _working ? null : _notNow,
+      notNowLabel: context.l10n.notNow,
       footer: [
         RestrictedSettingsHelp(
           controller: widget.controller,
@@ -294,13 +301,21 @@ class _AccessOfferState extends State<AccessOffer>
 
 /// The "Keep hidden apps quiet?" offer, naming exactly whose notifications
 /// Curre would hold.
-String quietOfferBody(List<String> hiddenLabels) {
+String quietOfferBody(List<String> hiddenLabels, [AppLocalizations? l10n]) {
   final names = switch (hiddenLabels.length) {
-    0 => 'the apps you hide',
+    0 => l10n?.hiddenNamesFallback ?? 'the apps you hide',
     1 => hiddenLabels.single,
-    2 => '${hiddenLabels.first} and ${hiddenLabels.last}',
+    2 =>
+      l10n?.hiddenNamesTwo(hiddenLabels.first, hiddenLabels.last) ??
+          '${hiddenLabels.first} and ${hiddenLabels.last}',
     _ =>
-      '${hiddenLabels.take(2).join(', ')} and ${hiddenLabels.length - 2} more',
+      l10n?.hiddenNamesMore(
+            hiddenLabels.first,
+            hiddenLabels[1],
+            hiddenLabels.length - 2,
+          ) ??
+          '${hiddenLabels.take(2).join(', ')} and ${hiddenLabels.length - 2} more',
   };
-  return 'Curre can hold notifications from $names quietly and give every one back when you open the app. Other apps notify as usual, and calls and alarms always come through.';
+  return l10n?.quietPromptBody(names) ??
+      'Curre can hold notifications from $names quietly and give every one back when you open the app. Other apps notify as usual, and calls and alarms always come through.';
 }

@@ -9,6 +9,23 @@ Settings _roundTrip(Settings settings) => Settings.fromJson(
 );
 
 void main() {
+  group('Settings.languageCode', () {
+    test('defaults to the phone and stays absent from older JSON', () {
+      final settings = Settings();
+      expect(settings.languageCode, isNull);
+      expect(settings.toJson().containsKey('languageCode'), isFalse);
+      expect(Settings.fromJson(settings.toJson()).languageCode, isNull);
+    });
+
+    test('normalizes, round-trips, changes and clears the override', () {
+      final settings = Settings(languageCode: 'PT-BR');
+      expect(settings.languageCode, 'pt');
+      expect(Settings.fromJson(settings.toJson()).languageCode, 'pt');
+      expect(settings.copyWith(languageCode: 'de').languageCode, 'de');
+      expect(settings.copyWith(clearLanguageCode: true).languageCode, isNull);
+    });
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Settings.displayName', () {

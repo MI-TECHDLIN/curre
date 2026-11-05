@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import 'curre_controller.dart';
 
 extension SessionPresentation on SessionName {
@@ -25,10 +27,15 @@ extension SessionPresentation on SessionName {
   };
 }
 
-String formatClock(DateTime value) {
+String formatClock(DateTime value, {String? locale}) {
   final local = value.toLocal();
-  return '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}';
+  try {
+    return DateFormat.Hm(locale).format(local);
+  } on Object {
+    // Lightweight widget tests do not always install intl's date symbols.
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 String formatDuration(Duration value) {
@@ -248,7 +255,9 @@ class ProfileAvatarButton extends StatelessWidget {
     final initial = trimmed == null || trimmed.isEmpty ? 'C' : trimmed;
     return Semantics(
       button: onPressed != null,
-      label: onPressed == null ? 'Profile avatar' : 'Open profile',
+      label: onPressed == null
+          ? context.l10n.profileAvatar
+          : context.l10n.openProfile,
       excludeSemantics: true,
       child: Material(
         color: Colors.transparent,
@@ -326,7 +335,7 @@ class CurreTopBar extends StatelessWidget {
       children: [
         RoundGlyphButton(
           glyph: CurreGlyphKind.back,
-          label: 'Back',
+          label: context.l10n.back,
           onPressed: () => Navigator.of(context).maybePop(),
         ),
         const SizedBox(width: CurreSpace.s3),
@@ -445,25 +454,26 @@ class HomeDock extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.4;
     final items = <({String label, CurreGlyphKind glyph, VoidCallback action})>[
       (
-        label: 'Phone',
+        label: l10n.phone,
         glyph: CurreGlyphKind.phone,
         action: () => _launch(controller.phonePackage),
       ),
       (
-        label: 'Messages',
+        label: l10n.messages,
         glyph: CurreGlyphKind.messages,
         action: () => _launch(controller.messagesPackage),
       ),
       (
-        label: 'Settings',
+        label: l10n.androidSettings,
         glyph: CurreGlyphKind.androidSettings,
         action: () => _launch(controller.androidSettingsPackage),
       ),
       (
-        label: 'Curre',
+        label: l10n.appName,
         glyph: CurreGlyphKind.curreSettings,
         action: onCurreSettings,
       ),
@@ -499,8 +509,8 @@ class HomeDock extends StatelessWidget {
                           Expanded(
                             child: Semantics(
                               button: true,
-                              label: item.label == 'Curre'
-                                  ? 'Curre settings'
+                              label: item.label == l10n.appName
+                                  ? l10n.curreSettings
                                   : item.label,
                               excludeSemantics: true,
                               child: InkWell(
@@ -514,7 +524,7 @@ class HomeDock extends StatelessWidget {
                                       CurreGlyph(
                                         item.glyph,
                                         size: 23,
-                                        color: item.label == 'Curre'
+                                        color: item.label == l10n.appName
                                             ? colors.emberText
                                             : colors.ink,
                                       ),
@@ -523,7 +533,7 @@ class HomeDock extends StatelessWidget {
                                         item.label,
                                         style: type.caption.copyWith(
                                           fontSize: 10,
-                                          color: item.label == 'Curre'
+                                          color: item.label == l10n.appName
                                               ? colors.emberText
                                               : colors.ink2,
                                         ),
@@ -548,9 +558,9 @@ class HomeDock extends StatelessWidget {
                   Expanded(
                     child: _DockLink(
                       key: const Key('home-all-apps'),
-                      label: 'All apps',
+                      label: l10n.allApps,
                       semanticLabel:
-                          'All apps. Every app you didn’t hide, ready to open.',
+                          '${l10n.allApps}. ${l10n.allAppsDescription}',
                       glyph: CurreGlyphKind.door,
                       onTap: openAll,
                     ),
@@ -565,9 +575,9 @@ class HomeDock extends StatelessWidget {
                 Expanded(
                   child: _DockLink(
                     key: const Key('home-hidden-apps'),
-                    label: hiddenAppsLabel(controller.hiddenApps.length),
+                    label: l10n.hiddenAppsCount(controller.hiddenApps.length),
                     semanticLabel:
-                        '${hiddenAppsLabel(controller.hiddenApps.length)}. Open the list to bring one back.',
+                        '${l10n.hiddenAppsCount(controller.hiddenApps.length)}. ${l10n.hiddenApps}',
                     glyph: CurreGlyphKind.rise,
                     onTap: onHidden,
                   ),
@@ -637,11 +647,18 @@ class _DockLink extends StatelessWidget {
 }
 
 /// The "Why now?" wait in words: "30 seconds".
-String get overrideWaitWords => '${overrideWait.inSeconds} seconds';
+String overrideWaitWordsFor(AppLocalizations l10n) =>
+    l10n.secondsCount(overrideWait.inSeconds);
+
+/// English compatibility for non-widget reports; screens use
+/// [overrideWaitWordsFor] with their active locale.
+String get overrideWaitWords =>
+    lookupAppLocalizations(const Locale('en'))
+        .secondsCount(overrideWait.inSeconds);
 
 /// "1 hidden app", "12 hidden apps".
 String hiddenAppsLabel(int count) =>
-    count == 1 ? '1 hidden app' : '$count hidden apps';
+    lookupAppLocalizations(const Locale('en')).hiddenAppsCount(count);
 
 /// A short note at the foot of the screen. With [actionLabel] it offers one
 /// action (an Undo) and still goes away by itself after [duration].
@@ -673,10 +690,6 @@ void showCurreSnack(
       ),
     );
 }
-
-/// What a waiting screen says while the first call of a session is slow.
-const gettingReadyCopy = 'Getting things ready…';
-const gettingReadyDetail = 'This can take a few more seconds.';
 
 /// Shows [child] (the screen's usual waiting line) until [waking] turns on,
 /// then a calm "getting ready" note in the same place.
@@ -712,10 +725,14 @@ class GettingReadyNote extends StatelessWidget {
             },
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(gettingReadyCopy, style: type.body, textAlign: align),
+              Text(
+                context.l10n.gettingReady,
+                style: type.body,
+                textAlign: align,
+              ),
               const SizedBox(height: CurreSpace.s1),
               Text(
-                gettingReadyDetail,
+                context.l10n.gettingReadyBody,
                 style: type.caption.copyWith(color: colors.ink2),
                 textAlign: align,
               ),

@@ -163,6 +163,35 @@ apps.
 The rule lives in `QuietNotificationListenerService.kt`, mirrored for
 tests by `QuietNotificationPolicy` in `lib/platform/quiet_notifications.dart`.
 
+## Languages
+
+Curre ships in **English, Spanish, French, Portuguese and German**. It
+follows the phone language on first launch; **Curre settings → Language**
+can keep a different language for Curre alone. Adding another language is
+one ARB file under [`lib/l10n/`](lib/l10n/); Flutter's `gen-l10n` checks that
+every locale has the same messages, placeholders and plurals.
+
+The selected two-letter language code travels with plan, Why-now, proof and
+Later requests. Clocked still returns Curre's stable internal codes, while
+Fill, Extract, Decide, Verify and Rerank read the person's original language;
+Extract spans stay verbatim so highlights continue to index the words the
+person typed. Offline plan-end parsing and on-device Whisper hints understand
+the same five languages.
+
+`clocked-sdk` 0.7.0 does not impose a language allowlist in its client
+source. A live Pipeline probe on 2026-11-04 exercised Fill, Extract, Decide,
+Verify (`grounding` in the SDK) and Rerank once in each shipped language; all
+25 steps returned HTTP 200. Each five-step pipeline used 7 credits, for
+**35 credits total**:
+
+| Language | Code | Credits | Model time |
+| --- | --- | ---: | ---: |
+| English | `en` | 7 | 165.5 ms |
+| Spanish | `es` | 7 | 158.6 ms |
+| French | `fr` | 7 | 166.1 ms |
+| Portuguese | `pt` | 7 | 158.0 ms |
+| German | `de` | 7 | 164.8 ms |
+
 ## Screenshots
 
 Light and dark captures live in [`docs/screenshots/`](docs/screenshots/).

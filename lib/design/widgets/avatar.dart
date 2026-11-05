@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../curre_colors.dart';
 import '../curre_type.dart';
 
@@ -264,6 +265,11 @@ abstract final class AvatarCatalog {
   }
 }
 
+int avatarNumber(String? id) {
+  final parts = id?.split('-');
+  return int.tryParse(parts == null || parts.isEmpty ? '' : parts.last) ?? 1;
+}
+
 /// A front-facing Curre profile avatar.
 ///
 /// Give [avatarId] to use a catalogue face. Supplying any art parameter draws
@@ -454,9 +460,14 @@ class _AvatarState extends State<Avatar> with SingleTickerProviderStateMixin {
     }
 
     final resolved = preset ?? AvatarCatalog.all.first;
-    final label =
-        widget.semanticLabel ??
-        '${preset?.semanticLabel ?? 'Custom profile avatar'}${widget.proofToday ? ', proof today' : ''}${widget.expression == AvatarExpression.sleepy ? ', sleepy' : ''}';
+    var label = preset == null
+        ? context.l10n.customProfileAvatar
+        : context.l10n.profileAvatarNumber(avatarNumber(preset.id));
+    if (widget.proofToday) label = context.l10n.avatarProofToday(label);
+    if (widget.expression == AvatarExpression.sleepy) {
+      label = context.l10n.avatarSleepy(label);
+    }
+    label = widget.semanticLabel ?? label;
     return Semantics(
       image: true,
       label: label,
@@ -540,7 +551,13 @@ class _InitialAvatar extends StatelessWidget {
     final letter = _firstRune(initial);
     final label =
         semanticLabel ??
-        '${letter == '?' ? 'Profile' : letter} initial${proofToday ? ', proof today' : ''}';
+        (letter == '?'
+            ? proofToday
+                  ? context.l10n.profileDefaultInitialProof
+                  : context.l10n.profileDefaultInitial
+            : proofToday
+            ? context.l10n.profileInitialProof(letter)
+            : context.l10n.profileInitial(letter));
     return Semantics(
       image: true,
       label: label,

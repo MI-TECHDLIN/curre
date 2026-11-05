@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/core.dart';
 import '../design/design.dart';
 import '../doors/door_models.dart';
+import '../l10n/l10n.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 import 'onboarding/app_hints.dart';
@@ -103,10 +104,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
         if (mounted) setState(() {});
       } on Object {
         if (mounted) {
-          showCurreSnack(
-            context,
-            'Curre couldn’t save that on this phone. Please try again.',
-          );
+          showCurreSnack(context, context.l10n.couldNotSave);
         }
       }
       return;
@@ -118,7 +116,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
         if (candidates.length <= AppChoiceScreen.minPlanApps) {
           showCurreSnack(
             context,
-            'Plans need at least ${AppChoiceScreen.minPlanApps} apps to choose from.',
+            context.l10n.planAppsMinimum(AppChoiceScreen.minPlanApps),
           );
           return;
         }
@@ -127,7 +125,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
         if (candidates.length >= AppChoiceScreen.maxPlanApps) {
           showCurreSnack(
             context,
-            'That’s ${AppChoiceScreen.maxPlanApps} already. Untick one to add another.',
+            context.l10n.planAppsMaximum(AppChoiceScreen.maxPlanApps),
           );
           return;
         }
@@ -136,7 +134,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
       next = settings.copyWith(candidates: candidates);
     } else {
       if (_fixed.contains(package)) {
-        showCurreSnack(context, '${app.label} is always on Home.');
+        showCurreSnack(context, context.l10n.appAlwaysOnHome(app.label));
         return;
       }
       final essentials = {...settings.essentials, ..._fixed};
@@ -160,10 +158,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
       if (mounted) setState(() {});
     } on Object {
       if (mounted) {
-        showCurreSnack(
-          context,
-          'Curre couldn’t save that on this phone. Please try again.',
-        );
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
     }
   }
@@ -186,16 +181,14 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
             ),
             child: CurreTopBar(
               title: switch (widget.kind) {
-                AppChoiceKind.planApps => 'Apps your plans can use',
-                AppChoiceKind.hidden => 'Hidden apps',
-                AppChoiceKind.alwaysOnHome => 'Always on Home',
+                AppChoiceKind.planApps => context.l10n.planApps,
+                AppChoiceKind.hidden => context.l10n.hiddenApps,
+                AppChoiceKind.alwaysOnHome => context.l10n.alwaysOnHome,
               },
               subtitle: switch (widget.kind) {
-                AppChoiceKind.planApps =>
-                  'When you plan, Curre picks from these. Choose 2 to 30.',
-                AppChoiceKind.hidden => 'Only these leave Home and ask “Why now?” first. Every other app opens as usual.',
-                AppChoiceKind.alwaysOnHome =>
-                  'These stay on Home all day, no plan needed.',
+                AppChoiceKind.planApps => context.l10n.planAppsHelp,
+                AppChoiceKind.hidden => context.l10n.hiddenAppsHelp,
+                AppChoiceKind.alwaysOnHome => context.l10n.alwaysOnHomeHelp,
               },
             ),
           ),
@@ -206,15 +199,21 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
                 Semantics(
                   liveRegion: true,
                   child: Text(switch (widget.kind) {
-                    AppChoiceKind.planApps => '${chosen.length} picked',
-                    AppChoiceKind.hidden => '${chosen.length} hidden',
-                    AppChoiceKind.alwaysOnHome => '${chosen.length} on Home',
+                    AppChoiceKind.planApps => context.l10n.pickedCount(
+                      chosen.length,
+                    ),
+                    AppChoiceKind.hidden => context.l10n.hiddenCount(
+                      chosen.length,
+                    ),
+                    AppChoiceKind.alwaysOnHome => context.l10n.onHomeCount(
+                      chosen.length,
+                    ),
                   }, style: type.meta),
                 ),
                 const SizedBox(height: CurreSpace.s3),
                 TextField(
                   decoration: InputDecoration(
-                    labelText: 'Find an app',
+                    labelText: context.l10n.findApp,
                     filled: true,
                     fillColor: colors.raised,
                   ),
@@ -225,7 +224,7 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
                   Padding(
                     padding: const EdgeInsets.all(CurreSpace.s6),
                     child: Text(
-                      'No app matches “$_query”.',
+                      context.l10n.noAppMatches(_query),
                       style: type.body.copyWith(color: colors.ink2),
                       textAlign: TextAlign.center,
                     ),
@@ -239,9 +238,9 @@ class _AppChoiceScreenState extends State<AppChoiceScreen> {
                     ),
                     title: app.label,
                     subtitle: !_planApps && _fixed.contains(app.packageName)
-                        ? 'Always on Home'
+                        ? context.l10n.alwaysOnHome
                         : _planApps
-                        ? appTaskExamples[app.packageName]
+                        ? localizedAppTaskExample(app.packageName, context.l10n)
                         : null,
                     selected: chosen.contains(app.packageName),
                     onTap: () => _toggle(app),

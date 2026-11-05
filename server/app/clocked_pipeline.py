@@ -129,6 +129,18 @@ PROOF_GUARD_INSTRUCTIONS = (
 )
 
 
+def _language_instructions(language: str) -> str:
+    """Keeps the API's stable English enum labels while making the model
+    explicitly read the person's words in the app language. A new phone
+    locale needs no prompt table here: the BCP-47 language code is enough."""
+    return (
+        f"The user's text is in language code {language}. Interpret its meaning, names, "
+        "time phrases, and ordinary wording in that language. Keep the request's field and "
+        "category labels unchanged; they are internal codes, not words the user will see. "
+        "When extracting, copy the user's original words exactly without translating them."
+    )
+
+
 class PipelineUnavailable(Exception):
     """Raised when the pipeline call itself cannot produce a usable result:
     a step error, a total timeout, or a Clocked error surviving the SDK's
@@ -212,7 +224,9 @@ def redactions_from_steps(steps: list[dict[str, Any]], text: str) -> list[Redact
 # ---------------------------------------------------------------------------
 
 
-def build_plan_steps(intention: str, candidates: list[Candidate]) -> list[dict[str, Any]]:
+def build_plan_steps(
+    intention: str, candidates: list[Candidate], language: str = "en"
+) -> list[dict[str, Any]]:
     labels = [c.label for c in candidates]
     fill_fields: dict[str, Any] = {
         "apps": {
@@ -239,8 +253,20 @@ def build_plan_steps(intention: str, candidates: list[Candidate]) -> list[dict[s
         )
 
     return [
-        {"fill": {"fields": fill_fields}, "name": "plan"},
-        {"extract": {"fields": extract_fields}, "name": "spans"},
+        {
+            "fill": {
+                "fields": fill_fields,
+                "instructions": _language_instructions(language),
+            },
+            "name": "plan",
+        },
+        {
+            "extract": {
+                "fields": extract_fields,
+                "instructions": _language_instructions(language),
+            },
+            "name": "spans",
+        },
     ]
 
 
@@ -248,9 +274,10 @@ async def run_plan_pipeline(
     client: AsyncClocked,
     intention: str,
     candidates: list[Candidate],
+    language: str = "en",
     idempotency_key: UUID | None = None,
 ) -> PlanResponse:
-    steps = build_plan_steps(intention, candidates)
+    steps = build_plan_steps(intention, candidates, language)
     try:
         result = await asyncio.wait_for(
             client.pipeline(
@@ -303,8 +330,13 @@ async def run_plan_pipeline(
 
 
 def build_unlock_steps(
-    app_label: str, plan_intention: str | None, reason: str, shortcut_labels: list[str]
+    app_label: str,
+    plan_intention: str | None,
+    reason: str,
+    shortcut_labels: list[str],
+    language: str = "en",
 ) -> list[dict[str, Any]]:
+    language_note = _language_instructions(language)
     questions: dict[str, Any] = {
         "kind": {
             "type": "choice",
@@ -327,14 +359,16 @@ def build_unlock_steps(
         {
             "injection": {
                 "source": "user",
-                "instructions": GUARD_INSTRUCTIONS,
+                "instructions": f"{GUARD_INSTRUCTIONS} {language_note}",
             },
             "stop": True,
             "name": "guard",
         },
         {
             "decide": {
-                "instructions": "Judge only the Reason line; the Plan line is context.",
+                "instructions": (
+                    "Judge only the Reason line; the Plan line is context. " + language_note
+                ),
                 "questions": questions,
             },
             "name": "gate",
@@ -348,14 +382,14 @@ def build_unlock_steps(
                         "send or create, as written"
                     ),
                     "person": (
-                        "the name of the person or group the user will message or call, "
-                        "as written"
+                        "the name of the person or group the user will message or call, as written"
                     ),
                     "minutes": {
                         "description": "how long the user says they need",
                         "normalize": "integer",
                     },
                 },
+                "instructions": language_note,
             },
             "name": "task",
         },
@@ -386,9 +420,10 @@ async def run_unlock_pipeline(
     reason: str,
     shortcut_labels: list[str],
     threshold: float,
+    language: str = "en",
 ) -> UnlockResponse:
     text = _compose_unlock_text(app_label, plan_intention, reason)
-    steps = build_unlock_steps(app_label, plan_intention, reason, shortcut_labels)
+    steps = build_unlock_steps(app_label, plan_intention, reason, shortcut_labels, language)
     try:
         result = await asyncio.wait_for(
             client.pipeline(
@@ -489,13 +524,14 @@ async def run_unlock_pipeline(
 # ---------------------------------------------------------------------------
 
 
-def build_proof_steps(task: str, note: str) -> list[dict[str, Any]]:
+def build_proof_steps(task: str, note: str, language: str = "en") -> list[dict[str, Any]]:
+    language_note = _language_instructions(language)
     return [
         build_redaction_step(note),
         {
             "injection": {
                 "source": "user",
-                "instructions": PROOF_GUARD_INSTRUCTIONS,
+                "instructions": f"{PROOF_GUARD_INSTRUCTIONS} {language_note}",
             },
             "stop": True,
             "name": "guard",
@@ -504,7 +540,7 @@ def build_proof_steps(task: str, note: str) -> list[dict[str, Any]]:
             "decide": {
                 "instructions": (
                     "Judge only the Completion note; the Task line is context. Judge whether "
-                    "it reports a completed result, not whether it is true."
+                    "it reports a completed result, not whether it is true. " + language_note
                 ),
                 "questions": {
                     "proof": {
@@ -523,6 +559,7 @@ def build_proof_steps(task: str, note: str) -> list[dict[str, Any]]:
                     "result": "what the person completed or produced, as written",
                     "learning": "what the person says they learned, as written",
                 },
+                "instructions": language_note,
             },
             "name": "caption",
         },
@@ -530,7 +567,7 @@ def build_proof_steps(task: str, note: str) -> list[dict[str, Any]]:
             "grounding": {
                 "documents": [{"id": "plan", "text": task}],
                 "answer": note,
-                "instructions": VERIFY_INSTRUCTIONS,
+                "instructions": f"{VERIFY_INSTRUCTIONS} {language_note}",
             },
             "name": "verify",
         },
@@ -564,12 +601,14 @@ def _compose_proof_text(task: str, note: str) -> str:
     return f"Task: {task}\nCompletion note: {note}"
 
 
-async def run_proof_pipeline(client: AsyncClocked, task: str, note: str) -> ProofResponse:
+async def run_proof_pipeline(
+    client: AsyncClocked, task: str, note: str, language: str = "en"
+) -> ProofResponse:
     try:
         result = await asyncio.wait_for(
             client.pipeline(
                 text=_compose_proof_text(task, note),
-                steps=build_proof_steps(task, note),
+                steps=build_proof_steps(task, note, language),
                 max_attempts=PROOF_MAX_ATTEMPTS,
             ),
             timeout=PROOF_TIMEOUT_SECONDS,
@@ -645,14 +684,17 @@ def build_later_documents(items: list[LaterItem]) -> list[dict[str, str]]:
 
 
 async def run_later_rerank(
-    client: AsyncClocked, plan: str, items: list[LaterItem]
+    client: AsyncClocked,
+    plan: str,
+    items: list[LaterItem],
+    language: str = "en",
 ) -> LaterResponse:
     try:
         result = await asyncio.wait_for(
             client.rerank(
                 query=plan,
                 documents=build_later_documents(items),
-                instructions=LATER_INSTRUCTIONS,
+                instructions=f"{LATER_INSTRUCTIONS} {_language_instructions(language)}",
                 max_attempts=LATER_MAX_ATTEMPTS,
             ),
             timeout=LATER_TIMEOUT_SECONDS,

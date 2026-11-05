@@ -5,6 +5,7 @@ import 'package:curre/app/hidden_apps_screen.dart';
 import 'package:curre/app/settings_screen.dart';
 import 'package:curre/core/core.dart';
 import 'package:curre/design/design.dart';
+import 'package:curre/l10n/l10n.dart';
 import 'package:curre/main.dart';
 import 'package:curre/platform/platform.dart';
 import 'package:flutter/material.dart';
@@ -530,7 +531,10 @@ void main() {
       expect(find.text('Your focus is done'), findsOneWidget);
       expect(find.text('14 days of focus, 1 rest day.'), findsOneWidget);
       expect(find.bySemanticsLabel('1 days with proof'), findsOneWidget);
-      expect(find.text(FocusPurpose.exams.endLine), findsOneWidget);
+      expect(
+        find.text(curreLocalizationsFor('en').focusEndExams),
+        findsOneWidget,
+      );
       expectPlainWords(tester);
 
       await tester.ensureVisible(find.text('Go back to my old home screen'));

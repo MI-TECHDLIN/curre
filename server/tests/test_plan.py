@@ -115,6 +115,37 @@ def test_plan_extract_step_error_still_returns_apps_without_spans(make_client):
     assert body["end_phrase"] is None
 
 
+def test_plan_passes_each_app_language_to_fill_and_extract(make_client):
+    captured = []
+    client = make_client(_picks_first_app(captured))
+
+    for language in ("en", "es", "fr", "pt", "de"):
+        response = client.post(
+            "/v1/plan",
+            json={**_plan_payload(), "language": language},
+        )
+        assert response.status_code == 200
+
+    for language, steps in zip(("en", "es", "fr", "pt", "de"), captured, strict=True):
+        assert f"language code {language}" in steps[0]["fill"]["instructions"]
+        assert f"language code {language}" in steps[1]["extract"]["instructions"]
+
+
+def test_plan_language_defaults_to_english_and_rejects_invalid_codes(make_client):
+    captured = []
+    client = make_client(_picks_first_app(captured))
+
+    assert client.post("/v1/plan", json=_plan_payload()).status_code == 200
+    assert "language code en" in captured[0][0]["fill"]["instructions"]
+    assert (
+        client.post(
+            "/v1/plan",
+            json={**_plan_payload(), "language": "english"},
+        ).status_code
+        == 422
+    )
+
+
 def test_plan_emoji_offsets_pass_through_as_code_points_untouched(make_client):
     # "learn 🎸 the G chord" -- the guitar emoji is one code point but two
     # UTF-16 units, so a correct implementation must not touch or

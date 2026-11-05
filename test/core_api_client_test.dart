@@ -82,6 +82,47 @@ void main() {
     await client(transport).unlock(unlockRequest());
   });
 
+  test('every request carries any of the five supported languages', () {
+    for (final language in const ['en', 'es', 'fr', 'pt', 'de']) {
+      expect(
+        PlanRequest(
+          session: SessionName.morning,
+          intention: 'plan',
+          candidates: [
+            PlanCandidate(id: 'a', label: 'A'),
+            PlanCandidate(id: 'b', label: 'B'),
+          ],
+          language: language,
+        ).toJson()['language'],
+        language,
+      );
+      expect(
+        UnlockRequest(
+          appLabel: 'A',
+          reason: 'a reason',
+          language: language,
+        ).toJson()['language'],
+        language,
+      );
+      expect(
+        ProofRequest(
+          task: 'task',
+          note: 'note',
+          language: language,
+        ).toJson()['language'],
+        language,
+      );
+      expect(
+        LaterRequest(
+          plan: 'plan',
+          items: [LaterRequestItem(id: 'one', appLabel: 'A', text: 'saved')],
+          language: language,
+        ).toJson()['language'],
+        language,
+      );
+    }
+  });
+
   test('plan sends the exact backend shape and parses spans', () async {
     final transport = MockClient((request) async {
       expect(request.url.toString(), 'https://api.example.test/root/v1/plan');
@@ -306,6 +347,7 @@ void main() {
           'reason': '15 min to watch 😀 guitar',
           'shortcut_labels': <String>['Search'],
           'threshold': 0.85,
+          'language': 'en',
         });
         return _jsonResponse(<String, Object?>{
           'outcome': 'open',
@@ -357,6 +399,7 @@ void main() {
       expect(jsonDecode(request.body), <String, Object?>{
         'task': 'learn the G chord',
         'note': 'I changed from G to C cleanly',
+        'language': 'en',
       });
       return _jsonResponse(<String, Object?>{
         'outcome': 'accepted',
@@ -427,6 +470,7 @@ void main() {
             'text': 'look at walking shoes',
           },
         ],
+        'language': 'en',
       });
       return _jsonResponse(<String, Object?>{
         'items': <Object?>[

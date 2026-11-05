@@ -118,7 +118,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byType(AvatarPicker), findsOneWidget);
-    await tester.tap(find.bySemanticsLabel(RegExp('Avatar 1, light skin')));
+    await tester.tap(find.bySemanticsLabel('Profile avatar 1'));
     await tester.pump();
     expect(controller.settings.avatarId, 'avatar-01');
     expect(find.text('Proof days'), findsOneWidget);
@@ -535,6 +535,7 @@ void main() {
     expect(sent.single, <String, Object?>{
       'task': 'Learn the G chord on YouTube',
       'note': 'I switched from G to C without looking',
+      'language': 'en',
     });
     expect(find.byKey(const Key('proof-accepted')), findsOneWidget);
     expect(find.text('Today’s sun is up'), findsOneWidget);

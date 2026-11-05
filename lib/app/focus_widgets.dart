@@ -2,36 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../core/core.dart';
 import '../design/design.dart';
+import '../l10n/l10n.dart';
 import '../platform/platform.dart';
 import 'app_widgets.dart';
 import 'curre_controller.dart';
 
 /// "Mon 17 Nov".
-String formatFocusDate(LocalDate day) {
-  const weekdays = <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  final weekday = DateTime.utc(day.year, day.month, day.day).weekday;
-  return '${weekdays[weekday - 1]} ${day.day} ${months[day.month - 1]}';
-}
-
-/// "1 day" / "5 days".
-String dayCount(int days) => days == 1 ? '1 day' : '$days days';
+String formatFocusDate(LocalDate day, [String? locale]) => DateFormat(
+  'EEE d MMM',
+  locale,
+).format(DateTime(day.year, day.month, day.day));
 
 extension FocusPurposeArt on FocusPurpose {
   CurreProp get prop => switch (this) {
@@ -40,7 +24,40 @@ extension FocusPurposeArt on FocusPurpose {
     FocusPurpose.habit => CurreProp.seedling,
     FocusPurpose.other => CurreProp.star,
   };
+
+  String labelFor(AppLocalizations l10n) => switch (this) {
+    FocusPurpose.exams => l10n.focusPurposeExams,
+    FocusPurpose.deadline => l10n.focusPurposeDeadline,
+    FocusPurpose.habit => l10n.focusPurposeHabit,
+    FocusPurpose.other => l10n.focusPurposeOther,
+  };
+
+  String hintFor(AppLocalizations l10n) => switch (this) {
+    FocusPurpose.exams => l10n.focusHintExams,
+    FocusPurpose.deadline => l10n.focusHintDeadline,
+    FocusPurpose.habit => l10n.focusHintHabit,
+    FocusPurpose.other => l10n.focusHintOther,
+  };
+
+  String endLineFor(AppLocalizations l10n) => switch (this) {
+    FocusPurpose.exams => l10n.focusEndExams,
+    FocusPurpose.deadline => l10n.focusEndDeadline,
+    FocusPurpose.habit => l10n.focusEndHabit,
+    FocusPurpose.other => l10n.focusEndOther,
+  };
 }
+
+extension FocusLengthLocalizations on FocusLength {
+  String labelFor(AppLocalizations l10n) => switch (this) {
+    FocusLength.oneWeek => l10n.focusLengthWeek,
+    FocusLength.twoWeeks => l10n.focusLengthTwoWeeks,
+    FocusLength.threeWeeks => l10n.focusLengthThreeWeeks,
+    FocusLength.thirtyDays => l10n.focusLengthThirtyDays,
+  };
+}
+
+String _focusTitle(FocusPeriod focus, AppLocalizations l10n) =>
+    focus.goal.isEmpty ? focus.purpose.labelFor(l10n) : focus.goal;
 
 /// Asks what a focus is for and how long it runs: purpose chips, a short
 /// goal, ready-made lengths and a date picker. The parent keeps the
@@ -79,6 +96,8 @@ class FocusPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final picked =
         endsOn != null && FocusLengthWords.forDays(days ?? -1) == null;
     final shownDays = endsOn == null
@@ -94,7 +113,7 @@ class FocusPicker extends StatelessWidget {
             for (final option in FocusPurpose.values)
               FocusChoiceChip(
                 key: ValueKey('focus-purpose-${option.name}'),
-                label: option.label,
+                label: option.labelFor(l10n),
                 prop: option.prop,
                 selected: option == purpose,
                 onTap: () {
@@ -114,8 +133,8 @@ class FocusPicker extends StatelessWidget {
             textInputAction: TextInputAction.done,
             style: type.you,
             decoration: InputDecoration(
-              labelText: 'Your goal, in a few words (optional)',
-              hintText: purpose!.goalHint,
+              labelText: l10n.focusGoalLabel,
+              hintText: purpose!.hintFor(l10n),
               filled: true,
               fillColor: colors.raised,
               counterText: '',
@@ -124,7 +143,7 @@ class FocusPicker extends StatelessWidget {
             onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
           ),
           const SizedBox(height: CurreSpace.s3),
-          Text('Until when?', style: type.label),
+          Text(l10n.untilWhen, style: type.label),
           const SizedBox(height: CurreSpace.s2),
           Wrap(
             spacing: CurreSpace.s2,
@@ -133,13 +152,15 @@ class FocusPicker extends StatelessWidget {
               for (final length in FocusLength.values)
                 FocusChoiceChip(
                   key: ValueKey('focus-length-${length.days}'),
-                  label: length.label,
+                  label: length.labelFor(l10n),
                   selected: !picked && shownDays == length.days,
                   onTap: () => onDays(length.days),
                 ),
               FocusChoiceChip(
                 key: const Key('focus-pick-date'),
-                label: picked ? formatFocusDate(endsOn!) : 'Pick a date',
+                label: picked
+                    ? formatFocusDate(endsOn!, locale)
+                    : l10n.pickDate,
                 selected: picked,
                 onTap: () => _pickDate(context),
               ),
@@ -147,7 +168,10 @@ class FocusPicker extends StatelessWidget {
           ),
           const SizedBox(height: CurreSpace.s2),
           Text(
-            'Ends ${formatFocusDate(end)}, in ${dayCount(daysBetween(today, end))}. You can change it later.',
+            l10n.focusEndsSummary(
+              formatFocusDate(end, locale),
+              l10n.daysCount(daysBetween(today, end)),
+            ),
             style: type.caption.copyWith(color: colors.ink3),
           ),
         ],
@@ -181,7 +205,7 @@ Future<LocalDate?> showFocusDatePicker(
     initialDate: asDate(start.compareTo(latest) > 0 ? latest : start),
     firstDate: asDate(first),
     lastDate: asDate(latest),
-    helpText: 'Focus ends on',
+    helpText: context.l10n.focusEndsOn,
   );
   return picked == null ? null : LocalDate.fromLocalDateTime(picked);
 }
@@ -310,10 +334,7 @@ class _FocusSheetState extends State<_FocusSheet> {
     } on Object {
       if (!mounted) return;
       setState(() => _saving = false);
-      showCurreSnack(
-        context,
-        'Curre couldn’t save your focus. Please try again.',
-      );
+      showCurreSnack(context, context.l10n.focusSaveFailed);
     }
   }
 
@@ -321,6 +342,7 @@ class _FocusSheetState extends State<_FocusSheet> {
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<CurreType>()!;
     final colors = Theme.of(context).extension<CurreColors>()!;
+    final l10n = context.l10n;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(
@@ -329,10 +351,10 @@ class _FocusSheetState extends State<_FocusSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('What’s this focus for?', style: type.headline),
+            Text(l10n.focusQuestion, style: type.headline),
             const SizedBox(height: CurreSpace.s2),
             Text(
-              'Curre helps most for a stretch with an end: exams, a deadline, a habit you want to break.',
+              l10n.focusPickerBody,
               style: type.body.copyWith(color: colors.ink2),
             ),
             const SizedBox(height: CurreSpace.s4),
@@ -357,7 +379,9 @@ class _FocusSheetState extends State<_FocusSheet> {
             ),
             const SizedBox(height: CurreSpace.s5),
             CurrePrimaryButton(
-              label: _purpose == null ? 'Pick what it’s for' : 'Start my focus',
+              label: _purpose == null
+                  ? l10n.pickFocusPurpose
+                  : l10n.startMyFocus,
               glyph: CurreGlyphKind.go,
               onPressed: _purpose == null || _saving ? null : _save,
             ),
@@ -457,14 +481,15 @@ class _FocusOfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
     return _FocusCardFrame(
       key: const Key('home-focus-offer'),
       prop: CurreProp.pin,
-      title: 'Set a focus?',
+      title: l10n.setFocusQuestion,
       children: [
         const SizedBox(height: CurreSpace.s2),
         Text(
-          'Curre helps most for a stretch with an end: exams, a deadline, a habit to break. Pick one and when it ends.',
+          l10n.focusOfferBody,
           style: type.body.copyWith(color: colors.ink2),
         ),
         const SizedBox(height: CurreSpace.s4),
@@ -473,14 +498,14 @@ class _FocusOfferCard extends StatelessWidget {
             Expanded(
               child: TextButton(
                 onPressed: controller.dismissFocusOffer,
-                child: const Text('Maybe later'),
+                child: Text(l10n.maybeLater),
               ),
             ),
             const SizedBox(width: CurreSpace.s2),
             Expanded(
               flex: 2,
               child: CurreSecondaryButton(
-                label: 'Set a focus',
+                label: l10n.setFocus,
                 onPressed: () =>
                     showFocusSheet(context, controller: controller),
               ),
@@ -502,19 +527,24 @@ class _FocusRunningCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final left = focus.daysLeft(controller.today);
     final resting = controller.isRestDay;
     return _FocusCardFrame(
       key: const Key('home-focus'),
       prop: resting ? CurreProp.hotDrink : focus.purpose.prop,
-      eyebrow: resting ? 'Rest day' : 'Your focus',
-      title: focus.title,
+      eyebrow: resting ? l10n.restDay : l10n.yourFocus,
+      title: _focusTitle(focus, l10n),
       children: [
         const SizedBox(height: CurreSpace.s2),
         Text(
           resting
-              ? 'Hidden apps open without asking today, their notifications come through, and reminders stay quiet. Your proof days are safe. Back to focus tomorrow.'
-              : '${dayCount(left)} left · ends ${formatFocusDate(focus.endsOn)}',
+              ? l10n.restDayBody
+              : l10n.focusLeft(
+                  l10n.daysCount(left),
+                  formatFocusDate(focus.endsOn, locale),
+                ),
           style: type.body.copyWith(color: colors.ink2),
         ),
         const SizedBox(height: CurreSpace.s2),
@@ -523,16 +553,16 @@ class _FocusRunningCard extends StatelessWidget {
           child: resting
               ? TextButton(
                   onPressed: () => _endRest(context),
-                  child: const Text('Back to focus now'),
+                  child: Text(l10n.backToFocusNow),
                 )
               : controller.canRestToday
               ? TextButton(
                   key: const Key('home-take-rest-day'),
                   onPressed: () => confirmRestDay(context, controller),
-                  child: const Text('Take today off'),
+                  child: Text(l10n.takeTodayOff),
                 )
               : Text(
-                  'Next rest day: ${_nextRest(controller)}',
+                  l10n.nextRestDay(_nextRest(context, controller)),
                   style: type.caption.copyWith(color: colors.ink3),
                 ),
         ),
@@ -545,20 +575,18 @@ class _FocusRunningCard extends StatelessWidget {
       await controller.endRestDay();
     } on Object {
       if (context.mounted) {
-        showCurreSnack(
-          context,
-          'Curre couldn’t change that. Please try again.',
-        );
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
     }
   }
 }
 
-String _nextRest(CurreController controller) {
+String _nextRest(BuildContext context, CurreController controller) {
+  final l10n = context.l10n;
   final next = controller.nextRestDay;
-  if (next == controller.today) return 'today';
-  if (next == controller.today.addDays(1)) return 'tomorrow';
-  return formatFocusDate(next);
+  if (next == controller.today) return l10n.today;
+  if (next == controller.today.addDays(1)) return l10n.tomorrow;
+  return formatFocusDate(next, Localizations.localeOf(context).toLanguageTag());
 }
 
 /// Asks once, then makes today a rest day.
@@ -569,18 +597,16 @@ Future<void> confirmRestDay(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Take today off?'),
-      content: const Text(
-        'Until tomorrow morning, hidden apps open without asking why, their notifications come through and Curre sends no reminders. Your proof days stay safe. You can take one rest day a week.',
-      ),
+      title: Text(context.l10n.takeTodayOffQuestion),
+      content: Text(context.l10n.takeTodayOffBody),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Keep going'),
+          child: Text(context.l10n.keepGoing),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Take today off'),
+          child: Text(context.l10n.takeTodayOff),
         ),
       ],
     ),
@@ -589,11 +615,11 @@ Future<void> confirmRestDay(
   try {
     final rested = await controller.takeRestDay();
     if (context.mounted && rested) {
-      showCurreSnack(context, 'Enjoy your rest day. Back to focus tomorrow.');
+      showCurreSnack(context, context.l10n.enjoyRestDay);
     }
   } on Object {
     if (context.mounted) {
-      showCurreSnack(context, 'Curre couldn’t save that. Please try again.');
+      showCurreSnack(context, context.l10n.couldNotSave);
     }
   }
 }
@@ -615,54 +641,57 @@ class FocusEndCard extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     final summary = controller.focusSummary!;
     final sky = colors.sky(Session.morning);
+    final l10n = context.l10n;
     return _FocusCardFrame(
       key: const Key('home-focus-end'),
       prop: CurreProp.sparkles,
-      eyebrow: 'Your focus is done',
-      title: focus.title,
+      eyebrow: l10n.focusDone,
+      title: _focusTitle(focus, l10n),
       tint: sky.bg,
       children: [
         const SizedBox(height: CurreSpace.s2),
         Text(
           summary.restDays == 0
-              ? '${dayCount(summary.days)} of focus.'
-              : '${dayCount(summary.days)} of focus, '
-                    '${summary.restDays == 1 ? '1 rest day' : '${summary.restDays} rest days'}.',
+              ? l10n.focusSummaryDays(l10n.daysCount(summary.days))
+              : l10n.focusSummaryWithRest(
+                  l10n.daysCount(summary.days),
+                  l10n.restDaysCount(summary.restDays),
+                ),
           style: type.body.copyWith(color: colors.ink2),
         ),
         const SizedBox(height: CurreSpace.s4),
         Row(
           children: [
-            _Stat(value: summary.proofDays, label: 'days with proof'),
+            _Stat(value: summary.proofDays, label: l10n.daysWithProof),
             const SizedBox(width: CurreSpace.s2),
-            _Stat(value: summary.proofs, label: 'tasks proved'),
+            _Stat(value: summary.proofs, label: l10n.tasksProved),
             const SizedBox(width: CurreSpace.s2),
             _Stat(
               value: summary.opensAvoided,
-              label: 'hidden apps left closed',
+              label: l10n.hiddenAppsLeftClosed,
             ),
           ],
         ),
         const SizedBox(height: CurreSpace.s4),
         Text(
-          focus.purpose.endLine,
+          focus.purpose.endLineFor(l10n),
           style: type.you.copyWith(color: colors.ink),
         ),
         const SizedBox(height: CurreSpace.s4),
         CurrePrimaryButton(
-          label: 'Start another focus period',
+          label: l10n.startAnotherFocus,
           glyph: CurreGlyphKind.go,
           onPressed: () => showFocusSheet(context, controller: controller),
         ),
         const SizedBox(height: CurreSpace.s2),
         CurreSecondaryButton(
-          label: 'Go back to my old home screen',
+          label: l10n.oldHomeScreen,
           glyph: CurreGlyphKind.homeRole,
           onPressed: () => _leave(context),
         ),
         const SizedBox(height: CurreSpace.s2),
         Text(
-          'Your history and proof days stay on this phone either way.',
+          l10n.focusHistoryStays,
           style: type.caption.copyWith(color: colors.ink3),
           textAlign: TextAlign.center,
         ),
@@ -676,23 +705,23 @@ class FocusEndCard extends StatelessWidget {
       opened = await controller.leaveForOldHomeScreen();
     } on Object {
       if (context.mounted) {
-        showCurreSnack(context, 'Curre couldn’t save that. Please try again.');
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
       return;
     }
     if (!context.mounted) return;
-    showCurreSnack(context, homeSwitchHelp(opened));
+    showCurreSnack(context, homeSwitchHelp(opened, context.l10n));
   }
 }
 
 /// What to do in Android's settings to choose another home screen.
-String homeSwitchHelp(HomeSettingsOpened opened) => switch (opened) {
-  HomeSettingsOpened.homeApps => 'Choose your old home screen in the list. Curre stops asking why and lets every notification through.',
-  HomeSettingsOpened.defaultApps =>
-    'Tap “Home app”, then choose your old home screen.',
-  HomeSettingsOpened.settings => 'Your phone opened Settings. Search for “Home app”, then choose your old home screen.',
-  HomeSettingsOpened.none => 'Open your phone’s Settings app and search for “Home app”. Choose your old home screen there.',
-};
+String homeSwitchHelp(HomeSettingsOpened opened, AppLocalizations l10n) =>
+    switch (opened) {
+      HomeSettingsOpened.homeApps => l10n.chooseOldHome,
+      HomeSettingsOpened.defaultApps => l10n.tapOldHome,
+      HomeSettingsOpened.settings => l10n.searchOldHome,
+      HomeSettingsOpened.none => l10n.openSettingsOldHome,
+    };
 
 class _Stat extends StatelessWidget {
   const _Stat({required this.value, required this.label});
@@ -742,6 +771,8 @@ class FocusSettingsCard extends StatelessWidget {
     final type = Theme.of(context).extension<CurreType>()!;
     final focus = controller.focus;
     final today = controller.today;
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return DecoratedBox(
       key: const Key('settings-focus'),
       decoration: BoxDecoration(
@@ -763,15 +794,22 @@ class FocusSettingsCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        focus?.title ?? 'No focus set',
+                        focus == null
+                            ? l10n.noFocusSet
+                            : _focusTitle(focus, l10n),
                         style: type.label.weight(700).copyWith(fontSize: 16),
                       ),
                       Text(
                         focus == null
-                            ? 'Pick what this stretch is for and when it ends.'
+                            ? l10n.focusSettingsEmpty
                             : controller.focusIsOver
-                            ? 'Ended ${formatFocusDate(focus.endsOn)}. See how it went on Home.'
-                            : 'Ends ${formatFocusDate(focus.endsOn)}, ${dayCount(focus.daysLeft(today))} left',
+                            ? l10n.focusEndedOn(
+                                formatFocusDate(focus.endsOn, locale),
+                              )
+                            : l10n.focusEndsLeft(
+                                formatFocusDate(focus.endsOn, locale),
+                                l10n.daysCount(focus.daysLeft(today)),
+                              ),
                         style: type.caption.copyWith(color: colors.ink2),
                       ),
                     ],
@@ -782,39 +820,37 @@ class FocusSettingsCard extends StatelessWidget {
             const SizedBox(height: CurreSpace.s3),
             if (focus == null || controller.focusIsOver)
               CurreSecondaryButton(
-                label: focus == null
-                    ? 'Set a focus'
-                    : 'Start another focus period',
+                label: focus == null ? l10n.setFocus : l10n.startAnotherFocus,
                 onPressed: () =>
                     showFocusSheet(context, controller: controller),
               )
             else ...[
               CurreSecondaryButton(
                 key: const Key('settings-focus-end-date'),
-                label: 'Change end date',
+                label: l10n.changeEndDate,
                 onPressed: () => _changeEnd(context, focus),
               ),
               const SizedBox(height: CurreSpace.s2),
               if (controller.isRestDay)
                 TextButton(
                   onPressed: controller.endRestDay,
-                  child: const Text('Back to focus now'),
+                  child: Text(l10n.backToFocusNow),
                 )
               else if (controller.canRestToday)
                 TextButton(
                   onPressed: () => confirmRestDay(context, controller),
-                  child: const Text('Take today off'),
+                  child: Text(l10n.takeTodayOff),
                 )
               else
                 Text(
-                  'One rest day a week. Next one: ${_nextRest(controller)}.',
+                  l10n.weeklyRestNext(_nextRest(context, controller)),
                   style: type.caption.copyWith(color: colors.ink3),
                   textAlign: TextAlign.center,
                 ),
               TextButton(
                 key: const Key('settings-focus-end-now'),
                 onPressed: () => _confirmEndNow(context),
-                child: const Text('End focus now'),
+                child: Text(l10n.endFocusNow),
               ),
             ],
           ],
@@ -836,12 +872,17 @@ class FocusSettingsCard extends StatelessWidget {
       if (context.mounted) {
         showCurreSnack(
           context,
-          'Your focus now ends ${formatFocusDate(picked)}.',
+          context.l10n.focusNowEnds(
+            formatFocusDate(
+              picked,
+              Localizations.localeOf(context).toLanguageTag(),
+            ),
+          ),
         );
       }
     } on Object {
       if (context.mounted) {
-        showCurreSnack(context, 'Curre couldn’t save that. Please try again.');
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
     }
   }
@@ -850,18 +891,16 @@ class FocusSettingsCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('End your focus now?'),
-        content: const Text(
-          'Home shows how it went, then you choose what’s next. Your history and proof days stay.',
-        ),
+        title: Text(context.l10n.endFocusQuestion),
+        content: Text(context.l10n.endFocusBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Keep going'),
+            child: Text(context.l10n.keepGoing),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('End focus'),
+            child: Text(context.l10n.endFocus),
           ),
         ],
       ),
@@ -871,7 +910,7 @@ class FocusSettingsCard extends StatelessWidget {
       await controller.endFocusNow();
     } on Object {
       if (context.mounted) {
-        showCurreSnack(context, 'Curre couldn’t save that. Please try again.');
+        showCurreSnack(context, context.l10n.couldNotSave);
       }
     }
   }
