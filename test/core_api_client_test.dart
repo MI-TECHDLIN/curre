@@ -155,12 +155,28 @@ void main() {
               'start': 6,
               'end': 14,
             },
+            'timing': <String, Object?>{
+              'duration_phrase': <String, Object?>{
+                'text': '45 min',
+                'start': 0,
+                'end': 6,
+              },
+              'duration_minutes': 45,
+            },
           },
         ],
         'end_phrase': <String, Object?>{
           'text': 'till 8',
           'start': 15,
           'end': 21,
+        },
+        'timing': <String, Object?>{
+          'end_phrase': <String, Object?>{
+            'text': 'till 8',
+            'start': 15,
+            'end': 21,
+          },
+          'end_clock': '08:00',
         },
         'usage': <String, Object?>{'credits': 3, 'model_ms': 27.5},
       });
@@ -171,6 +187,8 @@ void main() {
     expect(result.requiresManualChecklist, isFalse);
     expect(result.response!.apps.single.id, 'yt');
     expect(result.response!.apps.single.query!.text, '😀 guitar');
+    expect(result.response!.apps.single.timing!.durationMinutes, 45);
+    expect(result.response!.timing!.endClock, '08:00');
     expect(
       result.response!.endTextFromIntention('learn 😀 guitar till 8'),
       'till 8',

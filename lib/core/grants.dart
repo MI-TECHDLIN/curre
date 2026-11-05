@@ -8,7 +8,10 @@ const Duration overrideWait = Duration(seconds: 30);
 
 int grantMinutesFor(UnlockResponse response, {int fallbackUnlockMinutes = 5}) {
   final extracted = response.minutes;
-  if (extracted != null) return extracted.clamp(1, 30);
+  if (extracted != null) {
+    final maximum = response.kind == ReasonKind.task ? 120 : 30;
+    return extracted.clamp(1, maximum);
+  }
   return switch (response.kind) {
     ReasonKind.task => 10,
     ReasonKind.person || ReasonKind.timeSensitive => 5,

@@ -550,12 +550,15 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
       response,
       fallbackUnlockMinutes: controller.settings.unlockMinutes,
     );
+    final grantedTime = minutes < 60
+        ? l10n.youHaveMinutes(minutes)
+        : l10n.youHaveTime(_grantDuration(minutes, l10n));
     return switch (response.outcome) {
       UnlockOutcome.open
           when response.kind == ReasonKind.person &&
               _resolvedDestination?.kind != DoorResolutionKind.conversation =>
-        l10n.openNoChatBody(app, l10n.youHaveMinutes(minutes)),
-      UnlockOutcome.open => l10n.youHaveMinutes(minutes),
+        l10n.openNoChatBody(app, grantedTime),
+      UnlockOutcome.open => grantedTime,
       UnlockOutcome.later => l10n.laterBody(wait, app),
       UnlockOutcome.specify => l10n.specifyBody(wait, app),
       UnlockOutcome.flagged => l10n.flaggedBody(app, wait),
@@ -701,6 +704,8 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
 
 (int, int)? _durationSpan(String reason, int? minutes) {
   if (minutes == null) return null;
+  final english = parseEnglishTimeExpression(reason).durationPhrase;
+  if (english != null) return (english.start, english.end);
   final match = RegExp(
     r'\b\d{1,2}\s*(?:minutes?|mins?|min|hours?|hrs?|hr|h|minutos?|horas?|heures?|minuten?|stunden?)\b',
     caseSensitive: false,
@@ -709,6 +714,14 @@ class _UnlockGateScreenState extends State<UnlockGateScreen> {
   final start = reason.substring(0, match.start).runes.length;
   final end = start + match.group(0)!.runes.length;
   return (start, end);
+}
+
+String _grantDuration(int minutes, AppLocalizations l10n) {
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  return rest == 0
+      ? l10n.durationHoursShort(hours)
+      : l10n.durationHoursMinutesShort(hours, rest);
 }
 
 extension on UnlockOutcome {

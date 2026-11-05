@@ -335,12 +335,28 @@ void main() {
                     'start': 10,
                     'end': 17,
                   },
+                  'timing': <String, Object?>{
+                    'end_phrase': <String, Object?>{
+                      'text': 'till 7',
+                      'start': 29,
+                      'end': 35,
+                    },
+                    'end_clock': '07:00',
+                  },
                 },
               ],
               'end_phrase': <String, Object?>{
                 'text': 'till 7',
                 'start': 29,
                 'end': 35,
+              },
+              'timing': <String, Object?>{
+                'end_phrase': <String, Object?>{
+                  'text': 'till 7',
+                  'start': 29,
+                  'end': 35,
+                },
+                'end_clock': '07:00',
               },
               'usage': <String, Object?>{'credits': 18, 'model_ms': 420},
             }),
@@ -366,7 +382,22 @@ void main() {
 
       expect(find.text('Here’s your plan'), findsOneWidget);
       expect(find.text('YouTube'), findsOneWidget);
-      expect(find.text('→ Search “G chord”'), findsOneWidget);
+      expect(find.textContaining('→ Search “G chord”'), findsOneWidget);
+      expect(find.byKey(const Key('adjust-plan-time')), findsOneWidget);
+      expect(controller.plans.single.endsAt, DateTime.utc(2026, 10, 24, 7));
+      expect(
+        controller.plans.single.apps.single.endsAt,
+        DateTime.utc(2026, 10, 24, 7),
+      );
+      await tester.tap(find.byKey(const Key('adjust-plan-time')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('time-adjustment-field')),
+        '2 hours',
+      );
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2 h · until'), findsWidgets);
       await tester.tap(find.text('Back to Home'));
       await tester.pumpAndSettle();
       expect(find.text('Your morning'), findsOneWidget);
@@ -806,6 +837,33 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text(item.$2), findsWidgets);
     }
+  });
+
+  testWidgets('a specific two-hour task shows the full granted time', (
+    tester,
+  ) async {
+    await phone(tester);
+    final controller = _controller();
+    final app = controller.apps.firstWhere((app) => app.label == 'YouTube');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: curreTheme(Brightness.light),
+        home: UnlockGateScreen(
+          controller: controller,
+          app: app,
+          initialReason: 'for 2 hours to watch the maths lecture',
+          initialResponse: const UnlockResponse(
+            outcome: UnlockOutcome.open,
+            kind: ReasonKind.task,
+            confidence: .98,
+            target: SourceSpan(text: 'maths lecture', start: 25, end: 38),
+            minutes: 120,
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('You have 2 h.'), findsOneWidget);
   });
 
   testWidgets('person result promises only a conversation found on the phone', (

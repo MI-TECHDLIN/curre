@@ -337,6 +337,7 @@ class _CheckinScreenState extends State<CheckinScreen> {
     final colors = Theme.of(context).extension<CurreColors>()!;
     final type = Theme.of(context).extension<CurreType>()!;
     final l10n = context.l10n;
+    final planTimeSummary = _planTimeSummary(plan, l10n);
     final highlights = <SpanHighlight>[];
     for (final (index, app) in plan.apps.indexed) {
       if (app.query case final span?) {
@@ -351,19 +352,44 @@ class _CheckinScreenState extends State<CheckinScreen> {
           ),
         );
       }
+      for (final span in <SourceSpan?>[
+        app.timing?.durationPhrase,
+        app.timing?.startPhrase,
+        app.timing?.endPhrase,
+      ]) {
+        if (span != null && _spanBelongsTo(plan.intention, span)) {
+          highlights.add(
+            SpanHighlight(
+              span.start,
+              span.end,
+              style: type.youLarge.copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: colors.ember,
+                decorationThickness: 2.5,
+              ),
+            ),
+          );
+        }
+      }
     }
-    if (plan.endPhrase case final span?) {
-      highlights.add(
-        SpanHighlight(
-          span.start,
-          span.end,
-          style: type.youLarge.copyWith(
-            decoration: TextDecoration.underline,
-            decorationColor: colors.ember,
-            decorationThickness: 2.5,
+    for (final span in <SourceSpan?>[
+      plan.timing?.durationPhrase,
+      plan.timing?.startPhrase,
+      plan.timing?.endPhrase ?? plan.endPhrase,
+    ]) {
+      if (span != null && _spanBelongsTo(plan.intention, span)) {
+        highlights.add(
+          SpanHighlight(
+            span.start,
+            span.end,
+            style: type.youLarge.copyWith(
+              decoration: TextDecoration.underline,
+              decorationColor: colors.ember,
+              decorationThickness: 2.5,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
     return Column(
       key: const ValueKey('confirmation'),
@@ -398,12 +424,39 @@ class _CheckinScreenState extends State<CheckinScreen> {
                 ),
               ),
               const SizedBox(height: CurreSpace.s3),
-              Text(
-                l10n.onHomeUntil(
-                  formatClock(plan.endsAt, locale: l10n.localeName),
+              Semantics(
+                button: true,
+                label: l10n.planTimeAdjustSemantics(planTimeSummary),
+                child: InkWell(
+                  key: const Key('adjust-plan-time'),
+                  onTap: () => _adjustTime(plan),
+                  borderRadius: CurreShape.md,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: CurreSpace.s2,
+                    ),
+                    child: Row(
+                      children: [
+                        const CurreGlyph(CurreGlyphKind.editSpecify, size: 18),
+                        const SizedBox(width: CurreSpace.s2),
+                        Expanded(
+                          child: Text(
+                            planTimeSummary,
+                            style: type.meta.copyWith(color: colors.emberText),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                style: type.meta,
               ),
+              if (plan.timeWasCapped)
+                Text(
+                  l10n.timeCappedNotice,
+                  style: type.caption.copyWith(color: colors.ink3),
+                ),
+              const SizedBox(height: CurreSpace.s1),
+              Text(l10n.timeAdjustHelp, style: type.caption),
               const SizedBox(height: CurreSpace.s5),
               for (final (index, app) in plan.apps.indexed) ...[
                 if (index > 0) const SizedBox(height: CurreSpace.s2),
@@ -412,12 +465,18 @@ class _CheckinScreenState extends State<CheckinScreen> {
                       controller.appFor(app.packageName)?.label ??
                       app.packageName,
                   destination:
-                      '→ ${controller.destinationFor(app, plan, l10n)}',
+                      '→ ${controller.destinationFor(app, plan, l10n)} · ${_appTimeSummary(app, plan, l10n)}',
                   appIcon: InstalledAppIcon(
                     controller: controller,
                     packageName: app.packageName,
                   ),
                   link: index + 1,
+                  onTap: () => _adjustTime(plan, app: app),
+                  semanticLabel: l10n.appTimeAdjustSemantics(
+                    controller.appFor(app.packageName)?.label ??
+                        app.packageName,
+                    _appTimeSummary(app, plan, l10n),
+                  ),
                 ),
               ],
               if (_shelf case final shelf? when !shelf.isEmpty) ...[
@@ -452,6 +511,32 @@ class _CheckinScreenState extends State<CheckinScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _adjustTime(Plan plan, {PlannedApp? app}) async {
+    final l10n = context.l10n;
+    final label = app == null
+        ? l10n.thisPlan
+        : controller.appFor(app.packageName)?.label ?? app.packageName;
+    final phrase = await showDialog<String>(
+      context: context,
+      builder: (context) => _TimeAdjustDialog(
+        label: label,
+        initial: _timePhrase(app?.timing ?? plan.timing),
+      ),
+    );
+    if (phrase == null || phrase.isEmpty || !mounted) return;
+    final updated = await controller.adjustPlanTime(
+      plan,
+      phrase,
+      packageName: app?.packageName,
+    );
+    if (!mounted) return;
+    if (updated == null) {
+      showCurreSnack(context, l10n.timeParseHelp);
+      return;
+    }
+    setState(() => _plan = updated);
   }
 
   Future<void> _listen() async {
@@ -571,4 +656,114 @@ class _CheckinScreenState extends State<CheckinScreen> {
     PlanFallbackReason.network => l10n.fallbackNetworkBody,
     _ => l10n.fallbackBody,
   };
+}
+
+bool _spanBelongsTo(String source, SourceSpan span) {
+  try {
+    return sliceExtractSpan(source, span) == span.text;
+  } on Object {
+    return false;
+  }
+}
+
+String _planTimeSummary(Plan plan, AppLocalizations l10n) {
+  String clock(DateTime value) => formatClock(value, locale: l10n.localeName);
+  final timing = plan.timing;
+  if (timing == null || timing.isEmpty) {
+    return '${l10n.untilTime(clock(plan.endsAt))} · ${l10n.sessionEnd}';
+  }
+  final parts = <String>[];
+  if (plan.startsAt case final start? when timing.startPhrase != null) {
+    parts.add(l10n.fromTime(clock(start)));
+  }
+  final start =
+      plan.startsAt ?? plan.endsAt.subtract(const Duration(minutes: 1));
+  parts.add(_shortDuration(plan.endsAt.difference(start).inMinutes, l10n));
+  parts.add(l10n.untilTime(clock(plan.endsAt)));
+  return parts.join(' · ');
+}
+
+String _appTimeSummary(PlannedApp app, Plan plan, AppLocalizations l10n) {
+  final end = app.availableUntil(plan);
+  final timing = app.timing;
+  final endWords = l10n.untilTime(formatClock(end, locale: l10n.localeName));
+  if (timing == null || timing.isEmpty) return endWords;
+  final start = plan.startsAt;
+  final parts = <String>[];
+  if (timing.durationMinutes != null) {
+    final actual = start == null
+        ? timing.durationMinutes!
+        : end.difference(start).inMinutes;
+    parts.add(
+      _shortDuration(actual.clamp(1, maximumPlanDuration.inMinutes), l10n),
+    );
+  }
+  parts.add(endWords);
+  return parts.join(' · ');
+}
+
+String _shortDuration(int minutes, AppLocalizations l10n) {
+  if (minutes < 60) return l10n.durationMinutesShort(minutes);
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  return rest == 0
+      ? l10n.durationHoursShort(hours)
+      : l10n.durationHoursMinutesShort(hours, rest);
+}
+
+String _timePhrase(PlanTimeExpression? timing) {
+  if (timing == null) return '';
+  if (timing.startPhrase != null) return '';
+  if (timing.durationPhrase case final duration?) return duration.text;
+  if (timing.endPhrase case final end?) return end.text;
+  return '';
+}
+
+/// Owns its text controller so the field outlives the dialog's exit
+/// animation; disposing it right after `showDialog` returns would not.
+class _TimeAdjustDialog extends StatefulWidget {
+  const _TimeAdjustDialog({required this.label, required this.initial});
+
+  final String label;
+  final String initial;
+
+  @override
+  State<_TimeAdjustDialog> createState() => _TimeAdjustDialogState();
+}
+
+class _TimeAdjustDialogState extends State<_TimeAdjustDialog> {
+  late final TextEditingController _input = TextEditingController(
+    text: widget.initial,
+  );
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
+      title: Text(l10n.timeForLabel(widget.label)),
+      content: TextField(
+        key: const Key('time-adjustment-field'),
+        controller: _input,
+        autofocus: true,
+        decoration: InputDecoration(hintText: l10n.timeExampleHint),
+        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.keepIt),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_input.text.trim()),
+          child: Text(l10n.applyLabel),
+        ),
+      ],
+    );
+  }
 }

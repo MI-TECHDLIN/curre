@@ -63,8 +63,8 @@ cover; it is not a claim that no real `/v1/proof` call has been made.
 | Route | Clocked call | Outcome mapping |
 | --- | --- | --- |
 | `GET /healthz` | none | `{"status": "ok"}` |
-| `POST /v1/plan` | Fill (`apps` multiselect + up to 8 `door_<id>` choice fields) -> Extract (`ends` + up to 6 `q_<id>` fields) | Selected `apps` labels map back to candidate ids; a step error on Fill is `503`. An Extract step error still returns the apps Fill chose, without spans. |
-| `POST /v1/unlock` | Protect (`pii` on the reason alone) -> Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Protect returns source spans that make the phone's History copy show `[name]`, `[phone]`, and similar placeholders; it never changes the live gate or outcome. Guard stop -> `flagged`. A confident task/person/time_sensitive -> `open`; `browse` -> `later`; unclear or below threshold -> `specify`. A required-step error or timeout -> `unavailable`. |
+| `POST /v1/plan` | Fill (`apps` multiselect + up to 8 `door_<id>` choice fields) -> Extract (overall `duration`/`starts`/`ends`, per-app duration/end fields, + up to 6 `q_<id>` fields) | Selected labels map back to ids. Optional `timing` objects carry verbatim spans plus normalized minutes or `HH:mm`; durations are clamped to six hours. Old `end_phrase` stays in the response. An Extract error still returns Fill's apps without spans. |
+| `POST /v1/unlock` | Protect (`pii` on the reason alone) -> Guard (`injection`, `stop: true`) -> Decide (`kind` choice, + `door` choice when shortcuts exist) -> Extract (`target`, `person`, `minutes` on the reason alone) | Protect changes only History. Guard stop -> `flagged`. A confident task/person/time_sensitive -> `open`; `browse` -> `later`; unclear or below threshold -> `specify`. A stated task duration may grant up to 120 minutes; person/time-sensitive grants keep the 30-minute cap. A required-step error or timeout -> `unavailable`. |
 | `POST /v1/proof` | Protect (`pii` on the note alone) -> Guard (`injection`, `stop: true`) -> Decide (`proof` choice) -> Extract (`result`, `learning` on the note alone) -> Verify (`grounding`, plan as document and note as answer) | Protect changes only the History copy. Decide must return `specific_completion` at `>= 0.75` and Extract must return a result or learning span. Verify then vetoes only a claim with `contradicted >= 0.6`; `not_stated` does not veto it. The response carries that claim as the plain follow-up reason. A judged vague, future, unrelated, guarded, or contradicted note -> `vague`; an unanswered required step -> `pending`. |
 | `POST /v1/later` | One Rerank call (`query` is the new plan; 1–20 documents carry opaque id, app label as title, and saved reason as text) | Returns every known id in descending `relevance_score`. `fits` is true only for Rerank's `use` action; the phone shows at most three fitting items. A timeout, Clocked error, empty result, or malformed result is `503`, and the phone quietly falls back to newest first. |
 
@@ -127,6 +127,13 @@ Latency is full client-observed HTTP round-trip time, not only model time.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | `/v1/plan` | 10 | 5.30 (4-11) | 53 | 274 ms | 858 ms |
 | `/v1/unlock` | 25 | 4.76 (4-7) | 119 | 260 ms | 344 ms |
+
+Time-phrase prompts were spot-checked again on 2026-11-05 with four live
+calls. Plan extracted `2hrs` as 120 minutes; split `2 hrs` for YouTube and
+`20 min` for WhatsApp into separate app timings; and returned both ends of
+`from 4 to 6`. Unlock classified “for 2 hours to watch the maths lecture” as
+a task and granted 120 minutes. The three plan calls used 5 credits each and
+the unlock call used 6.
 
 Unlock outcome accuracy by authored sample category:
 

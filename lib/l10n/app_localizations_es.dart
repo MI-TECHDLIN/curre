@@ -2639,4 +2639,67 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sceneWorship => 'música de alabanza';
+
+  @override
+  String planTimeAdjustSemantics(String summary) {
+    return 'Hora del plan: $summary. Toca para ajustarla.';
+  }
+
+  @override
+  String get timeCappedNotice =>
+      'Se limitó a seis horas o hasta medianoche, lo que ocurra primero.';
+
+  @override
+  String get timeAdjustHelp => 'Toca una hora para ajustarla antes de empezar.';
+
+  @override
+  String appTimeAdjustSemantics(String app, String summary) {
+    return '$app, $summary, toca para ajustar';
+  }
+
+  @override
+  String timeForLabel(String label) {
+    return 'Tiempo para $label';
+  }
+
+  @override
+  String get timeExampleHint => '90 min o hasta las 7';
+
+  @override
+  String get applyLabel => 'Aplicar';
+
+  @override
+  String get timeParseHelp =>
+      'Prueba una duración como «90 min» o una hora como «hasta las 7».';
+
+  @override
+  String get thisPlan => 'este plan';
+
+  @override
+  String get sessionEnd => 'fin de la sesión';
+
+  @override
+  String fromTime(String time) {
+    return 'desde las $time';
+  }
+
+  @override
+  String durationMinutesShort(int count) {
+    return '$count min';
+  }
+
+  @override
+  String durationHoursShort(int count) {
+    return '$count h';
+  }
+
+  @override
+  String durationHoursMinutesShort(int hours, int minutes) {
+    return '$hours h $minutes min';
+  }
+
+  @override
+  String youHaveTime(String duration) {
+    return 'Tienes $duration.';
+  }
 }

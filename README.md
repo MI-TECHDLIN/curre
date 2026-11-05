@@ -102,6 +102,12 @@ days and an exhausting one for months. So Curre is built around a time-bound
   plan against the saved reasons; Curre shows up to three matching items in
   Rerank's order as doors at the saved words. If that call fails, the newest
   items appear first without interrupting the check-in.
+- **Times in your own words.** A check-in understands durations such as
+  “2hrs”, “an hour and a half” and “20 min”, clock ends such as “until
+  7:30pm”, and ranges such as “from 4 to 6”. An app can have its own time
+  inside the plan. Confirmation shows the resulting clock times and lets you
+  tap any one to adjust it. Explicit plans stop after six hours or at local
+  midnight, whichever comes first.
 - **Prooflight.** A completed task only counts if Curre watched you start
   it — through a Task Door or an explicit offline start. A completion note
   then goes through Protect → Guard → Decide → Extract → Verify. Decide must
@@ -128,7 +134,7 @@ the first time a nudge would help.
 | **Plan your day** | When your morning begins (new setups get one a day; the afternoon and evening ones are a separate switch) | Quiet nudges → *Plan your day* / *Afternoon and evening too* |
 | **Plan ending** | Ten minutes before a plan ends | Quiet nudges → *Plan ending* |
 | **Add your proof** | Five minutes after a plan ends (off by default for new setups) | Quiet nudges → *Add proof* |
-| **App time up** | While a hidden app you brought back is open, a countdown; then "hidden again" when the time is up | Quiet nudges → *App time up* |
+| **App time up** | While a hidden app you brought back—or gave its own time inside a plan—is open, a countdown; then "hidden again" when the time is up | Quiet nudges → *App time up* |
 | **Your focus is done** | The morning your focus period ends | Quiet nudges → *Focus ends* |
 | **Hidden app check is on** | Always shown while "Why now?" is watching for hidden apps (Android requires it for the small background helper) | Curre settings → Hidden apps → *Ask "Why now?"* off |
 

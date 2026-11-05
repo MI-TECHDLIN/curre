@@ -40,7 +40,8 @@ def test_plan_maps_selected_labels_to_candidate_ids_and_resolves_doors_and_queri
         fill_fields, extract_fields = _fields_from_steps(steps)
         fields = {"apps": fill_multiselect(["YouTube", "Spotify"])}
         fields["door_yt"] = fill_choice("Search")
-        spans = {"ends": extract_field("7", start=74, end=75)}
+        end_start = text.index("7")
+        spans = {"ends": extract_field("7", start=end_start, end=end_start + 1)}
         spans["q_yt"] = extract_field("G chord", start=15, end=22)
         spans["q_sp"] = extract_field("worship", start=38, end=45)
         return make_pipeline_result(
@@ -63,7 +64,7 @@ def test_plan_maps_selected_labels_to_candidate_ids_and_resolves_doors_and_queri
     assert apps_by_id["yt"]["query"] == {"text": "G chord", "start": 15, "end": 22}
     assert apps_by_id["sp"]["door"] is None
     assert apps_by_id["sp"]["query"] == {"text": "worship", "start": 38, "end": 45}
-    assert body["end_phrase"] == {"text": "7", "start": 74, "end": 75}
+    assert body["end_phrase"] == {"text": "7", "start": 62, "end": 63}
     assert body["usage"] == {"credits": 18, "model_ms": 120.0}
 
     # Never sends package names: only opaque ids and the labels the client gave.
@@ -71,6 +72,90 @@ def test_plan_maps_selected_labels_to_candidate_ids_and_resolves_doors_and_queri
     assert "com.example" not in sent_text
     sent_fill_fields = client.fake.calls[0]["steps"][0]["fill"]["fields"]
     assert sent_fill_fields["apps"]["options"] == ["YouTube", "Spotify", "WhatsApp"]
+
+
+def test_plan_returns_structured_per_app_durations(make_client):
+    intention = "watch a 2 hrs maths video on YouTube and 20 min on WhatsApp"
+
+    async def handler(*, text, steps, **kwargs):
+        fields = {"apps": fill_multiselect(["YouTube", "WhatsApp"])}
+
+        def copied(value: str) -> dict:
+            start = text.index(value)
+            return extract_field(value, start=start, end=start + len(value))
+
+        spans = {
+            "duration_yt": copied("2 hrs"),
+            "duration_wa": copied("20 min"),
+        }
+        return make_pipeline_result(
+            [
+                ok_step("plan", "fill", {"fields": fields}),
+                ok_step("spans", "extract", {"fields": spans}),
+            ]
+        )
+
+    client = make_client(handler)
+    body = client.post("/v1/plan", json=_plan_payload(intention)).json()
+    apps = {app["id"]: app for app in body["apps"]}
+    assert apps["yt"]["timing"]["duration_minutes"] == 120
+    assert apps["yt"]["timing"]["duration_phrase"]["text"] == "2 hrs"
+    assert apps["wa"]["timing"]["duration_minutes"] == 20
+    assert body["timing"] is None
+
+
+def test_plan_returns_structured_start_end_and_duration(make_client):
+    intention = "study from 4 to 6, then review for an hour and a half"
+
+    async def handler(*, text, steps, **kwargs):
+        fields = {"apps": fill_multiselect(["YouTube"])}
+
+        def copied(value: str, *, after: int = 0) -> dict:
+            start = text.index(value, after)
+            return extract_field(value, start=start, end=start + len(value))
+
+        spans = {
+            "starts": copied("4"),
+            "ends": copied("6", after=text.index("to")),
+            "duration": copied("an hour and a half"),
+        }
+        return make_pipeline_result(
+            [
+                ok_step("plan", "fill", {"fields": fields}),
+                ok_step("spans", "extract", {"fields": spans}),
+            ]
+        )
+
+    client = make_client(handler)
+    body = client.post("/v1/plan", json=_plan_payload(intention)).json()
+    assert body["timing"]["start_clock"] == "04:00"
+    assert body["timing"]["end_clock"] == "06:00"
+    assert body["timing"]["duration_minutes"] == 90
+    assert body["end_phrase"]["text"] == "6"
+
+
+def test_plan_normalizes_the_existing_localized_end_forms(make_client):
+    intention = "étudier jusqu’à 7 h 30"
+
+    async def handler(*, text, steps, **kwargs):
+        start = text.index("7 h 30")
+        return make_pipeline_result(
+            [
+                ok_step("plan", "fill", {"fields": {"apps": fill_multiselect(["YouTube"])}}),
+                ok_step(
+                    "spans",
+                    "extract",
+                    {"fields": {"ends": extract_field("7 h 30", start=start, end=start + 6)}},
+                ),
+            ]
+        )
+
+    client = make_client(handler)
+    body = client.post(
+        "/v1/plan",
+        json={**_plan_payload(intention), "language": "fr"},
+    ).json()
+    assert body["timing"]["end_clock"] == "07:30"
 
 
 def test_plan_door_choosing_app_itself_is_not_a_door(make_client):
@@ -91,9 +176,7 @@ def test_plan_door_choosing_app_itself_is_not_a_door(make_client):
 
 def test_plan_fill_step_error_returns_503(make_client):
     async def handler(*, text, steps, **kwargs):
-        return make_pipeline_result(
-            [error_step("plan", "fill"), error_step("spans", "extract")]
-        )
+        return make_pipeline_result([error_step("plan", "fill"), error_step("spans", "extract")])
 
     client = make_client(handler)
     resp = client.post("/v1/plan", json=_plan_payload())
@@ -111,8 +194,9 @@ def test_plan_extract_step_error_still_returns_apps_without_spans(make_client):
     resp = client.post("/v1/plan", json=_plan_payload())
     assert resp.status_code == 200
     body = resp.json()
-    assert body["apps"] == [{"id": "yt", "door": None, "query": None}]
+    assert body["apps"] == [{"id": "yt", "door": None, "query": None, "timing": None}]
     assert body["end_phrase"] is None
+    assert body["timing"] is None
 
 
 def test_plan_passes_each_app_language_to_fill_and_extract(make_client):
@@ -350,7 +434,7 @@ def test_plan_drops_repeated_ids_and_unusable_candidates(make_client):
 
     assert resp.status_code == 200
     assert captured[0][0]["fill"]["fields"]["apps"]["options"] == ["Maps", "Notes"]
-    assert resp.json()["apps"] == [{"id": "a", "door": None, "query": None}]
+    assert resp.json()["apps"] == [{"id": "a", "door": None, "query": None, "timing": None}]
 
 
 def test_plan_rejects_when_fewer_than_two_usable_candidates_remain(make_client):

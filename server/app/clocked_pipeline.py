@@ -63,6 +63,11 @@ from app.models import (
     UnlockResponse,
     Usage,
 )
+from app.time_phrases import (
+    duration_minutes_from_english,
+    span_from_field,
+    time_expression_from_fields,
+)
 
 PLAN_TIMEOUT_SECONDS = 10.0
 UNLOCK_TIMEOUT_SECONDS = 6.0
@@ -76,11 +81,13 @@ LATER_FITTING_ACTIONS = frozenset({"use"})
 
 MAX_DOOR_CANDIDATES = 8
 MAX_QUERY_CANDIDATES = 6
+MAX_TIME_CANDIDATES = 27
 
 DEFAULT_GRANT_TASK_MINUTES = 10
 DEFAULT_GRANT_PERSON_OR_TIME_MINUTES = 5
 MIN_GRANT_MINUTES = 1
 MAX_GRANT_MINUTES = 30
+MAX_TASK_GRANT_MINUTES = 120
 
 GUARD_INSTRUCTIONS = (
     "Text a person typed to explain why they want to open an app on their own phone. "
@@ -244,12 +251,34 @@ def build_plan_steps(
             "options": [*c.shortcut_labels, "The app itself"],
         }
 
-    extract_fields: dict[str, Any] = {"ends": "when the user says this plan ends, as written"}
+    extract_fields: dict[str, Any] = {
+        "duration": (
+            "the overall length of this plan, such as '2hrs', '90 min', "
+            "'an hour and a half', or 'half an hour', as written; blank when a time "
+            "belongs only to one app"
+        ),
+        "starts": (
+            "the clock time when the overall plan starts in phrases such as "
+            "'from 4 to 6' or 'at 5 for an hour', as written"
+        ),
+        "ends": (
+            "the clock time when the overall plan ends after 'until', 'till', 'by', "
+            "or the 'to' in 'from 4 to 6', as written"
+        ),
+    }
     query_candidates = [c for c in candidates if c.query_door][:MAX_QUERY_CANDIDATES]
     for c in query_candidates:
         extract_fields[f"q_{c.id}"] = (
             f"what the user says they will search for, watch, play, find, write, send or create "
             f"in {c.label}, as written"
+        )
+    for c in candidates[:MAX_TIME_CANDIDATES]:
+        extract_fields[f"duration_{c.id}"] = (
+            f"a duration stated specifically for time in {c.label}, not the whole plan, "
+            "as written; examples include '2hrs', '20 min', and 'half an hour'"
+        )
+        extract_fields[f"ends_{c.id}"] = (
+            f"a clock end stated specifically for {c.label}, not the whole plan, as written"
         )
 
     return [
@@ -317,11 +346,33 @@ async def run_plan_pipeline(
             if chosen and chosen != "The app itself":
                 door = chosen
         query = _span_from_field(spans_fields.get(f"q_{c.id}"))
-        apps.append(PlanApp(id=c.id, door=door, query=query))
+        timing = time_expression_from_fields(
+            spans_fields,
+            duration_key=f"duration_{c.id}",
+            end_key=f"ends_{c.id}",
+            source=intention,
+            language=language,
+        )
+        apps.append(PlanApp(id=c.id, door=door, query=query, timing=timing))
 
-    end_phrase = _span_from_field(spans_fields.get("ends"))
+    timing = time_expression_from_fields(
+        spans_fields,
+        duration_key="duration",
+        start_key="starts",
+        end_key="ends",
+        source=intention,
+        language=language,
+    )
+    end_phrase = (
+        timing.end_phrase if timing else span_from_field(spans_fields.get("ends"), intention)
+    )
 
-    return PlanResponse(apps=apps, end_phrase=end_phrase, usage=_usage_from_result(result))
+    return PlanResponse(
+        apps=apps,
+        end_phrase=end_phrase,
+        timing=timing,
+        usage=_usage_from_result(result),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -385,8 +436,10 @@ def build_unlock_steps(
                         "the name of the person or group the user will message or call, as written"
                     ),
                     "minutes": {
-                        "description": "how long the user says they need",
-                        "normalize": "integer",
+                        "description": (
+                            "the complete duration phrase including its unit, exactly as written; "
+                            "examples: 2hrs, 2 hours, 90 min, an hour and a half, half an hour"
+                        ),
                     },
                 },
                 "instructions": language_note,
@@ -403,13 +456,19 @@ def _compose_unlock_text(app_label: str, plan_intention: str | None, reason: str
 def _grant_minutes(kind: str, extract_fields: dict[str, Any]) -> int:
     minutes_field = extract_fields.get("minutes")
     normalized = minutes_field.get("normalized") if minutes_field else None
-    if normalized is not None:
+    if isinstance(normalized, dict):
+        normalized = normalized.get("value")
+    raw = minutes_field.get("value") if minutes_field else None
+    parsed = duration_minutes_from_english(raw) if isinstance(raw, str) else None
+    candidate = parsed if parsed is not None else normalized
+    if candidate is not None:
         try:
-            minutes = int(normalized)
+            minutes = int(candidate)
         except (TypeError, ValueError):
             minutes = None
         else:
-            return max(MIN_GRANT_MINUTES, min(MAX_GRANT_MINUTES, minutes))
+            maximum = MAX_TASK_GRANT_MINUTES if kind == "task" else MAX_GRANT_MINUTES
+            return max(MIN_GRANT_MINUTES, min(maximum, minutes))
     return DEFAULT_GRANT_TASK_MINUTES if kind == "task" else DEFAULT_GRANT_PERSON_OR_TIME_MINUTES
 
 

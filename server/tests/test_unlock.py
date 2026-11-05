@@ -64,6 +64,9 @@ def test_unlock_passes_each_app_language_to_every_text_step(make_client):
 
 def test_unlock_open_for_task(make_client):
     async def handler(*, text, steps, **kwargs):
+        minutes_field = steps[-1]["extract"]["fields"]["minutes"]
+        assert "normalize" not in minutes_field
+        assert "complete duration phrase" in minutes_field["description"]
         decide_fields = {"kind": decide_choice("task", 0.95), "door": decide_choice("app", 0.8)}
         extract_fields = {
             "target": extract_field("G chord", start=6, end=13),
@@ -134,7 +137,7 @@ def test_unlock_open_for_time_sensitive_defaults_minutes(make_client):
     assert body["minutes"] == 5
 
 
-def test_unlock_minutes_clamped_to_thirty(make_client):
+def test_unlock_specific_task_can_use_two_hours(make_client):
     async def handler(*, text, steps, **kwargs):
         decide_fields = {"kind": decide_choice("task", 0.9)}
         extract_fields = {"minutes": extract_field("two hours", normalized=120, start=0, end=9)}
@@ -148,6 +151,40 @@ def test_unlock_minutes_clamped_to_thirty(make_client):
 
     client = make_client(handler)
     resp = client.post("/v1/unlock", json=_unlock_payload())
+    assert resp.json()["minutes"] == 120
+
+
+def test_unlock_task_duration_is_capped_at_two_hours(make_client):
+    async def handler(*, text, steps, **kwargs):
+        decide_fields = {"kind": decide_choice("task", 0.9)}
+        extract_fields = {"minutes": extract_field("3 hours", normalized=3, start=0, end=7)}
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": decide_fields}),
+                ok_step("task", "extract", {"fields": extract_fields}),
+            ]
+        )
+
+    client = make_client(handler)
+    resp = client.post("/v1/unlock", json=_unlock_payload("3 hours for the lecture"))
+    assert resp.json()["minutes"] == 120
+
+
+def test_unlock_person_duration_keeps_short_cap(make_client):
+    async def handler(*, text, steps, **kwargs):
+        decide_fields = {"kind": decide_choice("person", 0.9)}
+        extract_fields = {"minutes": extract_field("2 hours", normalized=120, start=0, end=7)}
+        return make_pipeline_result(
+            [
+                _benign_guard_step(),
+                ok_step("gate", "decide", {"answers": decide_fields}),
+                ok_step("task", "extract", {"fields": extract_fields}),
+            ]
+        )
+
+    client = make_client(handler)
+    resp = client.post("/v1/unlock", json=_unlock_payload("2 hours to reply to Ada"))
     assert resp.json()["minutes"] == 30
 
 

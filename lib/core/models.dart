@@ -475,8 +475,72 @@ class AppEntry {
   };
 }
 
+/// The words that set a plan's time, kept beside their normalized values so
+/// confirmation can show exactly what Curre understood. Clock values use
+/// 24-hour `HH:mm`; a bare hour still resolves on the phone against the
+/// local day, using the source phrase rather than assuming am or pm.
+class PlanTimeExpression {
+  const PlanTimeExpression({
+    this.durationPhrase,
+    this.durationMinutes,
+    this.startPhrase,
+    this.startClock,
+    this.endPhrase,
+    this.endClock,
+    this.wasClamped = false,
+  });
+
+  factory PlanTimeExpression.fromJson(Map<String, Object?> json) =>
+      PlanTimeExpression(
+        durationPhrase: json['duration_phrase'] == null
+            ? null
+            : SourceSpan.fromJson(
+                _map(json['duration_phrase'], 'duration_phrase'),
+              ),
+        durationMinutes: json['duration_minutes'] == null
+            ? null
+            : _wholeNumber(json['duration_minutes'], 'duration_minutes'),
+        startPhrase: json['start_phrase'] == null
+            ? null
+            : SourceSpan.fromJson(_map(json['start_phrase'], 'start_phrase')),
+        startClock: _nullableString(json['start_clock'], 'start_clock'),
+        endPhrase: json['end_phrase'] == null
+            ? null
+            : SourceSpan.fromJson(_map(json['end_phrase'], 'end_phrase')),
+        endClock: _nullableString(json['end_clock'], 'end_clock'),
+        wasClamped: json['was_clamped'] == true,
+      );
+
+  final SourceSpan? durationPhrase;
+  final int? durationMinutes;
+  final SourceSpan? startPhrase;
+  final String? startClock;
+  final SourceSpan? endPhrase;
+  final String? endClock;
+  final bool wasClamped;
+
+  bool get isEmpty =>
+      durationPhrase == null && startPhrase == null && endPhrase == null;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    if (durationPhrase != null) 'duration_phrase': durationPhrase!.toJson(),
+    if (durationMinutes != null) 'duration_minutes': durationMinutes,
+    if (startPhrase != null) 'start_phrase': startPhrase!.toJson(),
+    if (startClock != null) 'start_clock': startClock,
+    if (endPhrase != null) 'end_phrase': endPhrase!.toJson(),
+    if (endClock != null) 'end_clock': endClock,
+    if (wasClamped) 'was_clamped': true,
+  };
+}
+
 class PlannedApp {
-  const PlannedApp({required this.packageName, this.door, this.query});
+  const PlannedApp({
+    required this.packageName,
+    this.door,
+    this.query,
+    this.timing,
+    this.endsAt,
+  });
 
   factory PlannedApp.fromJson(Map<String, Object?> json) => PlannedApp(
     packageName: _string(json['package'], 'package'),
@@ -484,16 +548,39 @@ class PlannedApp {
     query: json['query'] == null
         ? null
         : SourceSpan.fromJson(_map(json['query'], 'query')),
+    timing: json['timing'] == null
+        ? null
+        : PlanTimeExpression.fromJson(_map(json['timing'], 'timing')),
+    endsAt: json['endsAt'] == null ? null : _instant(json['endsAt'], 'endsAt'),
   );
 
   final String packageName;
   final String? door;
   final SourceSpan? query;
+  final PlanTimeExpression? timing;
+
+  /// When this app's own allowance ends. Null means it follows the plan.
+  final DateTime? endsAt;
+
+  DateTime availableUntil(Plan plan) {
+    final ownEnd = endsAt;
+    return ownEnd != null && ownEnd.isBefore(plan.endsAt)
+        ? ownEnd
+        : plan.endsAt;
+  }
+
+  bool isAvailableAt(DateTime instant, Plan plan) =>
+      !instant.toUtc().isBefore(
+        plan.startsAt ?? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      ) &&
+      instant.toUtc().isBefore(availableUntil(plan));
 
   Map<String, Object?> toJson() => <String, Object?>{
     'package': packageName,
     if (door != null) 'door': door,
     if (query != null) 'query': query!.toJson(),
+    if (timing != null && !timing!.isEmpty) 'timing': timing!.toJson(),
+    if (endsAt != null) 'endsAt': endsAt!.toUtc().toIso8601String(),
   };
 }
 
@@ -507,8 +594,12 @@ class Plan {
     required DateTime endsAt,
     required this.source,
     this.endPhrase,
+    this.timing,
+    DateTime? startsAt,
+    this.timeWasCapped = false,
     DateTime? plannedEndsAt,
   }) : apps = List.unmodifiable(apps),
+       startsAt = startsAt == null ? null : _asUtc(startsAt),
        endsAt = _asUtc(endsAt),
        plannedEndsAt = plannedEndsAt == null ? null : _asUtc(plannedEndsAt);
 
@@ -524,6 +615,13 @@ class Plan {
     endPhrase: json['endPhrase'] == null
         ? null
         : SourceSpan.fromJson(_map(json['endPhrase'], 'endPhrase')),
+    timing: json['timing'] == null
+        ? null
+        : PlanTimeExpression.fromJson(_map(json['timing'], 'timing')),
+    startsAt: json['startsAt'] == null
+        ? null
+        : _instant(json['startsAt'], 'startsAt'),
+    timeWasCapped: json['timeWasCapped'] == true,
     source: PlanSourceWire.fromWireValue(_string(json['source'], 'source')),
     plannedEndsAt: json['plannedEndsAt'] == null
         ? null
@@ -535,8 +633,11 @@ class Plan {
   final LocalDate date;
   final String intention;
   final List<PlannedApp> apps;
+  final DateTime? startsAt;
   final DateTime endsAt;
   final SourceSpan? endPhrase;
+  final PlanTimeExpression? timing;
+  final bool timeWasCapped;
   final PlanSource source;
 
   /// When the plan was meant to end, kept only once it was ended early
@@ -559,6 +660,27 @@ class Plan {
     return _copy(endsAt: planned, plannedEndsAt: null);
   }
 
+  Plan withTiming({
+    required DateTime startsAt,
+    required DateTime endsAt,
+    required PlanTimeExpression timing,
+    required bool timeWasCapped,
+    List<PlannedApp>? apps,
+  }) => Plan(
+    id: id,
+    session: session,
+    date: date,
+    intention: intention,
+    apps: apps ?? this.apps,
+    startsAt: startsAt,
+    endsAt: endsAt,
+    source: source,
+    endPhrase: timing.endPhrase,
+    timing: timing,
+    timeWasCapped: timeWasCapped,
+    plannedEndsAt: plannedEndsAt,
+  );
+
   Plan _copy({required DateTime endsAt, required DateTime? plannedEndsAt}) =>
       Plan(
         id: id,
@@ -566,9 +688,12 @@ class Plan {
         date: date,
         intention: intention,
         apps: apps,
+        startsAt: startsAt,
         endsAt: endsAt,
         source: source,
         endPhrase: endPhrase,
+        timing: timing,
+        timeWasCapped: timeWasCapped,
         plannedEndsAt: plannedEndsAt,
       );
 
@@ -578,8 +703,11 @@ class Plan {
     'date': date.toJson(),
     'intention': intention,
     'apps': apps.map((app) => app.toJson()).toList(growable: false),
+    if (startsAt != null) 'startsAt': startsAt!.toIso8601String(),
     'endsAt': endsAt.toIso8601String(),
     if (endPhrase != null) 'endPhrase': endPhrase!.toJson(),
+    if (timing != null && !timing!.isEmpty) 'timing': timing!.toJson(),
+    if (timeWasCapped) 'timeWasCapped': true,
     'source': source.wireValue,
     if (plannedEndsAt != null)
       'plannedEndsAt': plannedEndsAt!.toIso8601String(),
@@ -782,6 +910,11 @@ int _int(Object? value, String name) {
 num _number(Object? value, String name) {
   if (value is num) return value;
   throw FormatException('$name must be a number');
+}
+
+int _wholeNumber(Object? value, String name) {
+  if (value is int) return value;
+  throw FormatException('$name must be an integer');
 }
 
 bool _bool(Object? value, String name) {

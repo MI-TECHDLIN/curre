@@ -166,7 +166,7 @@ class PlanRequest {
 }
 
 class PlanSelection {
-  const PlanSelection({required this.id, this.door, this.query});
+  const PlanSelection({required this.id, this.door, this.query, this.timing});
 
   factory PlanSelection.fromJson(Map<String, Object?> json) => PlanSelection(
     id: _string(json['id'], 'id'),
@@ -174,11 +174,15 @@ class PlanSelection {
     query: json['query'] == null
         ? null
         : SourceSpan.fromJson(_map(json['query'], 'query')),
+    timing: json['timing'] == null
+        ? null
+        : PlanTimeExpression.fromJson(_map(json['timing'], 'timing')),
   );
 
   final String id;
   final String? door;
   final SourceSpan? query;
+  final PlanTimeExpression? timing;
 }
 
 class PlanResponse {
@@ -186,6 +190,7 @@ class PlanResponse {
     required List<PlanSelection> apps,
     required this.usage,
     this.endPhrase,
+    this.timing,
   }) : apps = List.unmodifiable(apps);
 
   factory PlanResponse.fromJson(Map<String, Object?> json) => PlanResponse(
@@ -195,11 +200,15 @@ class PlanResponse {
     endPhrase: json['end_phrase'] == null
         ? null
         : SourceSpan.fromJson(_map(json['end_phrase'], 'end_phrase')),
+    timing: json['timing'] == null
+        ? null
+        : PlanTimeExpression.fromJson(_map(json['timing'], 'timing')),
     usage: ApiUsage.fromJson(_map(json['usage'], 'usage')),
   );
 
   final List<PlanSelection> apps;
   final SourceSpan? endPhrase;
+  final PlanTimeExpression? timing;
   final ApiUsage usage;
 
   String? endTextFromIntention(String intention) =>

@@ -207,6 +207,8 @@ class FakeNotificationGateway implements GrantNotificationGateway {
 
   bool allow;
   var requests = 0;
+  final expiryNotices = <GrantNotificationNotice>[];
+  final ongoingNotices = <GrantNotificationNotice>[];
 
   /// What Android says before any request; null when it can't tell.
   bool? allowed;
@@ -228,10 +230,14 @@ class FakeNotificationGateway implements GrantNotificationGateway {
   }
 
   @override
-  Future<void> scheduleExpiry(GrantNotificationNotice notice) async {}
+  Future<void> scheduleExpiry(GrantNotificationNotice notice) async {
+    expiryNotices.add(notice);
+  }
 
   @override
-  Future<void> showOngoing(GrantNotificationNotice notice) async {}
+  Future<void> showOngoing(GrantNotificationNotice notice) async {
+    ongoingNotices.add(notice);
+  }
 }
 
 /// Android's scheduled notifications, kept as plain values.
@@ -287,6 +293,7 @@ CurreController fakeController({
 }) {
   final homePlatform = home ?? FakeHomePlatform();
   final launcher = platform ?? FakeDoorPlatform();
+  final currentTime = clock ?? () => now ?? DateTime(2026, 10, 26, 6, 40);
   launcher.home ??= homePlatform;
   return CurreController(
     launcher: launcher,
@@ -295,7 +302,7 @@ CurreController fakeController({
     gentleIntercept: gentleIntercept ?? FakeGentleIntercept(),
     notifications: notifications == null
         ? null
-        : GrantNotificationService(notifications),
+        : GrantNotificationService(notifications, now: currentTime),
     reminders: reminders,
     api: api,
     store: store,
@@ -329,6 +336,6 @@ CurreController fakeController({
     proofRecords: proofRecords,
     onboardingComplete: onboardingComplete,
     pendingPrompts: pendingPrompts,
-    now: clock ?? () => now ?? DateTime(2026, 10, 26, 6, 40),
+    now: currentTime,
   );
 }

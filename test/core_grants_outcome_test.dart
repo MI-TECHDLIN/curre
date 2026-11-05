@@ -19,11 +19,13 @@ void main() {
   );
 
   group('grants', () {
-    test('clamps extracted minutes to 1-30', () {
+    test('lets specific tasks run up to two hours', () {
       expect(grantMinutesFor(open(minutes: -4)), 1);
       expect(grantMinutesFor(open(minutes: 1)), 1);
       expect(grantMinutesFor(open(minutes: 30)), 30);
-      expect(grantMinutesFor(open(minutes: 99)), 30);
+      expect(grantMinutesFor(open(minutes: 99)), 99);
+      expect(grantMinutesFor(open(minutes: 180)), 120);
+      expect(grantMinutesFor(open(kind: ReasonKind.person, minutes: 99)), 30);
     });
 
     test('uses kind defaults when Extract has no minutes', () {

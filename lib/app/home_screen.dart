@@ -136,8 +136,21 @@ class _HomeBody extends StatelessWidget {
     final earlierOffline = offlineTasks
         .where((task) => task.planId != plan?.id)
         .toList(growable: false);
-    final activeTasks = completion?.active ?? const <TaskProgress>[];
-    final doneTasks = completion?.done ?? const <TaskProgress>[];
+    final availablePackages = plan == null
+        ? const <String>{}
+        : <String>{
+            for (final app in plan.apps)
+              if (app.isAvailableAt(today, plan)) app.packageName,
+          };
+    bool isAvailableTask(TaskProgress task) =>
+        task.task.packageName == null ||
+        availablePackages.contains(task.task.packageName);
+    final activeTasks = (completion?.active ?? const <TaskProgress>[])
+        .where(isAvailableTask)
+        .toList(growable: false);
+    final doneTasks = (completion?.done ?? const <TaskProgress>[])
+        .where(isAvailableTask)
+        .toList(growable: false);
     final allDone = plan != null && controller.allTasksDone;
     final schedule = SessionSchedule.fromSettings(controller.settings);
     final dayProgress = DayProgress.of(
@@ -150,15 +163,19 @@ class _HomeBody extends StatelessWidget {
         ? null
         : PlanProgress.of(
             plan,
-            startsAt: schedule
-                .current(plan.endsAt.subtract(const Duration(microseconds: 1)))
-                .startsAt,
+            startsAt:
+                plan.startsAt ??
+                schedule
+                    .current(
+                      plan.endsAt.subtract(const Duration(microseconds: 1)),
+                    )
+                    .startsAt,
             now: today,
             uses: controller.doorUses,
           );
-    final plannedPackages = plan?.packages ?? const <String>{};
+    final plannedPackages = availablePackages;
     final doorCount =
-        (plan?.apps.length ?? 0) +
+        availablePackages.length +
         controller.activeGrants
             .where((grant) => !plannedPackages.contains(grant.packageName))
             .length;
@@ -340,7 +357,7 @@ class _HomeBody extends StatelessWidget {
                       const SizedBox(height: CurreSpace.s2),
                     ],
                   ],
-                  if (plan != null && plan.apps.isNotEmpty) ...[
+                  if (availablePackages.isNotEmpty) ...[
                     const SizedBox(height: CurreSpace.s3),
                     Text(
                       l10n.pressHoldApp,

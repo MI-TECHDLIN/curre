@@ -5,7 +5,17 @@ void main() {
   const utc = FixedOffsetTimeZone(Duration.zero);
   final schedule = SessionSchedule.fromSettings(Settings(), timeZone: utc);
 
-  DateTime parse(
+  ResolvedPlanTime resolve(
+    String text,
+    DateTime now, {
+    SessionWindow? window,
+  }) => resolvePlanTime(
+    expression: parseEnglishTimeExpression(text),
+    now: now,
+    session: window ?? schedule.current(now),
+  );
+
+  DateTime legacy(
     String? text,
     DateTime now, {
     SessionWindow? window,
@@ -19,61 +29,163 @@ void main() {
     languageCode: language,
   );
 
-  test('accepts every specified form', () {
-    final morning = DateTime.utc(2026, 10, 24, 5);
-    expect(parse('8', morning), DateTime.utc(2026, 10, 24, 8));
-    expect(parse('8am', morning), DateTime.utc(2026, 10, 24, 8));
-    expect(parse('8:30', morning), DateTime.utc(2026, 10, 24, 8, 30));
-    expect(parse('noon', morning), DateTime.utc(2026, 10, 24, 12));
-    expect(parse('till 7', morning), DateTime.utc(2026, 10, 24, 7));
-
-    final evening = DateTime.utc(2026, 10, 24, 18);
-    expect(parse('8.30pm', evening), DateTime.utc(2026, 10, 24, 20, 30));
+  test('understands every duration form', () {
+    final now = DateTime.utc(2026, 10, 24, 15);
+    final expected = <String, DateTime>{
+      'watch for 2hrs': DateTime.utc(2026, 10, 24, 17),
+      'watch for 2 hours': DateTime.utc(2026, 10, 24, 17),
+      'watch for an hour and a half': DateTime.utc(2026, 10, 24, 16, 30),
+      'watch for 90 min': DateTime.utc(2026, 10, 24, 16, 30),
+      'watch for 45 minutes': DateTime.utc(2026, 10, 24, 15, 45),
+      'watch for half an hour': DateTime.utc(2026, 10, 24, 15, 30),
+    };
+    for (final entry in expected.entries) {
+      expect(resolve(entry.key, now).endsAt, entry.value, reason: entry.key);
+    }
   });
 
-  test('bare hours choose the next match within the session', () {
-    final afternoon = DateTime.utc(2026, 10, 24, 13);
-    expect(parse('till 4', afternoon), DateTime.utc(2026, 10, 24, 16));
+  test('understands clock ends and natural starts', () {
+    final afternoon = DateTime.utc(2026, 10, 24, 15);
+    expect(
+      resolve('work until 7', afternoon).endsAt,
+      DateTime.utc(2026, 10, 24, 19),
+    );
+    expect(
+      resolve('work till 7:30pm', afternoon).endsAt,
+      DateTime.utc(2026, 10, 24, 19, 30),
+    );
+    expect(
+      resolve('work by 3pm', DateTime.utc(2026, 10, 24, 13)).endsAt,
+      DateTime.utc(2026, 10, 24, 15),
+    );
 
-    final evening = DateTime.utc(2026, 10, 24, 18);
-    expect(parse('1', evening), DateTime.utc(2026, 10, 25, 1));
+    final ranged = resolve('study from 4 to 6', afternoon);
+    expect(ranged.startsAt, DateTime.utc(2026, 10, 24, 16));
+    expect(ranged.endsAt, DateTime.utc(2026, 10, 24, 18));
+
+    final anchored = resolve('at 5 for an hour', afternoon);
+    expect(anchored.startsAt, DateTime.utc(2026, 10, 24, 17));
+    expect(anchored.endsAt, DateTime.utc(2026, 10, 24, 18));
   });
 
   test('accepts the five app languages and their usual time forms', () {
     final morning = DateTime.utc(2026, 10, 24, 5);
-    expect(parse('until 7', morning), DateTime.utc(2026, 10, 24, 7));
+    expect(legacy('until 7', morning), DateTime.utc(2026, 10, 24, 7));
     expect(
-      parse('hasta las 7', morning, language: 'es'),
+      legacy('hasta las 7', morning, language: 'es'),
       DateTime.utc(2026, 10, 24, 7),
     );
     expect(
-      parse('jusqu’à 7 h 30', morning, language: 'fr'),
+      legacy('jusqu’à 7 h 30', morning, language: 'fr'),
       DateTime.utc(2026, 10, 24, 7, 30),
     );
     expect(
-      parse('até às 7', morning, language: 'pt'),
+      legacy('até às 7', morning, language: 'pt'),
       DateTime.utc(2026, 10, 24, 7),
     );
     expect(
-      parse('bis 7 Uhr', morning, language: 'de'),
+      legacy('bis 7 Uhr', morning, language: 'de'),
       DateTime.utc(2026, 10, 24, 7),
     );
   });
 
-  test('junk, elapsed times, and times outside the session use its end', () {
-    final now = DateTime.utc(2026, 10, 24, 9);
-    final end = DateTime.utc(2026, 10, 24, 12);
-    expect(parse(null, now), end);
-    expect(parse('after breakfast', now), end);
-    expect(parse('25:00', now), end);
-    expect(parse('8am', now), end);
-    expect(parse('8.30pm', now), end);
+  test('finds localized end phrases inside an offline plan', () {
+    final morning = DateTime.utc(2026, 10, 24, 5);
+    final cases = <(String, String, DateTime)>[
+      ('estudiar hasta las 7', 'es', DateTime.utc(2026, 10, 24, 7)),
+      ('étudier jusqu’à 7 h 30', 'fr', DateTime.utc(2026, 10, 24, 7, 30)),
+      ('estudar até às 7', 'pt', DateTime.utc(2026, 10, 24, 7)),
+      ('lernen bis 7 Uhr', 'de', DateTime.utc(2026, 10, 24, 7)),
+    ];
+    for (final (text, language, expected) in cases) {
+      final expression = parsePlanTimeExpression(text, languageCode: language);
+      expect(expression.endPhrase, isNotNull, reason: text);
+      expect(
+        resolvePlanTime(
+          expression: expression,
+          now: morning,
+          session: schedule.current(morning),
+          languageCode: language,
+        ).endsAt,
+        expected,
+        reason: text,
+      );
+    }
   });
 
-  test('session edge is allowed but remains the exclusive boundary', () {
-    final now = DateTime.utc(2026, 10, 24, 11);
-    expect(parse('12', now), DateTime.utc(2026, 10, 24, 12));
-    expect(schedule.current(parse('12', now)).session, SessionName.afternoon);
+  test('explicit durations may pass the current session end', () {
+    final now = DateTime.utc(2026, 10, 24, 16, 30);
+    expect(schedule.current(now).endsAt, DateTime.utc(2026, 10, 24, 17));
+    expect(
+      resolve('watch a 2 hrs maths video', now).endsAt,
+      DateTime.utc(2026, 10, 24, 18, 30),
+    );
+  });
+
+  test('a bare start chooses its next occurrence, never an elapsed one', () {
+    final now = DateTime.utc(2026, 10, 24, 18);
+    final resolved = resolve('at 5 for an hour', now);
+    expect(resolved.startsAt, DateTime.utc(2026, 10, 25, 5));
+    expect(resolved.endsAt, DateTime.utc(2026, 10, 25, 6));
+  });
+
+  test('caps explicit plans at six hours or midnight and reports the cap', () {
+    final long = resolve('work for 10 hours', DateTime.utc(2026, 10, 24, 14));
+    expect(long.endsAt, DateTime.utc(2026, 10, 24, 20));
+    expect(long.wasCapped, isTrue);
+
+    final midnight = resolve(
+      'work for 3 hours',
+      DateTime.utc(2026, 10, 24, 22),
+    );
+    expect(midnight.endsAt, DateTime.utc(2026, 10, 25));
+    expect(midnight.wasCapped, isTrue);
+
+    final noon = resolve('work until noon', DateTime.utc(2026, 10, 24, 5));
+    expect(noon.endsAt, DateTime.utc(2026, 10, 24, 11));
+    expect(noon.wasCapped, isTrue);
+  });
+
+  test(
+    'finds separate app allowances without treating either as plan-wide',
+    () {
+      const text =
+          'watch a 2 hrs maths video on YouTube and 20 min on WhatsApp';
+      final appTimes = parseEnglishPerAppTimes(text, const <String, String>{
+        'yt': 'YouTube',
+        'wa': 'WhatsApp',
+      });
+      expect(appTimes['yt']?.durationMinutes, 120);
+      expect(appTimes['yt']?.durationPhrase?.text, '2 hrs');
+      expect(appTimes['wa']?.durationMinutes, 20);
+      expect(appTimes['wa']?.durationPhrase?.text, '20 min');
+
+      final excluded = <SourceSpan>[
+        appTimes['yt']!.durationPhrase!,
+        appTimes['wa']!.durationPhrase!,
+      ];
+      expect(
+        parseEnglishTimeExpression(text, excluded: excluded).isEmpty,
+        isTrue,
+      );
+    },
+  );
+
+  test('junk and elapsed explicit ends use the session end', () {
+    final now = DateTime.utc(2026, 10, 24, 9);
+    final end = DateTime.utc(2026, 10, 24, 12);
+    expect(legacy(null, now), end);
+    expect(legacy('after breakfast', now), end);
+    expect(legacy('25:00', now), end);
+    expect(legacy('8am', now), end);
+  });
+
+  test('legacy clock forms still resolve', () {
+    final morning = DateTime.utc(2026, 10, 24, 5);
+    expect(legacy('8', morning), DateTime.utc(2026, 10, 24, 8));
+    expect(legacy('8am', morning), DateTime.utc(2026, 10, 24, 8));
+    expect(legacy('8:30', morning), DateTime.utc(2026, 10, 24, 8, 30));
+    expect(legacy('till 7', morning), DateTime.utc(2026, 10, 24, 7));
   });
 
   test('fall-back overlap picks the next occurrence of a wall time', () {
@@ -97,13 +209,11 @@ void main() {
       custom,
       timeZone: zone,
     );
-    // At 05:45 UTC the first 01:30 has passed; clocks fall back at 06:00,
-    // so the second 01:30 at 06:30 UTC is the next match.
     final now = DateTime.utc(2026, 11, 1, 5, 45);
     final window = overlapSchedule.current(now);
 
     expect(
-      parse('1:30', now, window: window),
+      legacy('1:30', now, window: window),
       DateTime.utc(2026, 11, 1, 6, 30),
     );
   });
@@ -131,7 +241,9 @@ void main() {
       timeZone: zone,
     ).current(now);
 
-    // 02:30 does not exist; it normalizes to 03:30 EDT (07:30 UTC).
-    expect(parse('2:30', now, window: window), DateTime.utc(2026, 3, 8, 7, 30));
+    expect(
+      legacy('2:30', now, window: window),
+      DateTime.utc(2026, 3, 8, 7, 30),
+    );
   });
 }

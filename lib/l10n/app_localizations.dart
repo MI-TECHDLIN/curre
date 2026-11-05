@@ -4249,6 +4249,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'worship'**
   String get sceneWorship;
+
+  /// No description provided for @planTimeAdjustSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan time, {summary}. Tap to adjust.'**
+  String planTimeAdjustSemantics(String summary);
+
+  /// No description provided for @timeCappedNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept to six hours or midnight, whichever comes first.'**
+  String get timeCappedNotice;
+
+  /// No description provided for @timeAdjustHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a time to adjust it before starting.'**
+  String get timeAdjustHelp;
+
+  /// No description provided for @appTimeAdjustSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{app}, {summary}, tap to adjust'**
+  String appTimeAdjustSemantics(String app, String summary);
+
+  /// No description provided for @timeForLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time for {label}'**
+  String timeForLabel(String label);
+
+  /// No description provided for @timeExampleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'2 hours, until 7, or from 4 to 6'**
+  String get timeExampleHint;
+
+  /// No description provided for @applyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get applyLabel;
+
+  /// No description provided for @timeParseHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Try a duration like “90 min” or a clock time like “until 7”.'**
+  String get timeParseHelp;
+
+  /// No description provided for @thisPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'this plan'**
+  String get thisPlan;
+
+  /// No description provided for @sessionEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'session end'**
+  String get sessionEnd;
+
+  /// No description provided for @fromTime.
+  ///
+  /// In en, this message translates to:
+  /// **'from {time}'**
+  String fromTime(String time);
+
+  /// No description provided for @durationMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String durationMinutesShort(int count);
+
+  /// No description provided for @durationHoursShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} h'**
+  String durationHoursShort(int count);
+
+  /// No description provided for @durationHoursMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min'**
+  String durationHoursMinutesShort(int hours, int minutes);
+
+  /// No description provided for @youHaveTime.
+  ///
+  /// In en, this message translates to:
+  /// **'You have {duration}.'**
+  String youHaveTime(String duration);
 }
 
 class _AppLocalizationsDelegate

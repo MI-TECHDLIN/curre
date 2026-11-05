@@ -142,7 +142,7 @@ void main() {
       await tester.pump();
       await waitFor(tester, find.text('Here’s your plan'));
       expect(find.text('Here’s your plan'), findsOneWidget);
-      expect(find.text('→ Search “G chord”'), findsOneWidget);
+      expect(find.textContaining('→ Search “G chord”'), findsOneWidget);
     });
   });
 
