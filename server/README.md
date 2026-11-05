@@ -128,6 +128,13 @@ Latency is full client-observed HTTP round-trip time, not only model time.
 | `/v1/plan` | 10 | 5.30 (4-11) | 53 | 274 ms | 858 ms |
 | `/v1/unlock` | 25 | 4.76 (4-7) | 119 | 260 ms | 344 ms |
 
+Time-phrase prompts were spot-checked again on 2026-11-05 with four live
+calls. Plan extracted `2hrs` as 120 minutes; split `2 hrs` for YouTube and
+`20 min` for WhatsApp into separate app timings; and returned both ends of
+`from 4 to 6`. Unlock classified “for 2 hours to watch the maths lecture” as
+a task and granted 120 minutes. The three plan calls used 5 credits each and
+the unlock call used 6.
+
 Unlock outcome accuracy by authored sample category:
 
 | Threshold | Overall | Task | Person | Time-sensitive | Browse | Unclear | Honest urgent | Injection |

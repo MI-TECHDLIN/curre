@@ -89,6 +89,30 @@ void main() {
     );
   });
 
+  test('finds localized end phrases inside an offline plan', () {
+    final morning = DateTime.utc(2026, 10, 24, 5);
+    final cases = <(String, String, DateTime)>[
+      ('estudiar hasta las 7', 'es', DateTime.utc(2026, 10, 24, 7)),
+      ('étudier jusqu’à 7 h 30', 'fr', DateTime.utc(2026, 10, 24, 7, 30)),
+      ('estudar até às 7', 'pt', DateTime.utc(2026, 10, 24, 7)),
+      ('lernen bis 7 Uhr', 'de', DateTime.utc(2026, 10, 24, 7)),
+    ];
+    for (final (text, language, expected) in cases) {
+      final expression = parsePlanTimeExpression(text, languageCode: language);
+      expect(expression.endPhrase, isNotNull, reason: text);
+      expect(
+        resolvePlanTime(
+          expression: expression,
+          now: morning,
+          session: schedule.current(morning),
+          languageCode: language,
+        ).endsAt,
+        expected,
+        reason: text,
+      );
+    }
+  });
+
   test('explicit durations may pass the current session end', () {
     final now = DateTime.utc(2026, 10, 24, 16, 30);
     expect(schedule.current(now).endsAt, DateTime.utc(2026, 10, 24, 17));
@@ -96,6 +120,13 @@ void main() {
       resolve('watch a 2 hrs maths video', now).endsAt,
       DateTime.utc(2026, 10, 24, 18, 30),
     );
+  });
+
+  test('a bare start chooses its next occurrence, never an elapsed one', () {
+    final now = DateTime.utc(2026, 10, 24, 18);
+    final resolved = resolve('at 5 for an hour', now);
+    expect(resolved.startsAt, DateTime.utc(2026, 10, 25, 5));
+    expect(resolved.endsAt, DateTime.utc(2026, 10, 25, 6));
   });
 
   test('caps explicit plans at six hours or midnight and reports the cap', () {

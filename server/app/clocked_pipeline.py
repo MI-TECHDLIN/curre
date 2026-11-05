@@ -63,7 +63,11 @@ from app.models import (
     UnlockResponse,
     Usage,
 )
-from app.time_phrases import duration_minutes_from_english, time_expression_from_fields
+from app.time_phrases import (
+    duration_minutes_from_english,
+    span_from_field,
+    time_expression_from_fields,
+)
 
 PLAN_TIMEOUT_SECONDS = 10.0
 UNLOCK_TIMEOUT_SECONDS = 6.0
@@ -346,6 +350,8 @@ async def run_plan_pipeline(
             spans_fields,
             duration_key=f"duration_{c.id}",
             end_key=f"ends_{c.id}",
+            source=intention,
+            language=language,
         )
         apps.append(PlanApp(id=c.id, door=door, query=query, timing=timing))
 
@@ -354,8 +360,12 @@ async def run_plan_pipeline(
         duration_key="duration",
         start_key="starts",
         end_key="ends",
+        source=intention,
+        language=language,
     )
-    end_phrase = timing.end_phrase if timing else _span_from_field(spans_fields.get("ends"))
+    end_phrase = (
+        timing.end_phrase if timing else span_from_field(spans_fields.get("ends"), intention)
+    )
 
     return PlanResponse(
         apps=apps,

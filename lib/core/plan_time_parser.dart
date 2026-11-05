@@ -3,7 +3,7 @@ import 'sessions.dart';
 import 'span.dart';
 
 final RegExp _leadingTimeWords = RegExp(
-  r"^(?:(?:till|until)|(?:hasta(?:\s+las)?)|(?:até(?:\s+às)?)|(?:jusqu['’]?(?:à|a)?)|bis)\s+",
+  r"^(?:(?:till|until|by|to|from|at)|(?:hasta(?:\s+las)?)|(?:até(?:\s+às)?)|(?:jusqu['’]?(?:à|a)?)|bis)\s+",
   caseSensitive: false,
 );
 
@@ -31,6 +31,25 @@ final RegExp _endPattern = RegExp(
   '(?:until|till|by|to)\\s+($_clockToken)',
   caseSensitive: false,
 );
+
+final Map<String, RegExp> _localizedEndPatterns = <String, RegExp>{
+  'es': RegExp(
+    r'(?:(?:hasta(?:\s+las)?))\s+(mediod[ií]a|medianoche|\d{1,2}(?:(?::|\.)[0-5]\d)?)',
+    caseSensitive: false,
+  ),
+  'fr': RegExp(
+    r"(?:jusqu['’]?(?:à|a)?)\s+(midi|minuit|\d{1,2}(?:\s*h(?:\s*[0-5]\d)?)?)",
+    caseSensitive: false,
+  ),
+  'pt': RegExp(
+    r'(?:até(?:\s+às?)?)\s+(meio-dia|meiodia|meia-noite|meianoite|\d{1,2}(?:\s*h(?:\s*[0-5]\d)?)?)',
+    caseSensitive: false,
+  ),
+  'de': RegExp(
+    r'(?:bis)\s+(mittag|mitternacht|\d{1,2}(?:(?::|\.)[0-5]\d)?\s*(?:uhr)?)',
+    caseSensitive: false,
+  ),
+};
 
 class ResolvedPlanTime {
   const ResolvedPlanTime({
@@ -94,6 +113,46 @@ PlanTimeExpression parseEnglishTimeExpression(
   );
 }
 
+/// Parses time words for the selected app language. English owns the richer
+/// duration/range grammar today; the other language entries preserve their
+/// established end-time forms behind the same interface so another grammar
+/// can be added without touching plan construction or storage.
+PlanTimeExpression parsePlanTimeExpression(
+  String text, {
+  String languageCode = 'en',
+  Iterable<SourceSpan> excluded = const <SourceSpan>[],
+}) {
+  var parsed = parseEnglishTimeExpression(text, excluded: excluded);
+  final language = _baseLanguage(languageCode);
+  if (parsed.isEmpty) {
+    final value = text.trim();
+    final clock = normalizeClockPhrase(value, languageCode: language);
+    if (value.isNotEmpty && clock != null) {
+      final utf16Start = text.indexOf(value);
+      final end = _utf16Span(text, utf16Start, utf16Start + value.length);
+      parsed = PlanTimeExpression(endPhrase: end, endClock: clock);
+    }
+  }
+  final pattern = _localizedEndPatterns[language];
+  if (pattern == null) return parsed;
+
+  final excludedList = excluded.toList(growable: false);
+  for (final match in pattern.allMatches(text)) {
+    final end = _groupSpan(text, match, 1);
+    if (excludedList.any((span) => _overlaps(end, span))) continue;
+    return PlanTimeExpression(
+      durationPhrase: parsed.durationPhrase,
+      durationMinutes: parsed.durationMinutes,
+      startPhrase: parsed.startPhrase,
+      startClock: parsed.startClock,
+      endPhrase: end,
+      endClock: normalizeClockPhrase(end.text, languageCode: language),
+      wasClamped: parsed.wasClamped,
+    );
+  }
+  return parsed;
+}
+
 /// Finds a duration tied to one app in a simple clause. Ambiguous clauses
 /// naming several apps stay plan-wide, so Curre never invents which app a
 /// timer belongs to.
@@ -143,28 +202,11 @@ PlanTimeExpression mergePlanTimeExpressions(
   );
 }
 
-PlanTimeExpression timeExpressionWithoutSpans(
-  PlanTimeExpression value,
-  Iterable<SourceSpan> excluded,
-) {
-  final spans = excluded.toList(growable: false);
-  bool kept(SourceSpan? span) =>
-      span != null && !spans.any((other) => _overlaps(span, other));
-  return PlanTimeExpression(
-    durationPhrase: kept(value.durationPhrase) ? value.durationPhrase : null,
-    durationMinutes: kept(value.durationPhrase) ? value.durationMinutes : null,
-    startPhrase: kept(value.startPhrase) ? value.startPhrase : null,
-    startClock: kept(value.startPhrase) ? value.startClock : null,
-    endPhrase: kept(value.endPhrase) ? value.endPhrase : null,
-    endClock: kept(value.endPhrase) ? value.endClock : null,
-    wasClamped: value.wasClamped,
-  );
-}
-
 ResolvedPlanTime resolvePlanTime({
   required PlanTimeExpression expression,
   required DateTime now,
   required SessionWindow session,
+  String languageCode = 'en',
   DateTime? fallbackEnd,
   DateTime? maximumEnd,
 }) {
@@ -172,12 +214,25 @@ ResolvedPlanTime resolvePlanTime({
   final hasExplicitTime = !expression.isEmpty;
   var start = current;
   if (expression.startPhrase case final phrase?) {
-    start = _resolveStart(phrase.text, current, session.timeZone) ?? current;
+    start =
+        _resolveStart(
+          phrase.text,
+          current,
+          session.timeZone,
+          languageCode: languageCode,
+        ) ??
+        current;
   }
 
   DateTime? end;
   if (expression.endPhrase case final phrase?) {
-    end = _resolveEnd(phrase.text, start, current, session.timeZone);
+    end = _resolveEnd(
+      phrase.text,
+      start,
+      current,
+      session.timeZone,
+      languageCode: languageCode,
+    );
   }
   if (end == null) {
     final minutes = expression.durationMinutes;
@@ -220,50 +275,17 @@ DateTime resolvePlanEnd({
   required DateTime now,
   required SessionWindow session,
   String languageCode = 'en',
-}) {
-  final phrase = endPhrase?.text.trim();
-  if (phrase == null || phrase.isEmpty) return session.endsAt.toUtc();
-
-  final token = _normaliseTimePhrase(phrase, languageCode);
-  final times = _candidateTimes(token, languageCode);
-  if (times == null) return session.endsAt.toUtc();
-
-  final current = now.toUtc();
-  final startWall = session.timeZone.toWallTime(session.startsAt);
-  final lastWall = session.timeZone.toWallTime(
-    session.endsAt.subtract(const Duration(microseconds: 1)),
-  );
-  final dayCount =
-      DateTime.utc(lastWall.date.year, lastWall.date.month, lastWall.date.day)
-          .difference(
-            DateTime.utc(
-              startWall.date.year,
-              startWall.date.month,
-              startWall.date.day,
-            ),
-          )
-          .inDays;
-
-  final matches = <DateTime>[];
-  for (var day = 0; day <= dayCount + 1; day++) {
-    final date = startWall.date.addDays(day);
-    for (final time in times) {
-      for (final candidate in session.timeZone.instantsFor(
-        LocalWallTime(date: date, time: time),
-      )) {
-        final utc = candidate.toUtc();
-        if (utc.isAfter(current) &&
-            !utc.isBefore(session.startsAt) &&
-            !utc.isAfter(session.endsAt)) {
-          matches.add(utc);
-        }
-      }
-    }
-  }
-  if (matches.isEmpty) return session.endsAt.toUtc();
-  matches.sort();
-  return matches.first;
-}
+}) => resolvePlanTime(
+  expression: PlanTimeExpression(
+    endPhrase: endPhrase,
+    endClock: endPhrase == null
+        ? null
+        : normalizeClockPhrase(endPhrase.text, languageCode: languageCode),
+  ),
+  now: now,
+  session: session,
+  languageCode: languageCode,
+).endsAt;
 
 String _normaliseTimePhrase(String phrase, String languageCode) {
   var token = phrase.toLowerCase().trim().replaceFirst(_leadingTimeWords, '');
@@ -286,7 +308,7 @@ String _normaliseTimePhrase(String phrase, String languageCode) {
 }
 
 List<LocalTime>? _candidateTimes(String token, String languageCode) {
-  final language = languageCode.toLowerCase().split(RegExp('[-_]')).first;
+  final language = _baseLanguage(languageCode);
   final noon = switch (language) {
     'es' => const {'mediodía', 'mediodia'},
     'fr' => const {'midi'},
@@ -329,6 +351,9 @@ List<LocalTime>? _candidateTimes(String token, String languageCode) {
   return <LocalTime>[LocalTime(hour, minute), LocalTime(hour + 12, minute)];
 }
 
+String _baseLanguage(String languageCode) =>
+    languageCode.toLowerCase().split(RegExp('[-_]')).first;
+
 int? durationMinutesFromEnglish(String phrase) {
   final normalized = phrase.toLowerCase().trim().replaceAll(
     RegExp(r'\s+'),
@@ -358,32 +383,37 @@ int? durationMinutesFromEnglish(String phrase) {
 }
 
 String? normalizeEnglishClock(String phrase) {
-  final token = _plainClockToken(phrase);
-  if (token == 'noon') return '12:00';
-  if (token == 'midnight') return '00:00';
-  final parsed = _clockParts(token);
-  if (parsed == null) return null;
-  final (hour, minute, meridiem) = parsed;
-  final hour24 = switch (meridiem) {
-    'am' => hour == 12 ? 0 : hour,
-    'pm' => hour == 12 ? 12 : hour + 12,
-    _ => hour,
-  };
-  return '${hour24.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+  return normalizeClockPhrase(phrase);
 }
 
-DateTime? _resolveStart(String token, DateTime now, CurreTimeZone zone) {
+String? normalizeClockPhrase(String phrase, {String languageCode = 'en'}) {
+  final token = _normaliseTimePhrase(phrase, languageCode);
+  final times = _candidateTimes(token, languageCode);
+  if (times == null || times.isEmpty) return null;
+  final value = times.first;
+  return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+}
+
+DateTime? _resolveStart(
+  String token,
+  DateTime now,
+  CurreTimeZone zone, {
+  required String languageCode,
+}) {
   final wall = zone.toWallTime(now);
   final candidates = <DateTime>[];
-  for (var day = -1; day <= 1; day++) {
-    candidates.addAll(_instantsForClock(token, wall.date.addDays(day), zone));
+  for (var day = 0; day <= 1; day++) {
+    candidates.addAll(
+      _instantsForClock(
+        token,
+        wall.date.addDays(day),
+        zone,
+        languageCode: languageCode,
+      ).where((candidate) => !candidate.isBefore(now)),
+    );
   }
   if (candidates.isEmpty) return null;
-  candidates.sort((a, b) {
-    final aDistance = a.difference(now).inMicroseconds.abs();
-    final bDistance = b.difference(now).inMicroseconds.abs();
-    return aDistance.compareTo(bDistance);
-  });
+  candidates.sort();
   return candidates.first;
 }
 
@@ -391,15 +421,21 @@ DateTime? _resolveEnd(
   String token,
   DateTime start,
   DateTime now,
-  CurreTimeZone zone,
-) {
+  CurreTimeZone zone, {
+  required String languageCode,
+}) {
   final startWall = zone.toWallTime(start);
   final midnight = _nextMidnight(start, zone);
   final after = start.isAfter(now) ? start : now;
   final candidates = <DateTime>[];
   for (var day = 0; day <= 1; day++) {
     candidates.addAll(
-      _instantsForClock(token, startWall.date.addDays(day), zone).where(
+      _instantsForClock(
+        token,
+        startWall.date.addDays(day),
+        zone,
+        languageCode: languageCode,
+      ).where(
         (candidate) => candidate.isAfter(after) && !candidate.isAfter(midnight),
       ),
     );
@@ -412,54 +448,16 @@ DateTime? _resolveEnd(
 List<DateTime> _instantsForClock(
   String token,
   LocalDate date,
-  CurreTimeZone zone,
-) {
-  final compact = _plainClockToken(token);
-  if (compact == 'noon') {
-    return zone.instantsFor(
-      LocalWallTime(date: date, time: const LocalTime(12)),
-    );
-  }
-  if (compact == 'midnight') {
-    return zone.instantsFor(
-      LocalWallTime(date: date, time: const LocalTime(0)),
-    );
-  }
-  final parsed = _clockParts(compact);
-  if (parsed == null) return const <DateTime>[];
-  final (hour, minute, meridiem) = parsed;
-  final hours = switch (meridiem) {
-    'am' => <int>[hour == 12 ? 0 : hour],
-    'pm' => <int>[hour == 12 ? 12 : hour + 12],
-    _ when hour == 12 => <int>[0, 12],
-    _ => <int>[hour, hour + 12],
-  };
+  CurreTimeZone zone, {
+  required String languageCode,
+}) {
+  final compact = _normaliseTimePhrase(token, languageCode);
+  final times = _candidateTimes(compact, languageCode);
+  if (times == null) return const <DateTime>[];
   return <DateTime>[
-    for (final value in hours)
-      ...zone.instantsFor(
-        LocalWallTime(date: date, time: LocalTime(value, minute)),
-      ),
+    for (final time in times)
+      ...zone.instantsFor(LocalWallTime(date: date, time: time)),
   ];
-}
-
-String _plainClockToken(String value) => value
-    .toLowerCase()
-    .trim()
-    .replaceFirst(RegExp(r'^(?:until|till|by|to|from|at)\s+'), '')
-    .replaceAll(RegExp(r'\s+'), '');
-
-(int, int, String?)? _clockParts(String token) {
-  final match = RegExp(
-    r'^(\d{1,2})(?:(?::|\.)(\d{2}))?(am|pm)?$',
-    caseSensitive: false,
-  ).firstMatch(token);
-  if (match == null) return null;
-  final hour = int.tryParse(match.group(1)!);
-  final minute = int.tryParse(match.group(2) ?? '0');
-  if (hour == null || hour < 1 || hour > 12 || minute == null || minute > 59) {
-    return null;
-  }
-  return (hour, minute, match.group(3)?.toLowerCase());
 }
 
 DateTime _nextMidnight(DateTime instant, CurreTimeZone zone) {

@@ -76,6 +76,24 @@ void main() {
     );
   });
 
+  test('a natural future start belongs to the Curre day it starts', () async {
+    var now = DateTime.utc(2026, 10, 26, 18);
+    final controller = fakeController(settings: settings, clock: () => now);
+    final plan = await controller.buildManualPlan(
+      'study maths from 5 to 6',
+      const <String>[youtube],
+    );
+
+    expect(plan.startsAt, DateTime.utc(2026, 10, 27, 5));
+    expect(plan.endsAt, DateTime.utc(2026, 10, 27, 6));
+    expect(plan.date, const LocalDate(2026, 10, 27));
+    expect(plan.session, SessionName.morning);
+    expect(controller.activePlan, isNull);
+
+    now = DateTime.utc(2026, 10, 27, 5, 30);
+    expect(controller.activePlan?.id, plan.id);
+  });
+
   test('a hidden app with its own time gets the gentle expiry nudge', () async {
     final notices = FakeNotificationGateway();
     final controller = fakeController(

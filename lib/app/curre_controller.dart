@@ -1367,14 +1367,15 @@ class CurreController extends ChangeNotifier {
     if (serverTime == null && endPhrase != null) {
       serverTime = PlanTimeExpression(
         endPhrase: endPhrase,
-        endClock: normalizeEnglishClock(endPhrase.text),
+        endClock: normalizeClockPhrase(
+          endPhrase.text,
+          languageCode: languageCode,
+        ),
       );
     }
-    if (serverTime != null) {
-      serverTime = timeExpressionWithoutSpans(serverTime, perAppSpans);
-    }
-    final fallbackTime = parseEnglishTimeExpression(
+    final fallbackTime = parsePlanTimeExpression(
       intention,
+      languageCode: languageCode,
       excluded: perAppSpans,
     );
     final planTime = mergePlanTimeExpressions(serverTime, fallbackTime);
@@ -1382,6 +1383,7 @@ class CurreController extends ChangeNotifier {
       expression: planTime,
       now: instant,
       session: window,
+      languageCode: languageCode,
     );
 
     var planEnd = resolved.endsAt;
@@ -1392,6 +1394,7 @@ class CurreController extends ChangeNotifier {
         expression: entry.value,
         now: resolved.startsAt,
         session: window,
+        languageCode: languageCode,
         fallbackEnd: planEnd,
       );
       appEnds[entry.key] = own.endsAt;
@@ -1402,6 +1405,8 @@ class CurreController extends ChangeNotifier {
         (left, right) => left.isAfter(right) ? left : right,
       );
     }
+    final startWindow = SessionSchedule.fromSettings(settings)
+        .current(resolved.startsAt);
     final resolvedApps = apps
         .map((app) {
           final ownEnd = appEnds[app.packageName];
@@ -1418,8 +1423,8 @@ class CurreController extends ChangeNotifier {
         .toList(growable: false);
     return Plan(
       id: 'plan-${instant.toUtc().microsecondsSinceEpoch}',
-      session: window.session,
-      date: window.localStartDate,
+      session: startWindow.session,
+      date: startWindow.localStartDate,
       intention: intention,
       apps: resolvedApps,
       startsAt: resolved.startsAt,
@@ -1735,7 +1740,10 @@ class CurreController extends ChangeNotifier {
     String phrase, {
     String? packageName,
   }) async {
-    final expression = parseEnglishTimeExpression(phrase.trim());
+    final expression = parsePlanTimeExpression(
+      phrase.trim(),
+      languageCode: languageCode,
+    );
     if (expression.isEmpty) return null;
     final window = SessionSchedule.fromSettings(settings)
         .current(plan.startsAt ?? now);
@@ -1746,6 +1754,7 @@ class CurreController extends ChangeNotifier {
         expression: expression,
         now: now,
         session: window,
+        languageCode: languageCode,
       );
       final apps = <PlannedApp>[];
       for (final app in plan.apps) {
@@ -1756,6 +1765,7 @@ class CurreController extends ChangeNotifier {
             expression: ownTiming,
             now: resolved.startsAt,
             session: window,
+            languageCode: languageCode,
             fallbackEnd: resolved.endsAt,
             maximumEnd: resolved.endsAt,
           ).endsAt;
@@ -1786,6 +1796,7 @@ class CurreController extends ChangeNotifier {
         expression: expression,
         now: plan.startsAt ?? now,
         session: window,
+        languageCode: languageCode,
         fallbackEnd: plan.endsAt,
         maximumEnd: plan.endsAt,
       );
