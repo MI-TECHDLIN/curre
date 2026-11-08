@@ -487,7 +487,10 @@ worth knowing before changing code.
 
 ## Development history
 
-Built for this challenge in public, one pull request per feature:
+Started during the challenge's building period (October 21 – November 10,
+2026): the
+[first commit](https://github.com/MI-TECHDLIN/curre/commit/b68b11b) landed
+October 23, 2026. Built in public from there, one pull request per feature:
 [commit and PR history](https://github.com/MI-TECHDLIN/curre/commits/main).
 Roughly, in order: the backend and phone-owned launcher logic first (`/v1/plan`,
 `/v1/unlock`, task doors); then the production Android screens, design system
@@ -499,6 +502,62 @@ focus periods with a rest day and graceful ending; selective app-hiding with
 held (not deleted) notifications; a code-rendered demo film; multilingual
 support in five languages; and natural-language plan/app time parsing. See
 `git log --oneline` for the exact sequence.
+
+AI coding tools helped build Curre — pairing on code, tests, and this
+documentation — the way a lint suggestion or a Stack Overflow answer would.
+Every change was reviewed, and I'm responsible for what's in this
+repository, working or not.
+
+## Credits and licenses
+
+Curre's own code is original. Everything below is a third-party package,
+font, or asset it bundles or depends on, checked against `pubspec.yaml`,
+`server/requirements.txt`, and the credits already shown in-app at
+**Curre settings → About → Licences** (`registerCurreLicenses` in
+`lib/design/curre_fonts.dart`, backed by `test/design/licenses_test.dart`).
+
+**Fonts** (bundled under `assets/fonts/`, licences under `assets/licenses/`):
+Geologica, Newsreader, and Atkinson Hyperlegible Mono — each under the
+**SIL Open Font License 1.1**.
+
+**Icon designs:** the Solar icon set by **480 Design**, under
+**CC BY 4.0**, used through the `solar_icons` Flutter package
+(see `lib/design/curre_fonts.dart`'s `curreIconCredit`).
+
+**Illustration:** onboarding scene props (`lib/design/art/fluent_props.dart`)
+are drawn as vectors from Microsoft's **Fluent Emoji** (Flat style), under
+the **MIT License**. The launcher icon, splash, notification art, and human
+profile avatars are original, code-drawn artwork.
+
+**Phone (Flutter/Dart packages, see `pubspec.yaml`):** `http`,
+`shared_preferences`, `flutter_lints` — BSD-3-Clause; `timezone` —
+BSD-2-Clause; `intl`, `flutter_localizations` (Flutter SDK) —
+BSD-3-Clause; `flutter_local_notifications` — BSD-3-Clause (Michael Bui);
+`path_parsing` — MIT (Dan Field); `record`, `path_provider`, `crypto`,
+`solar_icons` (package only) — BSD-3-Clause; `permission_handler` — MIT;
+`sherpa_onnx` — Apache-2.0 (bundles ONNX Runtime, MIT). Voice typing runs
+Whisper tiny (OpenAI, MIT) through `sherpa_onnx`; the model file is a
+one-time download, never bundled in the repository or the APK (see
+`lib/platform/voice_model.dart`).
+
+**Backend (Python packages, see `server/requirements.txt`):**
+`fastapi`, `pydantic`, `clocked-sdk` — MIT; `uvicorn`, `python-dotenv` —
+BSD-3-Clause.
+
+**The Clocked API itself** (`clocked-sdk` 0.7.0) is the processor this
+project is built on, not a credited asset — see
+[Privacy](#privacy) for what it stores and
+[How Clocked powers Curre](#how-clocked-powers-curre) for how it's used.
+
+**The demo film** (`demo/`, not part of the shipped app) is rendered in
+code against this checkout; see `demo/README.md` for how. Its narration
+voice is **Kokoro** (hexgrad/Kokoro-82M), under **Apache License 2.0**, run
+offline through the MIT-licensed `kokoro-onnx`; music and sound effects are
+synthesised in code, not sampled.
+
+No other third-party code, stock art, or media is bundled in the app or
+backend. The screenshots in `docs/screenshots/` and the demo video are
+captures of this app.
 
 ## What I learned
 
