@@ -17,8 +17,21 @@ few apps you chose to hide — the ones that pull you in — stay hidden until
 you say, in your own words, why you need one right now; every other app
 opens as usual.
 
+**Who it's for:** anyone who needs their own phone to behave for a set
+stretch and knows exactly when that stretch ends — a student clearing exam
+week, someone heads-down on a deadline, or a person breaking a habit like
+late-night scrolling. Not a permanent home screen, and not aimed at parental
+control or managing someone else's phone.
+
 Built for the [Clocked Build Challenge](https://clocked.rezolve.ai/challenge),
 entering Best Overall and Best Use of Decide, Extract or Fill.
+
+## Demo
+
+[2:59 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
+rendered from the real app against live-captured server answers (see
+`demo/README.md`). This link may be swapped for an improved cut before
+judging closes.
 
 ## The problem
 
@@ -221,6 +234,28 @@ stores nothing and logs only route/status/latency/credits — never the
 intention, reason, saved item, or note text. Full contract and response
 shapes: [`server/README.md`](server/README.md).
 
+**The journey, and what each call changes:**
+
+1. **Plan** (`/v1/plan`, check-in). You type what you're about to do; Fill
+   picks which installed apps belong on the next Home and which shortcut
+   each uses, and Extract copies the exact search words or end time
+   verbatim. The app turns that straight into **doors** — the small Home
+   for this task.
+2. **Doors** (`lib/doors/`, no Clocked call). Each door from step 1 opens as
+   an allowlisted search, a conversation shortcut, or a plain app open —
+   whichever the phone actually has. This is where Plan's output becomes
+   something tappable.
+3. **Unlock or proof** (`/v1/unlock` when a hidden app opens mid-plan;
+   `/v1/proof` when a task is checked off). Unlock's Decide step turns your
+   "why now?" into one of five outcomes that opens, defers, or blocks the
+   app; proof's Decide and Verify steps turn a completion note into a
+   proof day or an honest check-off. Either way, Protect's output decides
+   what History keeps, never what the gate or the sheet shows you live.
+4. **Later** (`/v1/later`, after the next plan). Rerank reads the new plan
+   against reasons saved from step 3's "later" outcomes and returns up to
+   three as doors on that plan, in Rerank's order — turning a deferred
+   reason from the past into a door in the present.
+
 | Route | Clocked steps | What it decides |
 | --- | --- | --- |
 | `POST /v1/plan` | Fill → Extract | Which installed apps appear on the next Home, which shortcut each uses, and the exact search words/end time, as visible highlights. |
@@ -246,6 +281,58 @@ measurement scope and credit budget.
 The Later shelf's sanitized real Rerank fixture used **2 credits** and
 reported **38.3 ms** of billable model time for six saved items. This was a
 single contract sample, not a latency sweep.
+
+## Uncertain results, missing information and failed requests
+
+Curre never blocks you on a Clocked call that can't answer confidently. Each
+case below has a defined fallback, so a bad network or an unsure model
+degrades the feature instead of freezing it.
+
+- **Low-confidence Decide ("why now?").** Decide's `kind` choice carries a
+  confidence score; below the configured threshold (`DECIDE_THRESHOLD`,
+  default `0.7`, clamped `0.5`–`0.9`) or when the reading is genuinely
+  `unclear`, the outcome is `specify`, not a guess — Curre asks you to say a
+  bit more rather than opening or blocking on a weak signal
+  (`server/README.md` endpoint map; `UnlockOutcome` in `lib/core/models.dart`).
+- **A clearly unsafe instruction.** Guard's `injection` check can stop the
+  pipeline outright; that outcome is `flagged`, and — unlike every other
+  outcome — it has no 30-second "Not now" escape.
+- **Missing or odd fields.** `/v1/plan` cleans rather than rejects: a
+  candidate app with a blank or repeated id/label, or a field of the wrong
+  type, is dropped instead of failing the whole plan
+  (`planCandidatesFrom`/`cleanShortcutLabels` in `lib/core/api_models.dart`,
+  mirrored server-side in `server/app/models.py`). An Extract value that
+  can't be found comes back as a null `value` with no fabricated span, and
+  an Extract error on `/v1/plan` still returns Fill's apps without spans
+  rather than discarding the whole answer. A Protect result that is
+  missing, malformed, or out of range changes nothing — Curre keeps the
+  original text and never claims it redacted something it didn't.
+- **Timeouts and retries.** `/v1/plan` gets one automatic retry inside a
+  12-second total budget (9 s first attempt, 250 ms pause, the remainder for
+  the retry), both attempts sharing one `Idempotency-Key` so a retry can't
+  double-bill a pipeline run (`lib/core/api_client.dart`,
+  `server/README.md`). `/v1/unlock`, `/v1/proof`, and `/v1/later` don't
+  retry; each has its own fallback instead (below).
+- **A cold Render host.** The free-tier backend can take ~13 s to wake. The
+  first call of a session gets a 30-second `coldStartBudget` instead of the
+  normal timeout, and `CurreApiClient.waking` drives a "getting ready" note
+  on the waiting screen while it does (`lib/core/api_client.dart`).
+- **Offline or failed requests, per route.** Every transport error, timeout,
+  non-2xx status, and malformed response is treated the same way, and
+  always leaves the user with something usable rather than an error screen:
+  - `/v1/plan` → the check-in falls back to a manual checklist built from
+    the apps you typed, with no Clocked-chosen doors or highlights.
+  - `/v1/unlock` → `unavailable`, which still gives the local 30-second
+    override wait so a hidden app can be opened anyway.
+  - `/v1/proof` → `pending`; the note stays on the phone and is credited to
+    its task's original day once it can be judged, rather than lost or
+    forced into a guess.
+  - `/v1/later` → the shelf silently falls back to newest-first ordering
+    instead of Rerank's order, with no interruption to check-in.
+- **Verify, specifically.** An ordinary new detail in a proof note that
+  Verify simply wasn't told about (`not_stated`) does not veto it — only a
+  claim that clearly contradicts the planned task does
+  (`contradicted >= 0.6`).
 
 ## Architecture
 
@@ -397,3 +484,37 @@ account/token with that scope (or via the GitHub web UI) to turn it on.
 See [`AGENTS.md`](AGENTS.md) for where things live (Android channel, design
 system, doors, Prooflight, local notifications, backend) and sharp edges
 worth knowing before changing code.
+
+## Development history
+
+Built for this challenge in public, one pull request per feature:
+[commit and PR history](https://github.com/MI-TECHDLIN/curre/commits/main).
+Roughly, in order: the backend and phone-owned launcher logic first (`/v1/plan`,
+`/v1/unlock`, task doors); then the production Android screens, design system
+and avatars; real Clocked integration and a Prooflight proof-day loop end to
+end; the "why now?" gate with quieted notifications; voice typing, richer
+onboarding and release signing; Verify-backed proof and the reranked Later
+shelf; five-step contextual onboarding and a calmly-handled waking host;
+focus periods with a rest day and graceful ending; selective app-hiding with
+held (not deleted) notifications; a code-rendered demo film; multilingual
+support in five languages; and natural-language plan/app time parsing. See
+`git log --oneline` for the exact sequence.
+
+## What I learned
+
+Clocked's pipeline model (several steps, one call, one credit total) turned
+out to fit a privacy constraint I hadn't planned around going in: because
+Protect's output only ever changes what gets written to History — never what
+the live gate or completion sheet shows — a single `/v1/unlock` or
+`/v1/proof` call could do both the judgment and the redaction without a
+second round trip or a second place for personal text to leak into. The
+other lesson was about confidence: treating anything short of a clear
+Decide result as "ask again" rather than guessing (open or block) made the
+gate feel fair even when it was wrong, because it was wrong in the direction
+of asking the person, not deciding for them.
+
+## Team
+
+| Name | Email | GitHub |
+| --- | --- | --- |
+| TODO | TODO | [@MI-TECHDLIN](https://github.com/MI-TECHDLIN) |
