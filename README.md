@@ -28,10 +28,28 @@ entering Best Overall and Best Use of Decide, Extract or Fill.
 
 ## Demo
 
-[2:59 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
+[3:58 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
 rendered from the real app against live-captured server answers (see
 `demo/README.md`). This link may be swapped for an improved cut before
 judging closes.
+
+## Try it (for judges)
+
+The fastest path: download the [latest release
+APK](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1)
+(`app-arm64-v8a-release.6.apk` fits almost every recent phone) and install
+it per [`docs/install.md`](docs/install.md) — no build step needed. That
+build already points at the hosted backend,
+`https://curre-zdfr.onrender.com`, which is live (`GET /healthz` →
+`{"status": "ok"}`). It's Render's free tier, so the first request after
+idle can take ~13 seconds to wake; the app shows a quiet "getting ready"
+note while it does (see
+[Uncertain results, missing information and failed requests](#uncertain-results-missing-information-and-failed-requests)).
+
+To build from source instead, or to run it against your own backend, see
+[Build and run](#build-and-run) below; `flutter analyze && flutter test`
+and the backend's `pytest`/`ruff check .` (also under Build and run → Tests)
+need no deployed backend or Clocked key beyond a non-empty placeholder.
 
 ## The problem
 
@@ -262,6 +280,23 @@ shapes: [`server/README.md`](server/README.md).
 | `POST /v1/unlock` | Protect → Guard → Decide → Extract | Protect's spans replace personal details only in the copy saved to History. Guard can stop an instruction; Decide selects one of five outcomes and a door; Extract supplies the target, person and grant length. |
 | `POST /v1/proof` | Protect → Guard → Decide → Extract → Verify | Protect changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
 | `POST /v1/later` | Rerank | Orders up to 20 phone-saved browsing reasons against the new plan. Only results with Rerank's `use` action become doors, capped at three; `skip` and `expand` stay saved for another plan. |
+
+### Clocked endpoints by award group
+
+Curre uses seven of the nine Clocked endpoints, meaningfully, each changing
+what the app shows or does — not as an unused extra call:
+
+| Group | Endpoint | Route(s) | What its output changes in the app |
+| --- | --- | --- | --- |
+| Decide, Extract, Fill | **Fill** | `/v1/plan` | Chooses which installed apps (and which shortcut of each) belong on the next Home (`server/app/clocked_pipeline.py`; mapped to doors in `lib/core/api_models.dart`). |
+| Decide, Extract, Fill | **Extract** | `/v1/plan`, `/v1/unlock`, `/v1/proof` | Copies the verbatim search words/end time for a door (plan); the target, person and grant length (unlock); the result/learning span for a proof day (proof). |
+| Decide, Extract, Fill | **Decide** | `/v1/unlock`, `/v1/proof` | Chooses the `open`/`later`/`specify`/`flagged`/`unavailable` outcome and door (unlock, see `UnlockOutcome` in `lib/core/models.dart`); gates whether a note is specific enough to raise a proof day (proof). |
+| Protect, Guard, Inspect | **Protect** | `/v1/unlock`, `/v1/proof` | Replaces personal details in the copy written to History only (`lib/core/redaction.dart`); never changes what the live gate or completion sheet shows. |
+| Protect, Guard, Inspect | **Guard** | `/v1/unlock`, `/v1/proof` | Can stop the pipeline outright, producing the `flagged` (unlock) or `vague` (proof) outcome (`GuardInfo` in `server/app/clocked_pipeline.py`). |
+| Protect, Guard, Inspect | Inspect | *not used* | Inspect reviews scripts; Curre has no scripts to review, only short reasons and notes (see `server/README.md`). |
+| Verify, Compare, Rerank | **Verify** | `/v1/proof` | Vetoes a completion note only when a claim clearly contradicts the planned task, and supplies the short follow-up reason (`grounding` in the SDK). |
+| Verify, Compare, Rerank | Compare | *not used* | Would duplicate the plan-vs-note judgment Verify already makes on the same inputs (see `server/README.md`). |
+| Verify, Compare, Rerank | **Rerank** | `/v1/later` | Orders saved "later" reasons against the new plan; only `use`-ranked results, capped at three, become doors. |
 
 Measured against the real Clocked API, sequentially, 2026-10-25
 (`server/scripts/measure.py`; see `server/README.md` for the full table and
@@ -574,6 +609,8 @@ of asking the person, not deciding for them.
 
 ## Team
 
+Solo entry.
+
 | Name | Email | GitHub |
 | --- | --- | --- |
-| TODO | TODO | [@MI-TECHDLIN](https://github.com/MI-TECHDLIN) |
+| Ezechukwu Miracle | ezechukwumiracle52@gmail.com | [@MI-TECHDLIN](https://github.com/MI-TECHDLIN) |
