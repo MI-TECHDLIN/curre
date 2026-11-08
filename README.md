@@ -31,15 +31,18 @@ entering Best Overall and Best Use of Decide, Extract or Fill.
 [3:58 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
 rendered from the real app against live-captured server answers (see
 `demo/README.md`). This link may be swapped for an improved cut before
-judging closes.
+judging closes. An improved cut is also planned to be attached directly to
+the [`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1)
+once ready.
 
 ## Try it (for judges)
 
-The fastest path: download the [latest release
-APK](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1)
-(`app-arm64-v8a-release.6.apk` fits almost every recent phone) and install
-it per [`docs/install.md`](docs/install.md) — no build step needed. That
-build already points at the hosted backend,
+The fastest path: download `app-arm64-v8a-release.6.apk` from the [V1.0.0
+release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1) and install
+it per [`docs/install.md`](docs/install.md) — no build step needed. **This
+release build is arm64 only**; a device or emulator needing a different ABI
+(`armeabi-v7a` or `x86_64`) needs its own build from source (see below).
+That build already points at the hosted backend,
 `https://curre-zdfr.onrender.com`, which is live (`GET /healthz` →
 `{"status": "ok"}`). It's Render's free tier, so the first request after
 idle can take ~13 seconds to wake; the app shows a quiet "getting ready"
