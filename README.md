@@ -28,10 +28,31 @@ entering Best Overall and Best Use of Decide, Extract or Fill.
 
 ## Demo
 
-[2:59 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
+[3:58 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
 rendered from the real app against live-captured server answers (see
 `demo/README.md`). This link may be swapped for an improved cut before
-judging closes.
+judging closes. An improved cut is also planned to be attached directly to
+the [`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1)
+once ready.
+
+## Try it (for judges)
+
+The fastest path: download `app-arm64-v8a-release.6.apk` from the [V1.0.0
+release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1) and install
+it per [`docs/install.md`](docs/install.md) — no build step needed. **This
+release build is arm64 only**; a device or emulator needing a different ABI
+(`armeabi-v7a` or `x86_64`) needs its own build from source (see below).
+That build already points at the hosted backend,
+`https://curre-zdfr.onrender.com`, which is live (`GET /healthz` →
+`{"status": "ok"}`). It's Render's free tier, so the first request after
+idle can take ~13 seconds to wake; the app shows a quiet "getting ready"
+note while it does (see
+[Uncertain results, missing information and failed requests](#uncertain-results-missing-information-and-failed-requests)).
+
+To build from source instead, or to run it against your own backend, see
+[Build and run](#build-and-run) below; `flutter analyze && flutter test`
+and the backend's `pytest`/`ruff check .` (also under Build and run → Tests)
+need no deployed backend or Clocked key beyond a non-empty placeholder.
 
 ## The problem
 
@@ -263,6 +284,23 @@ shapes: [`server/README.md`](server/README.md).
 | `POST /v1/proof` | Protect → Guard → Decide → Extract → Verify | Protect changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
 | `POST /v1/later` | Rerank | Orders up to 20 phone-saved browsing reasons against the new plan. Only results with Rerank's `use` action become doors, capped at three; `skip` and `expand` stay saved for another plan. |
 
+### Clocked endpoints by award group
+
+Curre uses seven of the nine Clocked endpoints, meaningfully, each changing
+what the app shows or does — not as an unused extra call:
+
+| Group | Endpoint | Route(s) | What its output changes in the app |
+| --- | --- | --- | --- |
+| Decide, Extract, Fill | **Fill** | `/v1/plan` | Chooses which installed apps (and which shortcut of each) belong on the next Home (`server/app/clocked_pipeline.py`; mapped to doors in `lib/core/api_models.dart`). |
+| Decide, Extract, Fill | **Extract** | `/v1/plan`, `/v1/unlock`, `/v1/proof` | Copies the verbatim search words/end time for a door (plan); the target, person and grant length (unlock); the result/learning span for a proof day (proof). |
+| Decide, Extract, Fill | **Decide** | `/v1/unlock`, `/v1/proof` | Chooses the `open`/`later`/`specify`/`flagged`/`unavailable` outcome and door (unlock, see `UnlockOutcome` in `lib/core/models.dart`); gates whether a note is specific enough to raise a proof day (proof). |
+| Protect, Guard, Inspect | **Protect** | `/v1/unlock`, `/v1/proof` | Replaces personal details in the copy written to History only (`lib/core/redaction.dart`); never changes what the live gate or completion sheet shows. |
+| Protect, Guard, Inspect | **Guard** | `/v1/unlock`, `/v1/proof` | Can stop the pipeline outright, producing the `flagged` (unlock) or `vague` (proof) outcome (`GuardInfo` in `server/app/clocked_pipeline.py`). |
+| Protect, Guard, Inspect | Inspect | *not used* | Inspect reviews scripts; Curre has no scripts to review, only short reasons and notes (see `server/README.md`). |
+| Verify, Compare, Rerank | **Verify** | `/v1/proof` | Vetoes a completion note only when a claim clearly contradicts the planned task, and supplies the short follow-up reason (`grounding` in the SDK). |
+| Verify, Compare, Rerank | Compare | *not used* | Would duplicate the plan-vs-note judgment Verify already makes on the same inputs (see `server/README.md`). |
+| Verify, Compare, Rerank | **Rerank** | `/v1/later` | Orders saved "later" reasons against the new plan; only `use`-ranked results, capped at three, become doors. |
+
 Measured against the real Clocked API, sequentially, 2026-10-25
 (`server/scripts/measure.py`; see `server/README.md` for the full table and
 method):
@@ -487,7 +525,10 @@ worth knowing before changing code.
 
 ## Development history
 
-Built for this challenge in public, one pull request per feature:
+Started during the challenge's building period (October 21 – November 10,
+2026): the
+[first commit](https://github.com/MI-TECHDLIN/curre/commit/b68b11b) landed
+October 23, 2026. Built in public from there, one pull request per feature:
 [commit and PR history](https://github.com/MI-TECHDLIN/curre/commits/main).
 Roughly, in order: the backend and phone-owned launcher logic first (`/v1/plan`,
 `/v1/unlock`, task doors); then the production Android screens, design system
@@ -499,6 +540,62 @@ focus periods with a rest day and graceful ending; selective app-hiding with
 held (not deleted) notifications; a code-rendered demo film; multilingual
 support in five languages; and natural-language plan/app time parsing. See
 `git log --oneline` for the exact sequence.
+
+AI coding tools helped build Curre — pairing on code, tests, and this
+documentation — the way a lint suggestion or a Stack Overflow answer would.
+Every change was reviewed, and I'm responsible for what's in this
+repository, working or not.
+
+## Credits and licenses
+
+Curre's own code is original. Everything below is a third-party package,
+font, or asset it bundles or depends on, checked against `pubspec.yaml`,
+`server/requirements.txt`, and the credits already shown in-app at
+**Curre settings → About → Licences** (`registerCurreLicenses` in
+`lib/design/curre_fonts.dart`, backed by `test/design/licenses_test.dart`).
+
+**Fonts** (bundled under `assets/fonts/`, licences under `assets/licenses/`):
+Geologica, Newsreader, and Atkinson Hyperlegible Mono — each under the
+**SIL Open Font License 1.1**.
+
+**Icon designs:** the Solar icon set by **480 Design**, under
+**CC BY 4.0**, used through the `solar_icons` Flutter package
+(see `lib/design/curre_fonts.dart`'s `curreIconCredit`).
+
+**Illustration:** onboarding scene props (`lib/design/art/fluent_props.dart`)
+are drawn as vectors from Microsoft's **Fluent Emoji** (Flat style), under
+the **MIT License**. The launcher icon, splash, notification art, and human
+profile avatars are original, code-drawn artwork.
+
+**Phone (Flutter/Dart packages, see `pubspec.yaml`):** `http`,
+`shared_preferences`, `flutter_lints` — BSD-3-Clause; `timezone` —
+BSD-2-Clause; `intl`, `flutter_localizations` (Flutter SDK) —
+BSD-3-Clause; `flutter_local_notifications` — BSD-3-Clause (Michael Bui);
+`path_parsing` — MIT (Dan Field); `record`, `path_provider`, `crypto`,
+`solar_icons` (package only) — BSD-3-Clause; `permission_handler` — MIT;
+`sherpa_onnx` — Apache-2.0 (bundles ONNX Runtime, MIT). Voice typing runs
+Whisper tiny (OpenAI, MIT) through `sherpa_onnx`; the model file is a
+one-time download, never bundled in the repository or the APK (see
+`lib/platform/voice_model.dart`).
+
+**Backend (Python packages, see `server/requirements.txt`):**
+`fastapi`, `pydantic`, `clocked-sdk` — MIT; `uvicorn`, `python-dotenv` —
+BSD-3-Clause.
+
+**The Clocked API itself** (`clocked-sdk` 0.7.0) is the processor this
+project is built on, not a credited asset — see
+[Privacy](#privacy) for what it stores and
+[How Clocked powers Curre](#how-clocked-powers-curre) for how it's used.
+
+**The demo film** (`demo/`, not part of the shipped app) is rendered in
+code against this checkout; see `demo/README.md` for how. Its narration
+voice is **Kokoro** (hexgrad/Kokoro-82M), under **Apache License 2.0**, run
+offline through the MIT-licensed `kokoro-onnx`; music and sound effects are
+synthesised in code, not sampled.
+
+No other third-party code, stock art, or media is bundled in the app or
+backend. The screenshots in `docs/screenshots/` and the demo video are
+captures of this app.
 
 ## What I learned
 
@@ -515,6 +612,8 @@ of asking the person, not deciding for them.
 
 ## Team
 
+Solo entry.
+
 | Name | Email | GitHub |
 | --- | --- | --- |
-| TODO | TODO | [@MI-TECHDLIN](https://github.com/MI-TECHDLIN) |
+| Ezechukwu Miracle | ezechukwumiracle52@gmail.com | [@MI-TECHDLIN](https://github.com/MI-TECHDLIN) |
