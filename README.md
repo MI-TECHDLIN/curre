@@ -1,5 +1,7 @@
 # Curre
 
+![Curre: open the task, not the app — a phone Home made from what you said you're about to do](docs/images/cover.jpg)
+
 **Curre opens the task, not the app.**
 
 Curre is an Android launcher for a focused stretch of your life: exams, a
@@ -28,12 +30,10 @@ entering Best Overall and Best Use of Decide, Extract or Fill.
 
 ## Demo
 
-[3:58 demo video](https://drive.google.com/file/d/10ENjXeWcpQQzb5f3T_B2vVdDYM2R4jtK/view) —
+[3:58 demo video](https://github.com/MI-TECHDLIN/curre/releases/download/V.1/curre-demo.mp4) —
 rendered from the real app against live-captured server answers (see
-`demo/README.md`). This link may be swapped for an improved cut before
-judging closes. An improved cut is also planned to be attached directly to
-the [`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1)
-once ready.
+`demo/README.md`). Attached to the
+[`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1).
 
 ## Try it (for judges)
 
@@ -99,6 +99,8 @@ days and an exhausting one for months. So Curre is built around a time-bound
 
 ## What Curre is
 
+![The Curre journey: Plan to Doors to Why now?/Proof to Later, wrapped by a focus period](docs/images/journey-diagram.jpg)
+
 - **Task Doors.** Fill picks which installed apps (and which of their own
   shortcut labels — "Messages", "Search") a plan needs. Extract copies the
   exact words for the search or the end time, verbatim, with positions.
@@ -125,7 +127,7 @@ days and an exhausting one for months. So Curre is built around a time-bound
   (`legacyHiddenApps` in `lib/core/visibility.dart`).
 - **"Why now?"** Opening a hidden app asks why, in your own words. Decide
   sorts that reason into `task`, `person`, `time_sensitive`, `browse`, or
-  `unclear`; Guard screens the text first.
+  `unclear`; Guard (injection) screens the text first.
   The gate answers with one of five outcomes — **open** (with a time-bound
   grant), **later**, **specify**, **flagged**, or **unavailable** — and
   every outcome except a flagged one still has an escape: "Not now," with
@@ -144,11 +146,12 @@ days and an exhausting one for months. So Curre is built around a time-bound
   midnight, whichever comes first.
 - **Prooflight.** A completed task only counts if Curre watched you start
   it — through a Task Door or an explicit offline start. A completion note
-  then goes through Protect → Guard → Decide → Extract → Verify. Decide must
-  find a specific result and Verify must find no clear conflict with the
-  planned task. A specific, traced completion raises a proof day; an honest
-  check-off without a note stays an honest check-off. The summary is rebuilt
-  from records each time, never stored as a counter.
+  then goes through Protect (pii) → Guard (injection) → Decide → Extract →
+  Verify (grounding). Decide must find a specific result and Verify
+  (grounding) must find no clear conflict with the planned task. A specific,
+  traced completion raises a proof day; an honest check-off without a note
+  stays an honest check-off. The summary is rebuilt from records each time,
+  never stored as a counter.
 - **Gentle intercept.** A small foreground service notices when a hidden
   app comes to the front — from the recent-apps list, a link, or a
   notification tap — and brings up Curre's "Why now?" gate instead of
@@ -213,9 +216,9 @@ every locale has the same messages, placeholders and plurals.
 
 The selected two-letter language code travels with plan, Why-now, proof and
 Later requests. Clocked still returns Curre's stable internal codes, while
-Fill, Extract, Decide, Verify and Rerank read the person's original language;
-Extract spans stay verbatim so highlights continue to index the words the
-person typed. Offline plan-end parsing and on-device Whisper hints understand
+Fill, Extract, Decide, Verify (grounding) and Rerank read the person's
+original language; Extract spans stay verbatim so highlights continue to
+index the words the person typed. Offline plan-end parsing and on-device Whisper hints understand
 the same five languages.
 
 `clocked-sdk` 0.7.0 does not impose a language allowlist in its client
@@ -249,6 +252,8 @@ Dark-theme counterparts: `onboarding-dark.jpg`, `home-dark.png`,
 
 ## How Clocked powers Curre
 
+![Four Clocked routes, one pipeline call each: /v1/plan, /v1/unlock, /v1/proof and /v1/later, with their Fill/Extract/Protect/Guard/Decide/Verify/Rerank steps](docs/images/clocked-routes-diagram.jpg)
+
 Four routes: three make one `clocked-sdk` `pipeline()` call each, and the
 Later shelf makes one `rerank()` call. The phone owns all state; the backend
 stores nothing and logs only route/status/latency/credits — never the
@@ -269,9 +274,10 @@ shapes: [`server/README.md`](server/README.md).
 3. **Unlock or proof** (`/v1/unlock` when a hidden app opens mid-plan;
    `/v1/proof` when a task is checked off). Unlock's Decide step turns your
    "why now?" into one of five outcomes that opens, defers, or blocks the
-   app; proof's Decide and Verify steps turn a completion note into a
-   proof day or an honest check-off. Either way, Protect's output decides
-   what History keeps, never what the gate or the sheet shows you live.
+   app; proof's Decide and Verify (grounding) steps turn a completion note
+   into a proof day or an honest check-off. Either way, Protect (pii)'s
+   output decides what History keeps, never what the gate or the sheet
+   shows you live.
 4. **Later** (`/v1/later`, after the next plan). Rerank reads the new plan
    against reasons saved from step 3's "later" outcomes and returns up to
    three as doors on that plan, in Rerank's order — turning a deferred
@@ -280,8 +286,8 @@ shapes: [`server/README.md`](server/README.md).
 | Route | Clocked steps | What it decides |
 | --- | --- | --- |
 | `POST /v1/plan` | Fill → Extract | Which installed apps appear on the next Home, which shortcut each uses, and the exact search words/end time, as visible highlights. |
-| `POST /v1/unlock` | Protect → Guard → Decide → Extract | Protect's spans replace personal details only in the copy saved to History. Guard can stop an instruction; Decide selects one of five outcomes and a door; Extract supplies the target, person and grant length. |
-| `POST /v1/proof` | Protect → Guard → Decide → Extract → Verify | Protect changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
+| `POST /v1/unlock` | Protect (pii) → Guard (injection) → Decide → Extract | Protect (pii)'s spans replace personal details only in the copy saved to History. Guard (injection) can stop an instruction; Decide selects one of five outcomes and a door; Extract supplies the target, person and grant length. |
+| `POST /v1/proof` | Protect (pii) → Guard (injection) → Decide → Extract → Verify (grounding) | Protect (pii) changes the note History keeps. Decide's specific-completion gate and Extract's evidence span still apply; Verify (grounding) vetoes a note only when a claim clearly conflicts with the planned task, and supplies the short follow-up reason. |
 | `POST /v1/later` | Rerank | Orders up to 20 phone-saved browsing reasons against the new plan. Only results with Rerank's `use` action become doors, capped at three; `skip` and `expand` stay saved for another plan. |
 
 ### Clocked endpoints by award group
@@ -294,10 +300,10 @@ what the app shows or does — not as an unused extra call:
 | Decide, Extract, Fill | **Fill** | `/v1/plan` | Chooses which installed apps (and which shortcut of each) belong on the next Home (`server/app/clocked_pipeline.py`; mapped to doors in `lib/core/api_models.dart`). |
 | Decide, Extract, Fill | **Extract** | `/v1/plan`, `/v1/unlock`, `/v1/proof` | Copies the verbatim search words/end time for a door (plan); the target, person and grant length (unlock); the result/learning span for a proof day (proof). |
 | Decide, Extract, Fill | **Decide** | `/v1/unlock`, `/v1/proof` | Chooses the `open`/`later`/`specify`/`flagged`/`unavailable` outcome and door (unlock, see `UnlockOutcome` in `lib/core/models.dart`); gates whether a note is specific enough to raise a proof day (proof). |
-| Protect, Guard, Inspect | **Protect** | `/v1/unlock`, `/v1/proof` | Replaces personal details in the copy written to History only (`lib/core/redaction.dart`); never changes what the live gate or completion sheet shows. |
-| Protect, Guard, Inspect | **Guard** | `/v1/unlock`, `/v1/proof` | Can stop the pipeline outright, producing the `flagged` (unlock) or `vague` (proof) outcome (`GuardInfo` in `server/app/clocked_pipeline.py`). |
+| Protect, Guard, Inspect | **Protect (pii)** | `/v1/unlock`, `/v1/proof` | Replaces personal details in the copy written to History only (`lib/core/redaction.dart`); never changes what the live gate or completion sheet shows. |
+| Protect, Guard, Inspect | **Guard (injection)** | `/v1/unlock`, `/v1/proof` | Can stop the pipeline outright, producing the `flagged` (unlock) or `vague` (proof) outcome (`GuardInfo` in `server/app/clocked_pipeline.py`). |
 | Protect, Guard, Inspect | Inspect | *not used* | Inspect reviews scripts; Curre has no scripts to review, only short reasons and notes (see `server/README.md`). |
-| Verify, Compare, Rerank | **Verify** | `/v1/proof` | Vetoes a completion note only when a claim clearly contradicts the planned task, and supplies the short follow-up reason (`grounding` in the SDK). |
+| Verify, Compare, Rerank | **Verify (grounding)** | `/v1/proof` | Vetoes a completion note only when a claim clearly contradicts the planned task, and supplies the short follow-up reason (`grounding` in the SDK). |
 | Verify, Compare, Rerank | Compare | *not used* | Would duplicate the plan-vs-note judgment Verify already makes on the same inputs (see `server/README.md`). |
 | Verify, Compare, Rerank | **Rerank** | `/v1/later` | Orders saved "later" reasons against the new plan; only `use`-ranked results, capped at three, become doors. |
 
@@ -312,7 +318,7 @@ method):
 
 The current five-step `/v1/proof` pipeline has one sanitized real sample:
 **10 credits and 900 ms** client-observed round trip. It has not been through
-the same 10+ sample latency sweep yet. The added Protect step was also seen
+the same 10+ sample latency sweep yet. The added Protect (pii) step was also seen
 at 65–72 ms inside two real pipelines; see `server/README.md` for the exact
 measurement scope and credit budget.
 
@@ -321,6 +327,8 @@ reported **38.3 ms** of billable model time for six saved items. This was a
 single contract sample, not a latency sweep.
 
 ## Uncertain results, missing information and failed requests
+
+![Handling uncertain, missing and failed results: a defined fallback for a low-confidence Decide, a flagged instruction, missing fields, timeouts, a sleeping backend and Verify specifically](docs/images/fallbacks-diagram.jpg)
 
 Curre never blocks you on a Clocked call that can't answer confidently. Each
 case below has a defined fallback, so a bad network or an unsure model
@@ -342,7 +350,7 @@ degrades the feature instead of freezing it.
   mirrored server-side in `server/app/models.py`). An Extract value that
   can't be found comes back as a null `value` with no fabricated span, and
   an Extract error on `/v1/plan` still returns Fill's apps without spans
-  rather than discarding the whole answer. A Protect result that is
+  rather than discarding the whole answer. A Protect (pii) result that is
   missing, malformed, or out of range changes nothing — Curre keeps the
   original text and never claims it redacted something it didn't.
 - **Timeouts and retries.** `/v1/plan` gets one automatic retry inside a
@@ -367,9 +375,9 @@ degrades the feature instead of freezing it.
     forced into a guess.
   - `/v1/later` → the shelf silently falls back to newest-first ordering
     instead of Rerank's order, with no interruption to check-in.
-- **Verify, specifically.** An ordinary new detail in a proof note that
-  Verify simply wasn't told about (`not_stated`) does not veto it — only a
-  claim that clearly contradicts the planned task does
+- **Verify (grounding), specifically.** An ordinary new detail in a proof
+  note that Verify (grounding) simply wasn't told about (`not_stated`) does
+  not veto it — only a claim that clearly contradicts the planned task does
   (`contradicted >= 0.6`).
 
 ## Architecture
@@ -388,7 +396,7 @@ flowchart LR
         Routes["/v1/plan · /v1/unlock · /v1/proof · /v1/later\n/healthz"]
     end
 
-    Clocked["Clocked API\nFill · Extract · Decide · Guard · Protect · Verify · Rerank"]
+    Clocked["Clocked API\nFill · Extract · Decide · Guard (injection) · Protect (pii) · Verify (grounding) · Rerank"]
 
     UI <--> Store
     UI <--> Kotlin
@@ -415,12 +423,12 @@ phone in local storage, age out automatically, and clear with History — but
 that local storage is not encrypted, so it isn't protected against a
 compromised or backed-up device.
 
-Before a judged unlock reason or proof note is written to History, Protect's
-source spans replace names, phone numbers, email addresses, addresses, card
-numbers and bank-account numbers with visible placeholders such as `[name]`
-and `[phone]`. The gate and completion sheet keep using the original words.
-If Protect does not answer, Curre keeps the words as typed and shows no false
-privacy marker.
+Before a judged unlock reason or proof note is written to History, Protect
+(pii)'s source spans replace names, phone numbers, email addresses,
+addresses, card numbers and bank-account numbers with visible placeholders
+such as `[name]` and `[phone]`. The gate and completion sheet keep using the
+original words. If Protect (pii) does not answer, Curre keeps the words as
+typed and shows no false privacy marker.
 
 ## Build and run
 
@@ -534,7 +542,7 @@ Roughly, in order: the backend and phone-owned launcher logic first (`/v1/plan`,
 `/v1/unlock`, task doors); then the production Android screens, design system
 and avatars; real Clocked integration and a Prooflight proof-day loop end to
 end; the "why now?" gate with quieted notifications; voice typing, richer
-onboarding and release signing; Verify-backed proof and the reranked Later
+onboarding and release signing; Verify (grounding)-backed proof and the reranked Later
 shelf; five-step contextual onboarding and a calmly-handled waking host;
 focus periods with a rest day and graceful ending; selective app-hiding with
 held (not deleted) notifications; a code-rendered demo film; multilingual
@@ -601,7 +609,7 @@ captures of this app.
 
 Clocked's pipeline model (several steps, one call, one credit total) turned
 out to fit a privacy constraint I hadn't planned around going in: because
-Protect's output only ever changes what gets written to History — never what
+Protect (pii)'s output only ever changes what gets written to History — never what
 the live gate or completion sheet shows — a single `/v1/unlock` or
 `/v1/proof` call could do both the judgment and the redaction without a
 second round trip or a second place for personal text to leak into. The
