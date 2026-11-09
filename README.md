@@ -30,7 +30,7 @@ entering Best Overall and Best Use of Decide, Extract or Fill.
 
 ## Demo
 
-[3:58 demo video](https://github.com/MI-TECHDLIN/curre/releases/download/V.1/curre-demo.mp4) —
+[3:36 demo video](https://github.com/MI-TECHDLIN/curre/releases/download/V.1/curre-demo.mp4) —
 rendered from the real app against live-captured server answers (see
 `demo/README.md`). Attached to the
 [`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1).
