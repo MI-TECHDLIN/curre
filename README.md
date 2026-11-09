@@ -39,8 +39,8 @@ Write-up: [Curre: a phone launcher for one focused stretch of your life (Medium)
 
 ## Try it (for judges)
 
-The fastest path: download `app-arm64-v8a-release.6.apk` from the [V1.0.0
-release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1) and install
+The fastest path: download [`curre.apk`](https://github.com/MI-TECHDLIN/curre/releases/download/V.1/curre.apk)
+from the [V1.0.0 release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1) and install
 it per [`docs/install.md`](docs/install.md) — no build step needed. **This
 release build is arm64 only**; a device or emulator needing a different ABI
 (`armeabi-v7a` or `x86_64`) needs its own build from source (see below).
