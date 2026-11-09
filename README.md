@@ -35,6 +35,8 @@ rendered from the real app against live-captured server answers (see
 `demo/README.md`). Attached to the
 [`V1.0.0` release](https://github.com/MI-TECHDLIN/curre/releases/tag/V.1).
 
+Write-up: [Curre: a phone launcher for one focused stretch of your life (Medium)](https://medium.com/@ezechukwumiracle52/curre-a-phone-launcher-for-one-focused-stretch-of-your-life-ad7a1bfd3891)
+
 ## Try it (for judges)
 
 The fastest path: download `app-arm64-v8a-release.6.apk` from the [V1.0.0
